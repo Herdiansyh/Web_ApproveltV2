@@ -1,0 +1,91 @@
+[33mcommit f61aaa04469a6897442704a921a77de4a383511c[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mworkflowv2[m[33m, [m[1;31morigin/workflowv2[m[33m)[m
+Author: Herdiansyh <mohammadherdiansyah84@gmail.com>
+Date:   Sun Oct 26 22:58:27 2025 +0700
+
+    workflow baru berhasil
+
+[33mcommit d2ba024a2888def12db8dcb845a6b57092882511[m[33m ([m[1;31morigin/workflow[m[33m, [m[1;32mworkflow[m[33m)[m
+Author: Herdiansyh <mohammadherdiansyah84@gmail.com>
+Date:   Sun Oct 26 16:28:52 2025 +0700
+
+    layouting ui design
+
+[33mcommit ceb536724663dedea9a107a6b32b4bfdba1c389f[m
+Author: Herdiansyh <mohammadherdiansyah84@gmail.com>
+Date:   Sat Oct 25 06:40:15 2025 +0700
+
+    pembuatan workflow, approve belum aktif
+
+[33mcommit 483474a9339aa419c247909ef713285221961366[m
+Author: Herdiansyh <mohammadherdiansyah84@gmail.com>
+Date:   Fri Oct 24 14:36:45 2025 +0700
+
+    pembagian hak akses admin, dan page division management
+
+[33mcommit 78f1047c47ba56fd2d65974739e7c6dd6a988d77[m
+Author: Herdiansyh <mohammadherdiansyah84@gmail.com>
+Date:   Thu Oct 23 23:05:35 2025 +0700
+
+    pembuatan workflow
+
+[33mcommit bae078b829471b72fa1330cf2c671f885373e322[m[33m ([m[1;31morigin/devApproveOnly[m[33m, [m[1;32mdevApproveOnly[m[33m)[m
+Author: Herdiansyh <mohammadherdiansyah84@gmail.com>
+Date:   Thu Oct 23 11:01:39 2025 +0700
+
+    fix responsive design
+
+[33mcommit 8a746da8220a9bc5f70ca5a1f7d417fa95fa1523[m
+Author: Herdiansyh <mohammadherdiansyah84@gmail.com>
+Date:   Thu Oct 23 10:26:25 2025 +0700
+
+    pemisahan akses user management ke admiin
+
+[33mcommit c9d3e1d7e9c52f7f63b33387db355ad96e4f41c4[m
+Author: Herdiansyh <mohammadherdiansyah84@gmail.com>
+Date:   Thu Oct 23 09:45:39 2025 +0700
+
+    devApproveOnly
+
+[33mcommit 02df2779d4c38955bf82eedcc880885dd5787fcf[m[33m ([m[1;32mdev2[m[33m)[m
+Author: Herdiansyh <mohammadherdiansyah84@gmail.com>
+Date:   Thu Oct 23 09:23:28 2025 +0700
+
+    pengajuan file sudah berhasil
+
+[33mcommit 0213bec07a78366a354131b2877e7e384a20b163[m[33m ([m[1;31morigin/dev2[m[33m, [m[1;31morigin/dev[m[33m)[m
+Author: Herdiansyh <mohammadherdiansyah84@gmail.com>
+Date:   Wed Oct 22 21:39:01 2025 +0700
+
+    dev
+
+[33mcommit 2ec17290f76014cde50a7787b514b9907f5cb2d2[m
+Author: Herdiansyh <mohammadherdiansyah84@gmail.com>
+Date:   Wed Oct 22 20:59:59 2025 +0700
+
+    Revert "feat dokumen"
+    
+    This reverts commit 0f31b1cf98ecab6e3e439d976a62d30afc35f887.
+
+[33mcommit 0f31b1cf98ecab6e3e439d976a62d30afc35f887[m
+Author: Herdiansyh <mohammadherdiansyah84@gmail.com>
+Date:   Wed Oct 22 16:31:08 2025 +0700
+
+    feat dokumen
+
+[33mcommit 76be3b8ad74ddc4738414a6d5bc672fb5383fb2e[m
+Author: Herdiansyh <mohammadherdiansyah84@gmail.com>
+Date:   Wed Oct 22 07:08:46 2025 +0700
+
+    percobaan
+
+[33mcommit 6993010a49acf2a209ac36e97a9d7b97201045d4[m
+Author: Herdiansyh <mohammadherdiansyah84@gmail.com>
+Date:   Tue Oct 21 16:37:47 2025 +0700
+
+    page pengajuan
+
+[33mcommit 5d52a22b6c6b51332a086c86275348884266041d[m[33m ([m[1;31morigin/main[m[33m, [m[1;32mmain[m[33m)[m
+Author: Herdiansyh <mohammadherdiansyah84@gmail.com>
+Date:   Tue Oct 21 16:21:56 2025 +0700
+
+    first commit

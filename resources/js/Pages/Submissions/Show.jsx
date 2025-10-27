@@ -13,7 +13,13 @@ import {
     DropdownMenuTrigger,
 } from "@/Components/ui/dropdown-menu";
 
-export default function Show({ auth, submission, fileUrl, canApprove }) {
+export default function Show({
+    auth,
+    submission,
+    fileUrl,
+    canApprove,
+    nextStep,
+}) {
     const [showApproveModal, setShowApproveModal] = useState(false);
     const [showRejectModal, setShowRejectModal] = useState(false);
 
@@ -169,6 +175,7 @@ export default function Show({ auth, submission, fileUrl, canApprove }) {
                                                     align="end"
                                                     className="w-48"
                                                 >
+                                                    {/* Approve */}
                                                     <DropdownMenuItem
                                                         onClick={() =>
                                                             setShowApproveModal(
@@ -179,6 +186,73 @@ export default function Show({ auth, submission, fileUrl, canApprove }) {
                                                     >
                                                         Setujui Pengajuan
                                                     </DropdownMenuItem>
+
+                                                    {/* Request to next step */}
+                                                    {nextStep && (
+                                                        <DropdownMenuItem
+                                                            onClick={() => {
+                                                                Swal.fire({
+                                                                    title: `Lanjutkan ke ${nextStep.division.name}?`,
+                                                                    text:
+                                                                        "Status dokumen akan menjadi waiting to " +
+                                                                        nextStep
+                                                                            .division
+                                                                            .name,
+                                                                    icon: "question",
+                                                                    showCancelButton: true,
+                                                                    confirmButtonText: `Ya, request to ${nextStep.division.name}`,
+                                                                    cancelButtonText:
+                                                                        "Batal",
+                                                                }).then(
+                                                                    (
+                                                                        result
+                                                                    ) => {
+                                                                        if (
+                                                                            result.isConfirmed
+                                                                        ) {
+                                                                            post(
+                                                                                route(
+                                                                                    "submissions.requestToNextStep",
+                                                                                    submission.id
+                                                                                ),
+                                                                                {
+                                                                                    onSuccess:
+                                                                                        () => {
+                                                                                            Swal.fire(
+                                                                                                {
+                                                                                                    icon: "success",
+                                                                                                    title: "Berhasil",
+                                                                                                    text:
+                                                                                                        "Dokumen diteruskan ke " +
+                                                                                                        nextStep
+                                                                                                            .division
+                                                                                                            .name,
+                                                                                                    confirmButtonText:
+                                                                                                        "OK",
+                                                                                                }
+                                                                                            ).then(
+                                                                                                () =>
+                                                                                                    window.location.reload()
+                                                                                            );
+                                                                                        },
+                                                                                }
+                                                                            );
+                                                                        }
+                                                                    }
+                                                                );
+                                                            }}
+                                                            className="text-blue-600 hover:text-blue-700 cursor-pointer border-b border-gray-200"
+                                                        >
+                                                            Request to{" "}
+                                                            {
+                                                                nextStep
+                                                                    .division
+                                                                    .name
+                                                            }
+                                                        </DropdownMenuItem>
+                                                    )}
+
+                                                    {/* Reject */}
                                                     <DropdownMenuItem
                                                         onClick={() =>
                                                             setShowRejectModal(

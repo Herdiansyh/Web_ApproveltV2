@@ -68,6 +68,9 @@ Route::middleware('auth')->group(function () {
    Route::middleware(['auth'])->group(function () {
     Route::post('submissions/{submission}/approve', [SubmissionController::class, 'approve'])->name('submissions.approve');
     Route::post('submissions/{submission}/reject', [SubmissionController::class, 'reject'])->name('submissions.reject');
+    Route::post('submissions/{submission}/request-to-next-step', [SubmissionController::class, 'requestToNextStep'])
+    ->name('submissions.requestToNextStep');
+
 });
 
     //admin only

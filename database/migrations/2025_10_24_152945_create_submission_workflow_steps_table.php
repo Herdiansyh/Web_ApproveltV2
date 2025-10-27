@@ -13,12 +13,15 @@ return new class extends Migration
             $table->foreignId('submission_id')->constrained()->onDelete('cascade');
             $table->foreignId('division_id')->constrained()->onDelete('cascade');
             $table->integer('step_order');
-            
-            // Tambahan kolom penting
-            $table->enum('status', ['pending', 'approved', 'rejected'])->default('pending');
+
+            // ubah ke string agar bisa pending, approved, rejected, forwarded, dsb
+            $table->string('status')->default('pending');
+
+            // kolom tambahan untuk tracking
             $table->text('note')->nullable();
+            $table->text('approval_note')->nullable();
             $table->timestamp('approved_at')->nullable();
-            $table->foreignId('approver_id')->nullable()->constrained('users')->nullOnDelete();
+            $table->foreignId('approved_by')->nullable()->constrained('users')->onDelete('set null');
 
             $table->timestamps();
         });

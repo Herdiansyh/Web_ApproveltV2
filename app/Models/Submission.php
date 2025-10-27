@@ -59,6 +59,11 @@ class Submission extends Model
         return $this->hasOne(SubmissionWorkflowStep::class)
             ->where('step_order', $this->current_step);
     }
+    
+public function division()
+{
+    return $this->belongsTo(Division::class);
+}
 }
 
 
