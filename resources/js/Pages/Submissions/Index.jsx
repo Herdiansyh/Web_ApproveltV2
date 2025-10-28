@@ -1,11 +1,23 @@
-import React from "react";
+import React, { useState } from "react";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
 import { Head, Link } from "@inertiajs/react";
 import PrimaryButton from "@/Components/PrimaryButton";
 import Sidebar from "@/Components/Sidebar";
 import { TooltipProvider } from "@/Components/ui/tooltip";
+import { Input } from "@/Components/ui/input";
 
 export default function Index({ auth, submissions }) {
+    const [Filter, setFilter] = useState("");
+    //function to handle filter
+    const handleFilterChange = (e) => {
+        setFilter(e.target.value);
+        console.log(e.target.value);
+    };
+
+    // filtered submissions
+    const SubmissionFilter = submissions.data.filter((submission) =>
+        submission.title.toLowerCase().includes(Filter.toLowerCase())
+    );
     return (
         <AuthenticatedLayout
             user={auth.user}
@@ -25,7 +37,39 @@ export default function Index({ auth, submissions }) {
                         <div className="bg-card text-card-foreground overflow-hidden shadow-md sm:rounded-lg">
                             <div className="p-6">
                                 {auth.user.role === "employee" && (
-                                    <div className="mb-6 flex justify-end">
+                                    <div className="mb-6 flex justify-between gap-2 mt-5 ">
+                                        {" "}
+                                        <div className="flex gap-2">
+                                            <Input
+                                                style={{ borderRadius: "10px" }}
+                                                className="border w-50 h-7 border-gray-600"
+                                                placeholder="Search Document..."
+                                                value={Filter}
+                                                onChange={handleFilterChange}
+                                            />
+                                            <select
+                                                className="border w-20 h-7  border-gray-600 rounded-lg px-3 py-2 bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                                                style={{
+                                                    borderRadius: "10px",
+                                                    fontSize: "0.75rem",
+                                                }}
+                                            >
+                                                {submissions.data.map(
+                                                    (submission, index) => (
+                                                        <option key={index}>
+                                                            {
+                                                                submission
+                                                                    .workflow
+                                                                    ?.document
+                                                                    ?.name
+                                                            }
+                                                        </option>
+                                                    )
+                                                )}
+
+                                                {/* Add more options as needed */}
+                                            </select>
+                                        </div>
                                         <Link
                                             href={route("submissions.create")}
                                         >
@@ -67,7 +111,7 @@ export default function Index({ auth, submissions }) {
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-border">
-                                            {submissions.data.map(
+                                            {SubmissionFilter.map(
                                                 (submission) => {
                                                     const currentStep =
                                                         submission.workflowSteps?.find(

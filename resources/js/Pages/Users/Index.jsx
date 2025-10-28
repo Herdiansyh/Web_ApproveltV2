@@ -23,10 +23,12 @@ import {
 } from "@/Components/ui/select";
 import Sidebar from "@/Components/Sidebar";
 import Swal from "sweetalert2";
+import { X } from "lucide-react"; // untuk ikon hapus filter
 
 export default function Index({ auth, users, divisions, roles }) {
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [editingUser, setEditingUser] = useState(null);
+    const [selectedDivision, setSelectedDivision] = useState(""); // filter divisi
 
     const { data, setData, post, put, processing, errors, reset } = useForm({
         name: "",
@@ -44,7 +46,6 @@ export default function Index({ auth, users, divisions, roles }) {
                 onSuccess: () => {
                     setEditingUser(null);
                     reset();
-
                     Swal.fire({
                         icon: "success",
                         title: "User updated",
@@ -59,7 +60,6 @@ export default function Index({ auth, users, divisions, roles }) {
                 onSuccess: () => {
                     setShowCreateModal(false);
                     reset();
-
                     Swal.fire({
                         icon: "success",
                         title: "User created",
@@ -107,6 +107,13 @@ export default function Index({ auth, users, divisions, roles }) {
         });
     };
 
+    // Filter user berdasarkan division
+    const filteredUsers = selectedDivision
+        ? users.data.filter(
+              (user) => String(user.division_id) === String(selectedDivision)
+          )
+        : users.data;
+
     return (
         <AuthenticatedLayout
             user={auth.user}
@@ -117,28 +124,77 @@ export default function Index({ auth, users, divisions, roles }) {
             }
         >
             <Head title="User Management" />
-            <div className="flex min-h-screen bg-gray-100">
+            <div className="flex min-h-screen bg-background">
                 <Sidebar />
 
                 <div className="py-12 w-full overflow-auto">
-                    <div className=" mx-auto   p-6 lg:px-8">
+                    <div className="mx-auto p-6 lg:px-8">
                         <Card className="p-6">
-                            <div className="flex justify-between items-center mb-6">
-                                <h3 className="text-lg font-semibold">Users</h3>
+                            {/* Header dan Filter */}
+                            {/* Filter & Add */}
+                            <div className="flex flex-col md:flex-row justify-between gap-3 mb-4">
+                                <div className="flex flex-col md:flex-row gap-2 w-full">
+                                    <Select
+                                        value={selectedDivision}
+                                        onValueChange={(value) =>
+                                            setSelectedDivision(value)
+                                        }
+                                    >
+                                        <SelectTrigger
+                                            className="md:w-1/4 border border-gray-300"
+                                            style={{ borderRadius: "8px" }}
+                                        >
+                                            <SelectValue placeholder="Filter by Division..." />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {divisions.map((division) => (
+                                                <SelectItem
+                                                    key={division.id}
+                                                    value={String(division.id)}
+                                                >
+                                                    {division.name}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+
                                 <Button
                                     onClick={() => {
                                         setEditingUser(null);
                                         reset();
                                         setShowCreateModal(true);
                                     }}
-                                    style={{
-                                        borderRadius: "15px",
-                                    }}
+                                    className="w-[180px] h-9 text-sm"
+                                    style={{ borderRadius: "8px" }}
                                 >
-                                    Add New User
+                                    + Add New User
                                 </Button>
                             </div>
 
+                            {/* Active Filter */}
+                            {selectedDivision && (
+                                <div className="flex flex-wrap gap-2 mb-6">
+                                    <div className="flex items-center gap-1 bg-gray-100 text-gray-800 px-2 py-1 rounded-md text-sm">
+                                        {
+                                            divisions.find(
+                                                (d) =>
+                                                    String(d.id) ===
+                                                    selectedDivision
+                                            )?.name
+                                        }
+                                        <X
+                                            size={14}
+                                            className="cursor-pointer hover:text-red-500"
+                                            onClick={() =>
+                                                setSelectedDivision("")
+                                            }
+                                        />
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Tabel Users */}
                             <Table>
                                 <TableHeader>
                                     <TableRow>
@@ -150,56 +206,73 @@ export default function Index({ auth, users, divisions, roles }) {
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {users.data.map((user) => (
-                                        <TableRow key={user.id}>
-                                            <TableCell>{user.name}</TableCell>
-                                            <TableCell>{user.email}</TableCell>
-                                            <TableCell>
-                                                {user.role
-                                                    .charAt(0)
-                                                    .toUpperCase() +
-                                                    user.role.slice(1)}
-                                            </TableCell>
-                                            <TableCell>
-                                                {user.division?.name || "N/A"}
-                                            </TableCell>
-                                            <TableCell>
-                                                <div className="flex space-x-2">
-                                                    <Button
-                                                        variant="outline"
-                                                        size="sm"
-                                                        onClick={() =>
-                                                            handleEdit(user)
-                                                        }
-                                                        style={{
-                                                            borderRadius:
-                                                                "15px",
-                                                        }}
-                                                    >
-                                                        Edit
-                                                    </Button>
-                                                    {user.id !==
-                                                        auth.user.id && (
+                                    {filteredUsers.length > 0 ? (
+                                        filteredUsers.map((user) => (
+                                            <TableRow key={user.id}>
+                                                <TableCell>
+                                                    {user.name}
+                                                </TableCell>
+                                                <TableCell>
+                                                    {user.email}
+                                                </TableCell>
+                                                <TableCell>
+                                                    {user.role
+                                                        .charAt(0)
+                                                        .toUpperCase() +
+                                                        user.role.slice(1)}
+                                                </TableCell>
+                                                <TableCell>
+                                                    {user.division?.name ||
+                                                        "N/A"}
+                                                </TableCell>
+                                                <TableCell>
+                                                    <div className="flex space-x-2">
                                                         <Button
-                                                            variant="destructive"
+                                                            variant="outline"
                                                             size="sm"
                                                             onClick={() =>
-                                                                handleDelete(
-                                                                    user.id
-                                                                )
+                                                                handleEdit(user)
                                                             }
                                                             style={{
                                                                 borderRadius:
                                                                     "15px",
                                                             }}
                                                         >
-                                                            Delete
+                                                            Edit
                                                         </Button>
-                                                    )}
-                                                </div>
+                                                        {user.id !==
+                                                            auth.user.id && (
+                                                            <Button
+                                                                variant="destructive"
+                                                                size="sm"
+                                                                onClick={() =>
+                                                                    handleDelete(
+                                                                        user.id
+                                                                    )
+                                                                }
+                                                                style={{
+                                                                    borderRadius:
+                                                                        "15px",
+                                                                }}
+                                                            >
+                                                                Delete
+                                                            </Button>
+                                                        )}
+                                                    </div>
+                                                </TableCell>
+                                            </TableRow>
+                                        ))
+                                    ) : (
+                                        <TableRow>
+                                            <TableCell
+                                                colSpan="5"
+                                                className="text-center text-gray-500"
+                                            >
+                                                No users found for this
+                                                division.
                                             </TableCell>
                                         </TableRow>
-                                    ))}
+                                    )}
                                 </TableBody>
                             </Table>
                         </Card>

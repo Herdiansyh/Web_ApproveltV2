@@ -17,18 +17,18 @@ export default function Dashboard({ auth }) {
         >
             <Head title="Dashboard" />
 
-            <div className="flex min-h-screen bg-gray-100">
+            <div className="flex min-h-screen bg-background">
                 <TooltipProvider>
                     <Sidebar />
                 </TooltipProvider>
 
                 {/* Main Content */}
                 <div className="space-y-6 p-10">
-                    <h2 className="text-2xl font-semibold text-gray-800">
+                    <h2 className="text-2xl font-semibold text-background">
                         Selamat Datang, {auth.user.name}
                     </h2>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                        <div className="bg-white rounded-xl shadow p-4 border border-gray-100">
+                        <div className="bg-background rounded-xl shadow p-4 border border-gray-100">
                             <h3 className="font-semibold text-gray-700">
                                 Total Pengajuan
                             </h3>
@@ -36,7 +36,7 @@ export default function Dashboard({ auth }) {
                                 12
                             </p>
                         </div>
-                        <div className="bg-white rounded-xl shadow p-4 border border-gray-100">
+                        <div className="bg-background rounded-xl shadow p-4 border border-gray-100">
                             <h3 className="font-semibold text-gray-700">
                                 Menunggu Persetujuan
                             </h3>
@@ -44,7 +44,7 @@ export default function Dashboard({ auth }) {
                                 4
                             </p>
                         </div>
-                        <div className="bg-white rounded-xl shadow p-4 border border-gray-100">
+                        <div className="bg-background rounded-xl shadow p-4 border border-gray-100">
                             <h3 className="font-semibold text-gray-700">
                                 Disetujui
                             </h3>

@@ -58,7 +58,7 @@ export default function Index({ auth, divisions }) {
             }
         >
             <Head title="Division Management" />
-            <div className="flex min-h-screen bg-gray-100">
+            <div className="flex min-h-screen bg-background">
                 <Sidebar />
                 <div className="py-12 w-full overflow-auto">
                     <div className="mx-auto p-6 lg:px-8">

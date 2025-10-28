@@ -8,6 +8,13 @@ import { Label } from "@/Components/ui/label";
 import { Textarea } from "@/Components/ui/textarea";
 import Sidebar from "@/Components/Sidebar";
 import Swal from "sweetalert2";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/Components/ui/select";
 
 export default function Create({ auth, userDivision }) {
     const { data, setData, post, processing, errors, reset } = useForm({
@@ -88,7 +95,7 @@ export default function Create({ auth, userDivision }) {
             }
         >
             <Head title="Buat Pengajuan" />
-            <div className="flex min-h-screen bg-gray-100">
+            <div className="flex min-h-screen bg-background">
                 <Sidebar />
                 <div className="py-12 w-full">
                     <div className="mx-auto sm:px-6 lg:px-8">
@@ -98,7 +105,61 @@ export default function Create({ auth, userDivision }) {
                                 encType="multipart/form-data"
                             >
                                 <div className="space-y-6">
+<<<<<<< HEAD
                                     {/* Judul */}
+=======
+                                    {/* Pilih Jenis Dokumen */}
+                                    <div>
+                                        <Label>Jenis Dokumen</Label>
+
+                                        <Label>Jenis Dokumen</Label>
+                                        <Select
+                                            value={data.document_id}
+                                            onValueChange={(value) =>
+                                                setData("document_id", value)
+                                            }
+                                        >
+                                            <SelectTrigger className="w-full mt-1">
+                                                <SelectValue placeholder="-- Pilih Jenis Dokumen --" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {documents?.length > 0 ? (
+                                                    documents.map((doc) => (
+                                                        <SelectItem
+                                                            key={doc.id}
+                                                            value={String(
+                                                                doc.id
+                                                            )}
+                                                        >
+                                                            {doc.name}
+                                                        </SelectItem>
+                                                    ))
+                                                ) : (
+                                                    <SelectItem
+                                                        disabled
+                                                        value=""
+                                                    >
+                                                        Tidak ada dokumen
+                                                        tersedia
+                                                    </SelectItem>
+                                                )}
+                                            </SelectContent>
+                                        </Select>
+                                        {errors.document_id && (
+                                            <p className="text-red-600 text-sm mt-1">
+                                                {errors.document_id}
+                                            </p>
+                                        )}
+
+                                        {errors.document_id && (
+                                            <p className="text-red-600 text-sm mt-1">
+                                                {errors.document_id}
+                                            </p>
+                                        )}
+                                    </div>
+
+                                    {/* Judul Pengajuan */}
+>>>>>>> 0d737fc (tambah search dan filter)
                                     <div>
                                         <Label>Judul Pengajuan</Label>
                                         <Input

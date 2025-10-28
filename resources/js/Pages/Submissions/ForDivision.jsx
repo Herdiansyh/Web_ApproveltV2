@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
 import { Head, Link } from "@inertiajs/react";
 import Sidebar from "@/Components/Sidebar";
@@ -10,8 +10,21 @@ import {
     TableHeader,
     TableRow,
 } from "@/Components/ui/table";
+import { Input } from "@/Components/ui/input";
 
 export default function ForDivision({ auth, submissions }) {
+    const [filter, setFilter] = useState("");
+    //function to handle filter
+    const handleFilterChange = (e) => {
+        setFilter(e.target.value);
+        console.log(e.target.value);
+    };
+
+    // filtered submissions
+    const SubmissionFilter = submissions.data.filter((submission) =>
+        submission.title.toLowerCase().includes(filter.toLowerCase())
+    );
+
     return (
         <AuthenticatedLayout
             user={auth.user}
@@ -28,7 +41,23 @@ export default function ForDivision({ auth, submissions }) {
                     <div className="mx-auto sm:px-6 lg:px-8">
                         <div className="bg-card shadow-sm sm:rounded-lg">
                             <div className="p-6 text-card-foreground">
+<<<<<<< HEAD
                                 <Table>
+=======
+                                <span className="block   text-lg font-bold tracking-wider">
+                                    Lihat list pengajuan
+                                </span>{" "}
+                                <Input
+                                    type="text"
+                                    className="border w-50 h-7 mt-3  border-gray-500 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                                    style={{ borderRadius: "10px" }}
+                                    placeholder="Search Dokumen..."
+                                    value={filter}
+                                    onChange={handleFilterChange}
+                                />
+                                {/* dropdown untuk filer */}
+                                <Table className="mt-6">
+>>>>>>> 0d737fc (tambah search dan filter)
                                     <TableHeader>
                                         <TableRow>
                                             <TableHead>Judul</TableHead>
@@ -41,7 +70,7 @@ export default function ForDivision({ auth, submissions }) {
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                        {submissions.data.map((submission) => (
+                                        {SubmissionFilter.map((submission) => (
                                             <TableRow key={submission.id}>
                                                 <TableCell>
                                                     {submission.title}
