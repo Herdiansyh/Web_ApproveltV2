@@ -25,27 +25,17 @@ import { X } from "lucide-react";
 import Sidebar from "@/Components/Sidebar";
 import Swal from "sweetalert2";
 
-export default function Index({ auth, workflows, divisions }) {
+export default function Index({ auth, workflows, divisions, documents }) {
     const [showModal, setShowModal] = useState(false);
     const [editingWorkflow, setEditingWorkflow] = useState(null);
-<<<<<<< HEAD
-
-    // Pastikan workflows selalu array
-    const workflowsList = workflows || [];
-=======
     const [filterText, setFilterText] = useState("");
     const [filterSelect, setFilterSelect] = useState("");
->>>>>>> 0d737fc (tambah search dan filter)
 
     const { data, setData, post, put, processing, errors, reset } = useForm({
         name: "",
         description: "",
-<<<<<<< HEAD
-        steps: [{ division_id: "" }], // default minimal 1 step
-=======
         document_id: documents[0]?.id || "",
         steps: [{ division_id: "" }],
->>>>>>> 0d737fc (tambah search dan filter)
     });
 
     // === Filter handling ===
@@ -66,10 +56,6 @@ export default function Index({ auth, workflows, divisions }) {
     const openCreateModal = () => {
         setEditingWorkflow(null);
         reset();
-<<<<<<< HEAD
-        setData("steps", [{ division_id: "" }]);
-=======
->>>>>>> 0d737fc (tambah search dan filter)
         setShowModal(true);
     };
 
@@ -78,6 +64,7 @@ export default function Index({ auth, workflows, divisions }) {
         setData({
             name: workflow.name,
             description: workflow.description || "",
+            document_id: workflow.document_id || documents[0]?.id || "",
             steps: workflow.steps?.map((s) => ({
                 id: s.id,
                 division_id: s.division?.id || "",
@@ -86,67 +73,20 @@ export default function Index({ auth, workflows, divisions }) {
         setShowModal(true);
     };
 
-<<<<<<< HEAD
-    const handleSubmit = (e) => {
-        e.preventDefault();
-        if (editingWorkflow) {
-            put(route("workflows.update", editingWorkflow.id), {
-                onSuccess: () => {
-                    setShowModal(false);
-                    setEditingWorkflow(null);
-                    reset();
-                    Swal.fire({
-                        icon: "success",
-                        title: "Workflow updated",
-                        timer: 2000,
-                        showConfirmButton: false,
-                    });
-                },
-            });
-        } else {
-            post(route("workflows.store"), {
-                onSuccess: () => {
-                    setShowModal(false);
-                    reset();
-                    Swal.fire({
-                        icon: "success",
-                        title: "Workflow created",
-                        timer: 2000,
-                        showConfirmButton: false,
-                    });
-                },
-            });
-        }
-    };
-
-    const handleDelete = (workflowId) => {
-        Swal.fire({
-            title: "Are you sure?",
-            text: "You won't be able to revert this!",
-=======
     const handleDelete = (id) => {
         Swal.fire({
             title: "Are you sure?",
             text: "This workflow will be deleted permanently.",
->>>>>>> 0d737fc (tambah search dan filter)
             icon: "warning",
             showCancelButton: true,
             confirmButtonText: "Yes, delete it!",
         }).then((result) => {
             if (result.isConfirmed) {
-<<<<<<< HEAD
-                router.delete(route("workflows.destroy", workflowId), {
-                    onSuccess: () => {
-                        Swal.fire(
-                            "Deleted!",
-                            "Workflow has been deleted.",
-=======
                 router.delete(route("workflows.destroy", id), {
                     onSuccess: () => {
                         Swal.fire(
                             "Deleted!",
                             "Workflow has been removed.",
->>>>>>> 0d737fc (tambah search dan filter)
                             "success"
                         );
                     },
@@ -154,16 +94,6 @@ export default function Index({ auth, workflows, divisions }) {
             }
         });
     };
-<<<<<<< HEAD
-
-    const addStep = () =>
-        setData("steps", [...data.steps, { division_id: "" }]);
-    const removeStep = (index) => {
-        const newSteps = data.steps.filter((_, i) => i !== index);
-        setData("steps", newSteps);
-    };
-=======
->>>>>>> 0d737fc (tambah search dan filter)
 
     const handleSubmit = (e) => {
         e.preventDefault();
@@ -302,56 +232,13 @@ export default function Index({ auth, workflows, divisions }) {
                                 <TableHeader>
                                     <TableRow>
                                         <TableHead>Name</TableHead>
+                                        <TableHead>Document</TableHead>
                                         <TableHead>Description</TableHead>
                                         <TableHead>Steps</TableHead>
                                         <TableHead>Actions</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-<<<<<<< HEAD
-                                    {workflowsList.map((wf) => (
-                                        <TableRow key={wf.id}>
-                                            <TableCell>{wf.name}</TableCell>
-                                            <TableCell>
-                                                {wf.description || "-"}
-                                            </TableCell>
-                                            <TableCell>
-                                                {(
-                                                    wf.steps?.map(
-                                                        (s) => s.division?.name
-                                                    ) || []
-                                                ).join(" → ") || "-"}
-                                            </TableCell>
-                                            <TableCell>
-                                                <div className="flex space-x-2">
-                                                    <Button
-                                                        variant="outline"
-                                                        size="sm"
-                                                        onClick={() =>
-                                                            openEditModal(wf)
-                                                        }
-                                                        style={{
-                                                            borderRadius:
-                                                                "15px",
-                                                        }}
-                                                    >
-                                                        Edit
-                                                    </Button>
-                                                    <Button
-                                                        variant="destructive"
-                                                        size="sm"
-                                                        onClick={() =>
-                                                            handleDelete(wf.id)
-                                                        }
-                                                        style={{
-                                                            borderRadius:
-                                                                "15px",
-                                                        }}
-                                                    >
-                                                        Delete
-                                                    </Button>
-                                                </div>
-=======
                                     {filteredWorkflows.length > 0 ? (
                                         filteredWorkflows.map((wf) => (
                                             <TableRow key={wf.id}>
@@ -415,7 +302,6 @@ export default function Index({ auth, workflows, divisions }) {
                                                 className="text-center text-gray-500"
                                             >
                                                 No workflows found.
->>>>>>> 0d737fc (tambah search dan filter)
                                             </TableCell>
                                         </TableRow>
                                     )}
@@ -426,11 +312,7 @@ export default function Index({ auth, workflows, divisions }) {
                 </div>
             </div>
 
-<<<<<<< HEAD
-            {/* Create/Edit Modal */}
-=======
             {/* Modal Form */}
->>>>>>> 0d737fc (tambah search dan filter)
             {showModal && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
                     <Card className="w-full max-w-lg p-6">
@@ -439,7 +321,6 @@ export default function Index({ auth, workflows, divisions }) {
                                 ? "Edit Workflow"
                                 : "Create New Workflow"}
                         </h3>
-
                         <form onSubmit={handleSubmit}>
                             <div className="space-y-4">
                                 <div>
@@ -458,11 +339,6 @@ export default function Index({ auth, workflows, divisions }) {
                                 </div>
 
                                 <div>
-<<<<<<< HEAD
-                                    <Label htmlFor="description">
-                                        Description
-                                    </Label>
-=======
                                     <Label>Document</Label>
                                     <Select
                                         value={
@@ -493,7 +369,6 @@ export default function Index({ auth, workflows, divisions }) {
 
                                 <div>
                                     <Label>Description</Label>
->>>>>>> 0d737fc (tambah search dan filter)
                                     <Input
                                         value={data.description}
                                         onChange={(e) =>
@@ -521,17 +396,9 @@ export default function Index({ auth, workflows, divisions }) {
                                                     const updated = [
                                                         ...data.steps,
                                                     ];
-<<<<<<< HEAD
-                                                    newSteps[
-                                                        index
-                                                    ].division_id =
-                                                        parseInt(value); // kembalikan ke number
-                                                    setData("steps", newSteps);
-=======
                                                     updated[i].division_id =
                                                         parseInt(value);
                                                     setData("steps", updated);
->>>>>>> 0d737fc (tambah search dan filter)
                                                 }}
                                             >
                                                 <SelectTrigger>
@@ -579,15 +446,7 @@ export default function Index({ auth, workflows, divisions }) {
                                 >
                                     Cancel
                                 </Button>
-<<<<<<< HEAD
-                                <Button
-                                    type="submit"
-                                    disabled={processing}
-                                    style={{ borderRadius: "15px" }}
-                                >
-=======
                                 <Button type="submit" disabled={processing}>
->>>>>>> 0d737fc (tambah search dan filter)
                                     {editingWorkflow ? "Update" : "Create"}
                                 </Button>
                             </div>

@@ -41,9 +41,6 @@ export default function ForDivision({ auth, submissions }) {
                     <div className="mx-auto sm:px-6 lg:px-8">
                         <div className="bg-card shadow-sm sm:rounded-lg">
                             <div className="p-6 text-card-foreground">
-<<<<<<< HEAD
-                                <Table>
-=======
                                 <span className="block   text-lg font-bold tracking-wider">
                                     Lihat list pengajuan
                                 </span>{" "}
@@ -57,7 +54,6 @@ export default function ForDivision({ auth, submissions }) {
                                 />
                                 {/* dropdown untuk filer */}
                                 <Table className="mt-6">
->>>>>>> 0d737fc (tambah search dan filter)
                                     <TableHeader>
                                         <TableRow>
                                             <TableHead>Judul</TableHead>
@@ -121,7 +117,6 @@ export default function ForDivision({ auth, submissions }) {
                                         ))}
                                     </TableBody>
                                 </Table>
-
                                 {/* Pagination */}
                                 <div className="mt-6 flex flex-wrap items-center">
                                     {submissions.links &&

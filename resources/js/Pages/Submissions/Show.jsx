@@ -14,13 +14,7 @@ import {
 } from "@/Components/ui/dropdown-menu";
 import PrimaryButton from "@/Components/PrimaryButton";
 
-export default function Show({
-    auth,
-    submission,
-    fileUrl,
-    canApprove,
-    nextStep,
-}) {
+export default function Show({ auth, submission, fileUrl, canApprove }) {
     const [showApproveModal, setShowApproveModal] = useState(false);
     const [showRejectModal, setShowRejectModal] = useState(false);
 
@@ -106,15 +100,22 @@ export default function Show({
                         <Card className="p-6">
                             <div className="mb-6 flex justify-between items-start">
                                 <div>
-                                    <h3 className="text-2xl font-bold mb-2">
-                                        {submission.title}
-                                    </h3>
+                                    <div>
+                                        <h3 className="text-2xl font-bold mb-2">
+                                            {submission.title}
+                                        </h3>
+                                    </div>
                                     <p className="text-gray-600">
-                                        Diajukan oleh: {submission.user.name} (
+                                        <span className="font-bold">
+                                            Diajukan oleh:
+                                        </span>{" "}
+                                        {submission.user.name} (
                                         {submission.user.division?.name ?? "-"})
                                     </p>
                                     <p className="text-gray-600">
-                                        Status:{" "}
+                                        <span className="font-bold">
+                                            Status:
+                                        </span>{" "}
                                         <span
                                             className={`font-semibold ${
                                                 submission.status === "approved"
@@ -148,14 +149,13 @@ export default function Show({
                                     )}
                                     {submission.description && (
                                         <p className="mt-4">
+                                            <span className="font-bold text-gray-600">
+                                                Deskripsi:{" "}
+                                            </span>
                                             {submission.description}
                                         </p>
                                     )}
                                 </div>
-<<<<<<< HEAD
-                                <div className="flex flex-col gap-2">
-                                    <Button asChild variant="secondary">
-=======
                                 <div className="flex flex-col gap-2 items-end ">
                                     <PrimaryButton
                                         style={{ borderRadius: "15px" }}
@@ -163,7 +163,6 @@ export default function Show({
                                         asChild
                                         variant="secondary"
                                     >
->>>>>>> 0d737fc (tambah search dan filter)
                                         <a
                                             href={fileUrl}
                                             target="_blank"
@@ -178,99 +177,46 @@ export default function Show({
                                         submission.status === "pending" && (
                                             <DropdownMenu>
                                                 <DropdownMenuTrigger asChild>
-                                                    <Button className="bg-blue-500 text-white rounded-md">
+                                                    <Button
+                                                        className="max-w-20 h-6 tracking-wide  bg-blue-500 text-white"
+                                                        style={{
+                                                            borderRadius: "5px",
+                                                        }}
+                                                    >
                                                         Action
+                                                        <div
+                                                            style={{
+                                                                rotate: "90deg",
+                                                                fontSize:
+                                                                    "10px",
+                                                            }}
+                                                        >
+                                                            <span>&lt;</span>
+                                                            <span>&gt;</span>
+                                                        </div>
                                                     </Button>
                                                 </DropdownMenuTrigger>
                                                 <DropdownMenuContent
                                                     align="end"
                                                     className="w-48"
                                                 >
-                                                    {/* Approve */}
                                                     <DropdownMenuItem
                                                         onClick={() =>
                                                             setShowApproveModal(
                                                                 true
                                                             )
                                                         }
-                                                        className="text-green-600 hover:text-green-700 cursor-pointer border-b border-gray-200"
+                                                        className=" hover:text-green-700 cursor-pointer border-b border-gray-200"
                                                     >
                                                         Setujui Pengajuan
                                                     </DropdownMenuItem>
-
-                                                    {/* Request to next step */}
-                                                    {nextStep && (
-                                                        <DropdownMenuItem
-                                                            onClick={() => {
-                                                                Swal.fire({
-                                                                    title: `Lanjutkan ke ${nextStep.division.name}?`,
-                                                                    text:
-                                                                        "Status dokumen akan menjadi waiting to " +
-                                                                        nextStep
-                                                                            .division
-                                                                            .name,
-                                                                    icon: "question",
-                                                                    showCancelButton: true,
-                                                                    confirmButtonText: `Ya, request to ${nextStep.division.name}`,
-                                                                    cancelButtonText:
-                                                                        "Batal",
-                                                                }).then(
-                                                                    (
-                                                                        result
-                                                                    ) => {
-                                                                        if (
-                                                                            result.isConfirmed
-                                                                        ) {
-                                                                            post(
-                                                                                route(
-                                                                                    "submissions.requestToNextStep",
-                                                                                    submission.id
-                                                                                ),
-                                                                                {
-                                                                                    onSuccess:
-                                                                                        () => {
-                                                                                            Swal.fire(
-                                                                                                {
-                                                                                                    icon: "success",
-                                                                                                    title: "Berhasil",
-                                                                                                    text:
-                                                                                                        "Dokumen diteruskan ke " +
-                                                                                                        nextStep
-                                                                                                            .division
-                                                                                                            .name,
-                                                                                                    confirmButtonText:
-                                                                                                        "OK",
-                                                                                                }
-                                                                                            ).then(
-                                                                                                () =>
-                                                                                                    window.location.reload()
-                                                                                            );
-                                                                                        },
-                                                                                }
-                                                                            );
-                                                                        }
-                                                                    }
-                                                                );
-                                                            }}
-                                                            className="text-blue-600 hover:text-blue-700 cursor-pointer border-b border-gray-200"
-                                                        >
-                                                            Request to{" "}
-                                                            {
-                                                                nextStep
-                                                                    .division
-                                                                    .name
-                                                            }
-                                                        </DropdownMenuItem>
-                                                    )}
-
-                                                    {/* Reject */}
                                                     <DropdownMenuItem
                                                         onClick={() =>
                                                             setShowRejectModal(
                                                                 true
                                                             )
                                                         }
-                                                        className="text-red-600 hover:text-red-700 cursor-pointer"
+                                                        className=" hover:text-red-700 cursor-pointer"
                                                     >
                                                         Tolak Pengajuan
                                                     </DropdownMenuItem>
