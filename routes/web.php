@@ -2,14 +2,18 @@
 
 use App\Http\Controllers\DivisionController;
 use App\Http\Controllers\DocumentController;
+use App\Http\Controllers\DocumentPermissionController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\SubdivisionController;
 use App\Http\Controllers\SubmissionController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\WorkflowController;
+use App\Http\Controllers\WorkflowStepPermissionController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
+// Login page
 Route::get('/', function () {
     return Inertia::render('Auth/Login', [
         'canLogin' => Route::has('login'),
@@ -18,15 +22,8 @@ Route::get('/', function () {
         'phpVersion' => PHP_VERSION,
     ]);
 });
-Route::resource('documents', DocumentController::class);
 
-// User Management Routes (Manager only)
-Route::middleware(['auth', 'role:admin'])->group(function () {
-    Route::get('/users', [UserController::class, 'index'])->name('users.index');
-    Route::post('/users', [UserController::class, 'store'])->name('users.store');
-    Route::put('/users/{user}', [UserController::class, 'update'])->name('users.update');
-    Route::delete('/users/{user}', [UserController::class, 'destroy'])->name('users.destroy');
-});
+// PDF view
 Route::get('/view-pdf/{filename}', function ($filename) {
     $path = storage_path('app/private/submission/' . $filename);
 
@@ -38,58 +35,83 @@ Route::get('/view-pdf/{filename}', function ($filename) {
         'Content-Type' => 'application/pdf',
     ]);
 });
+
+// Dashboard
 Route::get('/dashboard', function () {
     return Inertia::render('Dashboard');
 })->middleware(['auth', 'verified'])->name('dashboard');
 
-Route::middleware('auth')->group(function () {
-    // User Management Routes (Manager only)
-    Route::middleware('can:manage-users')->group(function () {
+// Authenticated routes
+Route::middleware(['auth'])->group(function () {
 
-    });
+    // Profile routes
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
     // Employee-only routes
-    Route::middleware(['role:employee'])->group(function () {
+    Route::middleware('role:employee')->group(function () {
         Route::get('submissions/create', [SubmissionController::class, 'create'])->name('submissions.create');
         Route::post('submissions', [SubmissionController::class, 'store'])->name('submissions.store');
-  
     });
- Route::get('/submissions/division', [SubmissionController::class, 'forDivision'])
-    ->name('submissions.forDivision');
 
-    // Common submission routes for both employees and managers
-    Route::middleware(['auth'])->group(function () {
-        Route::resource('submissions', SubmissionController::class)->only(['index', 'show']);
-        Route::get('submissions/{submission}/file', [SubmissionController::class, 'file'])->name('submissions.file');
-        // web.php
-Route::post('/submissions/{submission}/request', [SubmissionController::class, 'request'])
-    ->name('submissions.request');
-
-    });
+    // Submission routes (common)
+    Route::get('/submissions/division', [SubmissionController::class, 'forDivision'])->name('submissions.forDivision');
+    Route::resource('submissions', SubmissionController::class)->only(['index', 'show']);
+    Route::get('submissions/{submission}/file', [SubmissionController::class, 'file'])->name('submissions.file');
+    Route::post('submissions/{submission}/request', [SubmissionController::class, 'request'])->name('submissions.request');
 
     // Manager-only routes
-   Route::middleware(['auth'])->group(function () {
-    Route::post('submissions/{submission}/approve', [SubmissionController::class, 'approve'])->name('submissions.approve');
-    Route::post('submissions/{submission}/reject', [SubmissionController::class, 'reject'])->name('submissions.reject');
-});
+    Route::middleware('role:manager')->group(function () {
+        Route::post('submissions/{submission}/approve', [SubmissionController::class, 'approve'])->name('submissions.approve');
+        Route::post('submissions/{submission}/reject', [SubmissionController::class, 'reject'])->name('submissions.reject');
+    });
 
-    //admin only
-    Route::middleware(['role:admin'])->group(function () {
-     Route::get('/divisions', [DivisionController::class, 'index'])->name('divisions.index');
-    Route::get('/divisions/create', [DivisionController::class, 'create'])->name('divisions.create');
-    Route::post('/divisions', [DivisionController::class, 'store'])->name('divisions.store');
-    Route::get('/divisions/{division}/edit', [DivisionController::class, 'edit'])->name('divisions.edit');
-    Route::put('/divisions/{division}', [DivisionController::class, 'update'])->name('divisions.update');
-    Route::delete('/divisions/{division}', [DivisionController::class, 'destroy'])->name('divisions.destroy');
-       Route::get('/workflows', [WorkflowController::class, 'index'])->name('workflows.index');
-    Route::post('/workflows', [WorkflowController::class, 'store'])->name('workflows.store');
-    Route::put('/workflows/{workflow}', [WorkflowController::class, 'update'])->name('workflows.update');
-    Route::delete('/workflows/{workflow}', [WorkflowController::class, 'destroy'])->name('workflows.destroy');
+    // Admin-only routes
+    Route::middleware('role:admin')->group(function () {
 
- });
-});
+        Route::resource('subdivisions', SubdivisionController::class);
+
+        // User Management
+        Route::get('/users', [UserController::class, 'index'])->name('users.index');
+        Route::post('/users', [UserController::class, 'store'])->name('users.store');
+        Route::put('/users/{user}', [UserController::class, 'update'])->name('users.update');
+        Route::delete('/users/{user}', [UserController::class, 'destroy'])->name('users.destroy');
+
+        // Division Management
+        Route::resource('divisions', DivisionController::class);
+
+        // Workflow Management
+        Route::resource('workflows', WorkflowController::class);
+
+        // Document Management
+        Route::resource('documents', DocumentController::class);
+
+        // Document Permission
+        Route::get('documents/{document}/permissions', [DocumentPermissionController::class, 'edit'])->name('document.permissions.edit');
+        Route::post('documents/{document}/permissions', [DocumentPermissionController::class, 'update'])->name('document.permissions.update');
+        Route::get('permissions', [DocumentPermissionController::class, 'index'])->name('permissions.index');
+
+    // Workflow Step Permission
+    Route::get('workflow-steps/{workflowStep}/permissions', [WorkflowStepPermissionController::class, 'index'])
+        ->name('workflow-steps.permissions.index');
+
+    Route::get('workflow-steps/{workflowStep}/permissions/create', [WorkflowStepPermissionController::class, 'create'])
+        ->name('workflow-steps.permissions.create');
+
+    Route::post('workflow-steps/{workflowStep}/permissions', [WorkflowStepPermissionController::class, 'store'])
+        ->name('workflow-steps.permissions.store');
+
+    Route::get('workflow-step-permissions/{permission}/edit', [WorkflowStepPermissionController::class, 'edit'])
+        ->name('workflow-steps.permissions.edit');
+
+    Route::put('workflow-step-permissions/{permission}', [WorkflowStepPermissionController::class, 'update'])
+        ->name('workflow-steps.permissions.update');
+
+    Route::delete('workflow-step-permissions/{permission}', [WorkflowStepPermissionController::class, 'destroy'])
+        ->name('workflow-steps.permissions.destroy'); });
+
+        
+    });
 
 require __DIR__.'/auth.php';

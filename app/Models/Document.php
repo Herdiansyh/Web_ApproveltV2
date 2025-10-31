@@ -16,4 +16,9 @@ class Document extends Model
     {
         return $this->hasMany(Workflow::class, 'document_id');
     }
+    public function permissions()
+{
+    return $this->hasMany(DocumentPermission::class);
+}
+
 }

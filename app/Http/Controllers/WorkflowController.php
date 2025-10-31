@@ -2,166 +2,207 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Division;
 use App\Models\Workflow;
 use App\Models\WorkflowStep;
+use App\Models\WorkflowStepPermission;
+use App\Models\Division;
 use App\Models\Document;
+use App\Models\Subdivision;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
+use Illuminate\Support\Facades\DB;
 
 class WorkflowController extends Controller
 {
-    public function index()
+    /**
+     * Tampilkan daftar semua workflow
+     */
+ public function index()
+{
+    $workflows = Workflow::with(['document', 'steps.division'])
+        ->orderBy('id', 'desc')
+        ->get();
+
+    $divisions = Division::orderBy('name')->get();
+    $documents = Document::orderBy('name')->get();
+    $subdivisions = Subdivision::orderBy('name')->get();
+
+    return Inertia::render('Admin/Workflow/Index', [
+        'workflows' => $workflows,
+        'divisions' => $divisions,
+        'documents' => $documents,
+        'subdivisions' => $subdivisions,
+    ]);
+}
+
+
+    /**
+     * Form untuk membuat workflow baru
+     */
+    public function create()
     {
-        $workflows = Workflow::with(['steps.division', 'document'])->get()
-            ->map(function ($wf) {
-                $wf->steps = $wf->steps->sortBy('step_order')->values();
-                return $wf;
-            });
-
-        $divisions = Division::all();
-        $documents = Document::all();
-
-        return Inertia::render('Workflows/Index', [
-            'workflows' => $workflows,
-            'divisions' => $divisions,
-            'documents' => $documents,
+        return Inertia::render('Admin/Workflow/Create', [
+            'divisions' => Division::all(),
+            'documents' => Document::all(),
+            'subdivisions' => Subdivision::all(),
         ]);
     }
 
-    /** ------------------------
-     *  SIMPAN WORKFLOW BARU (Dinamis Actions)
-     *  ------------------------ */
+    /**
+     * Simpan workflow baru
+     */
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'document_id' => 'required|exists:documents,id',
-            'steps' => 'required|array|min:1',
+            'name'             => 'required|string|max:255',
+            'description'      => 'nullable|string',
+            'division_from_id' => 'required|exists:divisions,id',
+            'division_to_id'   => 'nullable|exists:divisions,id',
+            'document_id'      => 'required|exists:documents,id',
+            'steps'            => 'required|array|min:1',
             'steps.*.division_id' => 'required|exists:divisions,id',
-            'steps.*.actions' => 'nullable|array', // 🔽 Tambahan validasi
+            'steps.*.step_order'  => 'required|integer|min:1',
+            'steps.*.role'        => 'nullable|string|max:100',
+            'steps.*.permissions' => 'array', // subdivisi + hak akses
         ]);
 
-        $workflow = Workflow::create([
-            'name' => $validated['name'],
-            'description' => $validated['description'] ?? null,
-            'document_id' => $validated['document_id'],
-            'division_from_id' => $validated['steps'][0]['division_id'],
-            'division_to_id' => $validated['steps'][count($validated['steps']) - 1]['division_id'],
-            'total_steps' => count($validated['steps']),
-        ]);
+        DB::transaction(function () use ($validated) {
+            // Simpan workflow utama
+            $workflow = Workflow::create([
+                'name'             => $validated['name'],
+                'description'      => $validated['description'] ?? null,
+                'division_from_id' => $validated['division_from_id'],
+                'division_to_id'   => $validated['division_to_id'] ?? null,
+                'document_id'      => $validated['document_id'],
+                'is_active'        => true,
+                'total_steps'      => count($validated['steps']),
+            ]);
 
-        foreach ($validated['steps'] as $index => $step) {
-            $nextStep = $validated['steps'][$index + 1] ?? null;
+            // Simpan langkah-langkah workflow
+            foreach ($validated['steps'] as $stepData) {
+                $step = WorkflowStep::create([
+                    'workflow_id'   => $workflow->id,
+                    'division_id'   => $stepData['division_id'],
+                    'step_order'    => $stepData['step_order'],
+                    'role'          => $stepData['role'] ?? null,
+                    'is_final_step' => $stepData['is_final_step'] ?? false,
+                    'instructions'  => $stepData['instructions'] ?? null,
+                    'actions'       => $stepData['actions'] ?? null,
+                ]);
 
-            // 🔽 Buat daftar action
-            $actions = $step['actions'] ?? [];
-
-            // Jika admin belum isi actions, buat otomatis
-            if (empty($actions)) {
-                $actions = ['approve', 'reject'];
-                if ($nextStep) {
-                    $nextDivision = Division::find($nextStep['division_id']);
-                    if ($nextDivision) {
-                        $actions[] = "request to " . strtolower($nextDivision->name);
+                // Simpan permission subdivisi di langkah ini (jika ada)
+                if (!empty($stepData['permissions'])) {
+                    foreach ($stepData['permissions'] as $perm) {
+                        WorkflowStepPermission::create([
+                            'workflow_step_id' => $step->id,
+                            'subdivision_id'   => $perm['subdivision_id'],
+                            'can_read'         => $perm['can_read'] ?? false,
+                            'can_create'       => $perm['can_create'] ?? false,
+                            'can_edit'         => $perm['can_edit'] ?? false,
+                            'can_delete'       => $perm['can_delete'] ?? false,
+                            'can_approve'      => $perm['can_approve'] ?? false,
+                        ]);
                     }
                 }
             }
+        });
 
-            WorkflowStep::create([
-                'workflow_id' => $workflow->id,
-                'division_id' => $step['division_id'],
-                'step_order' => $index + 1,
-                'is_final_step' => ($index + 1 === count($validated['steps'])),
-                'actions' => json_encode($actions),
-            ]);
-        }
-
-        return redirect()->route('workflows.index')
-            ->with('success', 'Workflow baru berhasil dibuat dengan action dinamis.');
+        return redirect()->route('workflows.index')->with('success', 'Workflow berhasil dibuat.');
     }
 
-    /** ------------------------
-     *  UPDATE WORKFLOW (Dinamis Actions)
-     *  ------------------------ */
-    public function update(Request $request, Workflow $workflow)
+    /**
+     * Edit workflow
+     */
+    public function edit($id)
+    {
+        $workflow = Workflow::with(['steps.permissions.subdivision', 'document'])->findOrFail($id);
+
+        return Inertia::render('Admin/Workflow/Edit', [
+            'workflow' => $workflow,
+            'divisions' => Division::all(),
+            'documents' => Document::all(),
+            'subdivisions' => Subdivision::all(),
+        ]);
+    }
+
+    /**
+     * Update workflow
+     */
+    public function update(Request $request, $id)
     {
         $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'document_id' => 'required|exists:documents,id',
-            'steps' => 'required|array|min:1',
-            'steps.*.id' => 'nullable|exists:workflow_steps,id',
-            'steps.*.division_id' => 'required|exists:divisions,id',
-            'steps.*.actions' => 'nullable|array', // 🔽 Tambahan validasi
+            'name'             => 'required|string|max:255',
+            'description'      => 'nullable|string',
+            'division_from_id' => 'required|exists:divisions,id',
+            'division_to_id'   => 'nullable|exists:divisions,id',
+            'document_id'      => 'required|exists:documents,id',
+            'steps'            => 'array',
         ]);
 
-        $workflow->update([
-            'name' => $validated['name'],
-            'description' => $validated['description'] ?? null,
-            'document_id' => $validated['document_id'],
-            'division_from_id' => $validated['steps'][0]['division_id'],
-            'division_to_id' => $validated['steps'][count($validated['steps']) - 1]['division_id'],
-            'total_steps' => count($validated['steps']),
-        ]);
+        DB::transaction(function () use ($validated, $id) {
+            $workflow = Workflow::findOrFail($id);
+            $workflow->update([
+                'name'             => $validated['name'],
+                'description'      => $validated['description'] ?? null,
+                'division_from_id' => $validated['division_from_id'],
+                'division_to_id'   => $validated['division_to_id'] ?? null,
+                'document_id'      => $validated['document_id'],
+                'total_steps'      => isset($validated['steps']) ? count($validated['steps']) : $workflow->total_steps,
+            ]);
 
-        foreach ($validated['steps'] as $index => $step) {
-            $nextStep = $validated['steps'][$index + 1] ?? null;
-            $actions = $step['actions'] ?? [];
+            if (isset($validated['steps'])) {
+                // Hapus semua step dan permission lama
+                $workflow->steps()->each(function ($step) {
+                    $step->permissions()->delete();
+                });
+                $workflow->steps()->delete();
 
-            // 🔽 Jika actions kosong, isi otomatis
-            if (empty($actions)) {
-                $actions = ['approve', 'reject'];
-                if ($nextStep) {
-                    $nextDivision = Division::find($nextStep['division_id']);
-                    if ($nextDivision) {
-                        $actions[] = "request to " . strtolower($nextDivision->name);
+                // Simpan step dan permission baru
+                foreach ($validated['steps'] as $stepData) {
+                    $step = WorkflowStep::create([
+                        'workflow_id'   => $workflow->id,
+                        'division_id'   => $stepData['division_id'],
+                        'step_order'    => $stepData['step_order'],
+                        'role'          => $stepData['role'] ?? null,
+                        'is_final_step' => $stepData['is_final_step'] ?? false,
+                        'instructions'  => $stepData['instructions'] ?? null,
+                        'actions'       => $stepData['actions'] ?? null,
+                    ]);
+
+                    if (!empty($stepData['permissions'])) {
+                        foreach ($stepData['permissions'] as $perm) {
+                            WorkflowStepPermission::create([
+                                'workflow_step_id' => $step->id,
+                                'subdivision_id'   => $perm['subdivision_id'],
+                                'can_read'         => $perm['can_read'] ?? false,
+                                'can_create'       => $perm['can_create'] ?? false,
+                                'can_edit'         => $perm['can_edit'] ?? false,
+                                'can_delete'       => $perm['can_delete'] ?? false,
+                                'can_approve'      => $perm['can_approve'] ?? false,
+                            ]);
+                        }
                     }
                 }
             }
+        });
 
-            if (isset($step['id'])) {
-                WorkflowStep::where('id', $step['id'])->update([
-                    'division_id' => $step['division_id'],
-                    'step_order' => $index + 1,
-                    'is_final_step' => ($index + 1 === count($validated['steps'])),
-                    'actions' => json_encode($actions),
-                ]);
-            } else {
-                WorkflowStep::create([
-                    'workflow_id' => $workflow->id,
-                    'division_id' => $step['division_id'],
-                    'step_order' => $index + 1,
-                    'is_final_step' => ($index + 1 === count($validated['steps'])),
-                    'actions' => json_encode($actions),
-                ]);
-            }
-        }
-
-        return redirect()->route('workflows.index')
-            ->with('success', 'Workflow berhasil diperbarui dengan action dinamis.');
+        return redirect()->route('workflows.index')->with('success', 'Workflow berhasil diperbarui.');
     }
 
-    public function edit(Workflow $workflow)
+    /**
+     * Hapus workflow
+     */
+    public function destroy($id)
     {
-        $workflow->load(['steps.division', 'document']);
-        $workflow->steps = $workflow->steps->sortBy('step_order')->values();
-        $divisions = Division::all();
-        $documents = Document::all();
+        $workflow = Workflow::findOrFail($id);
+        DB::transaction(function () use ($workflow) {
+            $workflow->steps()->each(function ($step) {
+                $step->permissions()->delete();
+            });
+            $workflow->steps()->delete();
+            $workflow->delete();
+        });
 
-        return Inertia::render('Workflows/Edit', [
-            'workflow' => $workflow,
-            'divisions' => $divisions,
-            'documents' => $documents,
-        ]);
-    }
-
-    public function destroy(Workflow $workflow)
-    {
-        $workflow->delete();
-
-        return redirect()->route('workflows.index')
-            ->with('success', 'Workflow berhasil dihapus.');
+        return redirect()->route('workflows.index')->with('success', 'Workflow berhasil dihapus.');
     }
 }

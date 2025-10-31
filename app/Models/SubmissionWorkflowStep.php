@@ -12,6 +12,8 @@ class SubmissionWorkflowStep extends Model
     protected $fillable = [
         'submission_id',
         'division_id',
+        'subdivision_id',
+
         'step_order',
         'status',       // pending, approved, rejected
         'approver_id',  // user yang approve step

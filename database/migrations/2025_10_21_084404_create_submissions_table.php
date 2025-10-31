@@ -30,6 +30,7 @@ return new class extends Migration
             $table->foreignId('approved_by')->nullable()->constrained('users')->onDelete('set null');
             $table->text('approval_note')->nullable();
             $table->text('notes')->nullable();
+$table->foreignId('document_id')->nullable()->constrained('documents')->onDelete('set null');
 
             // posisi watermark
             $table->float('watermark_x')->nullable();

@@ -1,6 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
-import { Head, router } from "@inertiajs/react";
+import { Head, router, useForm } from "@inertiajs/react";
 import { Card } from "@/Components/ui/card";
 import { Button } from "@/Components/ui/button";
 import {
@@ -11,7 +11,6 @@ import {
     TableHeader,
     TableRow,
 } from "@/Components/ui/table";
-import { useForm } from "@inertiajs/react";
 import { Input } from "@/Components/ui/input";
 import { Label } from "@/Components/ui/label";
 import {
@@ -23,71 +22,78 @@ import {
 } from "@/Components/ui/select";
 import Sidebar from "@/Components/Sidebar";
 import Swal from "sweetalert2";
-import { X } from "lucide-react"; // untuk ikon hapus filter
+import { X } from "lucide-react";
 
-export default function Index({ auth, users, divisions, roles }) {
+export default function Index({ auth, users, divisions, subdivisions, roles }) {
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [editingUser, setEditingUser] = useState(null);
-    const [selectedDivision, setSelectedDivision] = useState(""); // filter divisi
+    const [selectedDivision, setSelectedDivision] = useState("");
     const [search, setSearch] = useState("");
+    const [filteredSubdivisions, setFilteredSubdivisions] = useState([]);
+
     const { data, setData, post, put, processing, errors, reset } = useForm({
         name: "",
         email: "",
         password: "",
         role: "",
         division_id: "",
+        subdivision_id: "",
     });
-    const handleSearch = (e) => {
-        setSearch(e.target.value);
-    };
+
+    const handleSearch = (e) => setSearch(e.target.value);
+
+    // Filter subdiv berdasarkan division yang dipilih di form
+    useEffect(() => {
+        if (data.division_id) {
+            const filtered = subdivisions.filter(
+                (sub) => String(sub.division_id) === String(data.division_id)
+            );
+            setFilteredSubdivisions(filtered);
+        } else {
+            setFilteredSubdivisions([]);
+        }
+    }, [data.division_id, subdivisions]);
 
     const filteredUsers = users.data.filter((user) => {
-        // Jika ada selectedDivision, cocokkan division_id
         const matchesDivision = selectedDivision
             ? String(user.division_id) === String(selectedDivision)
             : true;
-
-        // Jika ada input search, cocokkan nama
         const matchesSearch = search
             ? user.name.toLowerCase().includes(search.toLowerCase())
             : true;
-
-        // Hanya tampilkan user yang cocok keduanya
         return matchesDivision && matchesSearch;
     });
 
     const handleSubmit = (e) => {
         e.preventDefault();
 
-        if (editingUser) {
-            put(route("users.update", editingUser.id), {
-                onSuccess: () => {
-                    setEditingUser(null);
-                    reset();
-                    Swal.fire({
-                        icon: "success",
-                        title: "User updated",
-                        text: "The user has been successfully updated!",
-                        timer: 2000,
-                        showConfirmButton: false,
-                    });
-                },
-            });
-        } else {
-            post(route("users.store"), {
-                onSuccess: () => {
-                    setShowCreateModal(false);
-                    reset();
-                    Swal.fire({
-                        icon: "success",
-                        title: "User created",
-                        text: "A new user has been successfully created!",
-                        timer: 2000,
-                        showConfirmButton: false,
-                    });
-                },
-            });
-        }
+        const action = editingUser
+            ? put(route("users.update", editingUser.id), {
+                  onSuccess: () => {
+                      setEditingUser(null);
+                      reset();
+                      Swal.fire({
+                          icon: "success",
+                          title: "User updated",
+                          text: "The user has been successfully updated!",
+                          timer: 2000,
+                          showConfirmButton: false,
+                      });
+                  },
+              })
+            : post(route("users.store"), {
+                  onSuccess: () => {
+                      setShowCreateModal(false);
+                      reset();
+                      Swal.fire({
+                          icon: "success",
+                          title: "User created",
+                          text: "A new user has been successfully created!",
+                          timer: 2000,
+                          showConfirmButton: false,
+                      });
+                  },
+              });
     };
 
     const handleEdit = (user) => {
@@ -97,7 +103,8 @@ export default function Index({ auth, users, divisions, roles }) {
             email: user.email,
             password: "",
             role: user.role,
-            division_id: user.division_id,
+            division_id: user.division_id || "",
+            subdivision_id: user.subdivision_id || "",
         });
     };
 
@@ -107,8 +114,6 @@ export default function Index({ auth, users, divisions, roles }) {
             text: "You won't be able to revert this!",
             icon: "warning",
             showCancelButton: true,
-            confirmButtonColor: "#3085d6",
-            cancelButtonColor: "#d33",
             confirmButtonText: "Yes, delete it!",
         }).then((result) => {
             if (result.isConfirmed) {
@@ -116,7 +121,7 @@ export default function Index({ auth, users, divisions, roles }) {
                     onSuccess: () => {
                         Swal.fire(
                             "Deleted!",
-                            "The user has been deleted.",
+                            "User has been deleted.",
                             "success"
                         );
                     },
@@ -128,30 +133,23 @@ export default function Index({ auth, users, divisions, roles }) {
     return (
         <AuthenticatedLayout
             user={auth.user}
-            header={
-                <h2 className="font-semibold text-xl text-gray-800 leading-tight">
-                    User Management
-                </h2>
-            }
+            header={<h2 className="font-semibold text-xl">User Management</h2>}
         >
             <Head title="User Management" />
             <div className="flex min-h-screen bg-background">
                 <Sidebar />
-
                 <div className="py-12 w-full overflow-auto relative">
                     <div className="mx-auto p-6 lg:px-8 ">
                         <h1 className="absolute top-5 text-2xl font-bold">
-                            User Managements
+                            User Management
                         </h1>
                         <Card className="p-6">
-                            {/* Header dan Filter */}
                             {/* Filter & Add */}
                             <div className="flex flex-col md:flex-row justify-between gap-3 mb-4">
                                 <div className="flex flex-col md:flex-row gap-2 w-full">
                                     <Input
                                         className="md:w-1/2"
                                         placeholder="Search User..."
-                                        style={{ borderRadius: "8px" }}
                                         value={search}
                                         onChange={handleSearch}
                                     />
@@ -161,10 +159,7 @@ export default function Index({ auth, users, divisions, roles }) {
                                             setSelectedDivision(value)
                                         }
                                     >
-                                        <SelectTrigger
-                                            className="md:w-1/4 border border-gray-300"
-                                            style={{ borderRadius: "8px" }}
-                                        >
+                                        <SelectTrigger className="md:w-1/4 border border-gray-300">
                                             <SelectValue placeholder="Filter by Division..." />
                                         </SelectTrigger>
                                         <SelectContent>
@@ -187,7 +182,6 @@ export default function Index({ auth, users, divisions, roles }) {
                                         setShowCreateModal(true);
                                     }}
                                     className="w-[180px] h-9 text-sm"
-                                    style={{ borderRadius: "8px" }}
                                 >
                                     + Add New User
                                 </Button>
@@ -215,7 +209,7 @@ export default function Index({ auth, users, divisions, roles }) {
                                 </div>
                             )}
 
-                            {/* Tabel Users */}
+                            {/* Table */}
                             <Table>
                                 <TableHeader>
                                     <TableRow>
@@ -223,6 +217,7 @@ export default function Index({ auth, users, divisions, roles }) {
                                         <TableHead>Email</TableHead>
                                         <TableHead>Role</TableHead>
                                         <TableHead>Division</TableHead>
+                                        <TableHead>Subdivision</TableHead>
                                         <TableHead>Actions</TableHead>
                                     </TableRow>
                                 </TableHeader>
@@ -247,6 +242,10 @@ export default function Index({ auth, users, divisions, roles }) {
                                                         "N/A"}
                                                 </TableCell>
                                                 <TableCell>
+                                                    {user.subdivision?.name ||
+                                                        "-"}
+                                                </TableCell>
+                                                <TableCell>
                                                     <div className="flex space-x-2">
                                                         <Button
                                                             variant="outline"
@@ -254,10 +253,6 @@ export default function Index({ auth, users, divisions, roles }) {
                                                             onClick={() =>
                                                                 handleEdit(user)
                                                             }
-                                                            style={{
-                                                                borderRadius:
-                                                                    "15px",
-                                                            }}
                                                         >
                                                             Edit
                                                         </Button>
@@ -271,10 +266,6 @@ export default function Index({ auth, users, divisions, roles }) {
                                                                         user.id
                                                                     )
                                                                 }
-                                                                style={{
-                                                                    borderRadius:
-                                                                        "15px",
-                                                                }}
                                                             >
                                                                 Delete
                                                             </Button>
@@ -286,11 +277,10 @@ export default function Index({ auth, users, divisions, roles }) {
                                     ) : (
                                         <TableRow>
                                             <TableCell
-                                                colSpan="5"
+                                                colSpan="6"
                                                 className="text-center text-gray-500"
                                             >
-                                                No users found for this
-                                                division.
+                                                No users found.
                                             </TableCell>
                                         </TableRow>
                                     )}
@@ -308,30 +298,26 @@ export default function Index({ auth, users, divisions, roles }) {
                         <h3 className="text-lg font-semibold mb-4">
                             {editingUser ? "Edit User" : "Create New User"}
                         </h3>
-
                         <form onSubmit={handleSubmit}>
                             <div className="space-y-4">
                                 <div>
-                                    <Label htmlFor="name">Name</Label>
+                                    <Label>Name</Label>
                                     <Input
-                                        id="name"
-                                        type="text"
                                         value={data.name}
                                         onChange={(e) =>
                                             setData("name", e.target.value)
                                         }
                                     />
                                     {errors.name && (
-                                        <p className="text-sm text-red-600 mt-1">
+                                        <p className="text-sm text-red-600">
                                             {errors.name}
                                         </p>
                                     )}
                                 </div>
 
                                 <div>
-                                    <Label htmlFor="email">Email</Label>
+                                    <Label>Email</Label>
                                     <Input
-                                        id="email"
                                         type="email"
                                         value={data.email}
                                         onChange={(e) =>
@@ -339,35 +325,25 @@ export default function Index({ auth, users, divisions, roles }) {
                                         }
                                     />
                                     {errors.email && (
-                                        <p className="text-sm text-red-600 mt-1">
+                                        <p className="text-sm text-red-600">
                                             {errors.email}
                                         </p>
                                     )}
                                 </div>
 
                                 <div>
-                                    <Label htmlFor="password">
-                                        {editingUser
-                                            ? "Password (leave blank to keep current)"
-                                            : "Password"}
-                                    </Label>
+                                    <Label>Password</Label>
                                     <Input
-                                        id="password"
                                         type="password"
                                         value={data.password}
                                         onChange={(e) =>
                                             setData("password", e.target.value)
                                         }
                                     />
-                                    {errors.password && (
-                                        <p className="text-sm text-red-600 mt-1">
-                                            {errors.password}
-                                        </p>
-                                    )}
                                 </div>
 
                                 <div>
-                                    <Label htmlFor="role">Role</Label>
+                                    <Label>Role</Label>
                                     <Select
                                         value={data.role}
                                         onValueChange={(value) =>
@@ -391,15 +367,10 @@ export default function Index({ auth, users, divisions, roles }) {
                                             ))}
                                         </SelectContent>
                                     </Select>
-                                    {errors.role && (
-                                        <p className="text-sm text-red-600 mt-1">
-                                            {errors.role}
-                                        </p>
-                                    )}
                                 </div>
 
                                 <div>
-                                    <Label htmlFor="division">Division</Label>
+                                    <Label>Division</Label>
                                     <Select
                                         value={data.division_id}
                                         onValueChange={(value) =>
@@ -413,18 +384,48 @@ export default function Index({ auth, users, divisions, roles }) {
                                             {divisions.map((division) => (
                                                 <SelectItem
                                                     key={division.id}
-                                                    value={division.id}
+                                                    value={String(division.id)}
                                                 >
                                                     {division.name}
                                                 </SelectItem>
                                             ))}
                                         </SelectContent>
                                     </Select>
-                                    {errors.division_id && (
-                                        <p className="text-sm text-red-600 mt-1">
-                                            {errors.division_id}
-                                        </p>
-                                    )}
+                                </div>
+
+                                <div>
+                                    <Label>Subdivision</Label>
+                                    <Select
+                                        value={data.subdivision_id}
+                                        onValueChange={(value) =>
+                                            setData("subdivision_id", value)
+                                        }
+                                        disabled={!data.division_id}
+                                    >
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Select subdivision" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {filteredSubdivisions.length > 0 ? (
+                                                filteredSubdivisions.map(
+                                                    (sub) => (
+                                                        <SelectItem
+                                                            key={sub.id}
+                                                            value={String(
+                                                                sub.id
+                                                            )}
+                                                        >
+                                                            {sub.name}
+                                                        </SelectItem>
+                                                    )
+                                                )
+                                            ) : (
+                                                <div className="text-gray-500 px-2 py-1 text-sm">
+                                                    No subdivision available
+                                                </div>
+                                            )}
+                                        </SelectContent>
+                                    </Select>
                                 </div>
                             </div>
 
@@ -437,19 +438,10 @@ export default function Index({ auth, users, divisions, roles }) {
                                         setEditingUser(null);
                                         reset();
                                     }}
-                                    style={{
-                                        borderRadius: "15px",
-                                    }}
                                 >
                                     Cancel
                                 </Button>
-                                <Button
-                                    type="submit"
-                                    disabled={processing}
-                                    style={{
-                                        borderRadius: "15px",
-                                    }}
-                                >
+                                <Button type="submit" disabled={processing}>
                                     {editingUser ? "Update" : "Create"}
                                 </Button>
                             </div>

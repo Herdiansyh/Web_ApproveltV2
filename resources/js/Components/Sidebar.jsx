@@ -8,9 +8,10 @@ import {
     CheckCircle2,
     LogOut,
     Menu,
-    ListChecks,
     Workflow,
     DockIcon,
+    Shield,
+    Layers,
 } from "lucide-react";
 
 import {
@@ -55,15 +56,12 @@ export default function Sidebar() {
                       active: route().current("dashboard"),
                       icon: <FileText className="h-5 w-5" />,
                   },
-                  // 🔹 Lihat List Persetujuan (khusus divisi yang menerima pengajuan)
                   {
                       label: "Lihat List Persetujuan",
                       href: route("submissions.forDivision"),
                       active: route().current("submissions.forDivision"),
                       icon: <ListCheck className="h-5 w-5" />,
                   },
-
-                  // 🔹 Lihat Pengajuan (untuk melihat pengajuan yang dibuat user)
                   {
                       label: "Lihat Pengajuan",
                       href: route("submissions.index"),
@@ -91,12 +89,32 @@ export default function Sidebar() {
                       href: route("workflows.index"),
                       active: route().current("workflows.*"),
                       icon: <Workflow className="h-5 w-5" />,
-                  }, // 🔹 Document Management (baru ditambahkan)
+                  },
                   {
                       label: "Document Management",
                       href: route("documents.index"),
                       active: route().current("documents.*"),
                       icon: <DockIcon className="h-5 w-5" />,
+                  },
+                  // 🔹 Tambahan: Permissions
+                  {
+                      label: "Permissions",
+                      href: route("permissions.index"),
+                      active: route().current("permissions.*"),
+                      icon: <Shield className="h-5 w-5" />,
+                  },
+                  // 🔹 Tambahan: Workflow Step Permissions
+                  {
+                      label: "Workflow Step Permissions",
+                      href: route("workflow-steps.permissions.index", 1), // default step id
+                      active: route().current("workflow-steps.permissions.*"),
+                      icon: <Shield className="h-5 w-5" />,
+                  },
+                  {
+                      label: "Subdivision Management",
+                      href: route("subdivisions.index"),
+                      active: route().current("subdivisions.index"),
+                      icon: <Layers className="h-5 w-5" />,
                   },
               ]
             : []),

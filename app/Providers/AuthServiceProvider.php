@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Models\Document;
+use App\Policies\DocumentPolicy;
 use Illuminate\Foundation\Support\Providers\AuthServiceProvider as ServiceProvider;
 use Illuminate\Support\Facades\Gate;
 use App\Models\Submission;
@@ -16,6 +18,8 @@ class AuthServiceProvider extends ServiceProvider
      */
     protected $policies = [
         Submission::class => SubmissionPolicy::class,
+            Document::class => DocumentPolicy::class, // nanti kita buat
+
     ];
 
     /**

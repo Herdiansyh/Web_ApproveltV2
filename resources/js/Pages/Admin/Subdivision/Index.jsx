@@ -13,42 +13,33 @@ import {
 } from "@/Components/ui/table";
 import Sidebar from "@/Components/Sidebar";
 import Swal from "sweetalert2";
-import DivisionModal from "./Create.jsx";
+import SubdivisionModal from "./Create.jsx";
 import { Input } from "@/Components/ui/input.jsx";
-import {
-    Dialog,
-    DialogContent,
-    DialogHeader,
-    DialogTitle,
-    DialogFooter,
-} from "@/Components/ui/dialog";
 import { X } from "lucide-react";
 
-export default function Index({ auth, divisions }) {
+export default function Index({ auth, subdivisions, divisions }) {
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [editingDivision, setEditingDivision] = useState(null);
+    const [editingSubdivision, setEditingSubdivision] = useState(null);
     const [search, setSearch] = useState("");
     const [selectedDivision, setSelectedDivision] = useState("");
-    const [selectedDivisionForSub, setSelectedDivisionForSub] = useState(null); // ⬅️ for subdivision modal
 
-    const handleSearch = (e) => setSearch(e.target.value);
-
-    const filteredDivisions = divisions.filter((division) => {
-        const matchSearch = division.name
+    const filteredSubdivisions = subdivisions.filter((sub) => {
+        const matchSearch = sub.name
             .toLowerCase()
             .includes(search.toLowerCase());
         const matchSelect =
             selectedDivision === "" ||
-            division.name.toLowerCase() === selectedDivision.toLowerCase();
+            sub.division?.name?.toLowerCase() ===
+                selectedDivision.toLowerCase();
         return matchSearch && matchSelect;
     });
 
-    const handleEdit = (division) => {
-        setEditingDivision(division);
+    const handleEdit = (subdivision) => {
+        setEditingSubdivision(subdivision);
         setIsModalOpen(true);
     };
 
-    const handleDelete = (divisionId) => {
+    const handleDelete = (id) => {
         Swal.fire({
             title: "Are you sure?",
             text: "This action cannot be undone.",
@@ -59,9 +50,13 @@ export default function Index({ auth, divisions }) {
             confirmButtonText: "Yes, delete it!",
         }).then((result) => {
             if (result.isConfirmed) {
-                router.delete(route("divisions.destroy", divisionId), {
+                router.delete(route("subdivisions.destroy", id), {
                     onSuccess: () => {
-                        Swal.fire("Deleted!", "Division deleted.", "success");
+                        Swal.fire(
+                            "Deleted!",
+                            "Subdivision deleted.",
+                            "success"
+                        );
                     },
                 });
             }
@@ -72,72 +67,70 @@ export default function Index({ auth, divisions }) {
         <AuthenticatedLayout
             user={auth.user}
             header={
-                <h2 className="font-semibold text-xl text-gray-800">
-                    Division Management
+                <h2 className="font-semibold text-xl text-gray-800 leading-tight">
+                    Subdivision Management
                 </h2>
             }
         >
-            <Head title="Division Management" />
+            <Head title="Subdivision Management" />
 
             <div className="flex min-h-screen bg-background">
                 <Sidebar />
                 <div className="py-12 w-full overflow-auto relative">
                     <div className="mx-auto p-6 lg:px-8">
                         <h1 className="text-2xl font-bold absolute top-5">
-                            Divisions
+                            Subdivisions
                         </h1>
 
                         <Card className="p-6">
-                            {/* Filter & Add Button */}
+                            {/* Filter dan tombol tambah */}
                             <div className="flex flex-col md:flex-row justify-between gap-3 mb-4">
                                 <div className="flex flex-col md:flex-row gap-2 w-full">
                                     <Input
                                         className="md:w-1/2"
-                                        placeholder="Search Division..."
+                                        placeholder="Search Subdivision..."
+                                        style={{ borderRadius: "8px" }}
                                         value={search}
-                                        onChange={handleSearch}
+                                        onChange={(e) =>
+                                            setSearch(e.target.value)
+                                        }
                                     />
                                 </div>
 
                                 <Button
                                     onClick={() => {
-                                        setEditingDivision(null);
+                                        setEditingSubdivision(null);
                                         setIsModalOpen(true);
                                     }}
-                                    className="w-[180px] h-9 text-sm"
+                                    className="w-[200px] h-9 text-sm"
+                                    style={{ borderRadius: "8px" }}
                                 >
-                                    + Add New Division
+                                    + Add New Subdivision
                                 </Button>
                             </div>
 
-                            {/* Table */}
+                            {/* Tabel Subdivisions */}
                             <Table>
                                 <TableHeader>
                                     <TableRow>
                                         <TableHead>Name</TableHead>
+                                        <TableHead>Division</TableHead>
                                         <TableHead>Description</TableHead>
                                         <TableHead>Actions</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {filteredDivisions.length > 0 ? (
-                                        filteredDivisions.map((division) => (
-                                            <TableRow key={division.id}>
+                                    {filteredSubdivisions.length > 0 ? (
+                                        filteredSubdivisions.map((sub) => (
+                                            <TableRow key={sub.id}>
                                                 <TableCell>
-                                                    <button
-                                                        onClick={() =>
-                                                            setSelectedDivisionForSub(
-                                                                division
-                                                            )
-                                                        }
-                                                        className="text-blue-600 hover:underline"
-                                                    >
-                                                        {division.name}
-                                                    </button>
+                                                    {sub.name}
                                                 </TableCell>
                                                 <TableCell>
-                                                    {division.description ||
-                                                        "-"}
+                                                    {sub.division?.name || "-"}
+                                                </TableCell>
+                                                <TableCell>
+                                                    {sub.description || "-"}
                                                 </TableCell>
                                                 <TableCell>
                                                     <div className="flex space-x-2">
@@ -145,10 +138,12 @@ export default function Index({ auth, divisions }) {
                                                             variant="outline"
                                                             size="sm"
                                                             onClick={() =>
-                                                                handleEdit(
-                                                                    division
-                                                                )
+                                                                handleEdit(sub)
                                                             }
+                                                            style={{
+                                                                borderRadius:
+                                                                    "15px",
+                                                            }}
                                                         >
                                                             Edit
                                                         </Button>
@@ -157,9 +152,13 @@ export default function Index({ auth, divisions }) {
                                                             size="sm"
                                                             onClick={() =>
                                                                 handleDelete(
-                                                                    division.id
+                                                                    sub.id
                                                                 )
                                                             }
+                                                            style={{
+                                                                borderRadius:
+                                                                    "15px",
+                                                            }}
                                                         >
                                                             Delete
                                                         </Button>
@@ -170,10 +169,10 @@ export default function Index({ auth, divisions }) {
                                     ) : (
                                         <TableRow>
                                             <TableCell
-                                                colSpan={3}
+                                                colSpan={4}
                                                 className="text-center text-gray-500"
                                             >
-                                                No divisions found.
+                                                No subdivisions found.
                                             </TableCell>
                                         </TableRow>
                                     )}
@@ -184,71 +183,15 @@ export default function Index({ auth, divisions }) {
                 </div>
             </div>
 
-            {/* Modal Add/Edit Division */}
-            <DivisionModal
+            <SubdivisionModal
                 isOpen={isModalOpen}
                 onClose={() => {
                     setIsModalOpen(false);
-                    setEditingDivision(null);
+                    setEditingSubdivision(null);
                 }}
-                division={editingDivision}
+                subdivision={editingSubdivision}
+                divisions={divisions}
             />
-
-            {/* 🔹 Modal List Subdivisions */}
-            <Dialog
-                open={!!selectedDivisionForSub}
-                onOpenChange={() => setSelectedDivisionForSub(null)}
-            >
-                <DialogContent className="max-w-2xl">
-                    <DialogHeader>
-                        <DialogTitle>
-                            Subdivisions in {selectedDivisionForSub?.name}
-                        </DialogTitle>
-                    </DialogHeader>
-
-                    <div className="space-y-3">
-                        {selectedDivisionForSub?.subdivisions?.length > 0 ? (
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead>Name</TableHead>
-                                        <TableHead>Description</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {selectedDivisionForSub.subdivisions.map(
-                                        (sub) => (
-                                            <TableRow key={sub.id}>
-                                                <TableCell>
-                                                    {sub.name}
-                                                </TableCell>
-                                                <TableCell>
-                                                    {sub.description || "-"}
-                                                </TableCell>
-                                            </TableRow>
-                                        )
-                                    )}
-                                </TableBody>
-                            </Table>
-                        ) : (
-                            <p className="text-gray-500 text-center py-6">
-                                No subdivisions found.
-                            </p>
-                        )}
-                    </div>
-
-                    <DialogFooter>
-                        <Button
-                            onClick={() => {
-                                setSelectedDivisionForSub(null);
-                            }}
-                            variant="outline"
-                        >
-                            Close
-                        </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
         </AuthenticatedLayout>
     );
 }

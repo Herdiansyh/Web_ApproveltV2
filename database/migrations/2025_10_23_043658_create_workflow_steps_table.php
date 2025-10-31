@@ -9,20 +9,27 @@
         public function up(): void
         {
             Schema::create('workflow_steps', function (Blueprint $table) {
-                $table->id();
-                $table->foreignId('workflow_id')->constrained('workflows')->onDelete('cascade');
-                $table->foreignId('division_id')->constrained('divisions')->onDelete('cascade');
-                $table->integer('step_order'); // Urutan proses (1, 2, 3, dst)
+    $table->id();
+    $table->foreignId('workflow_id')->constrained('workflows')->onDelete('cascade');
+    $table->foreignId('division_id')->constrained('divisions')->onDelete('cascade');
+    $table->integer('step_order'); // Urutan proses (1, 2, 3, dst)
 
-                // 🔽 Tambahan opsional (berguna kalau kamu ingin sistem approval dinamis)
-                $table->string('role')->nullable(); // Role/divisi khusus untuk step ini
-                $table->boolean('is_final_step')->default(false); // Menandai step terakhir
-                $table->text('instructions')->nullable(); // Catatan atau petunjuk step
-    // Tambahkan kolom ini
-        $table->json('actions')->nullable(); // misalnya ["approve", "reject", "request to direktur"]
+    // Opsional dan tambahan
+    $table->string('role')->nullable(); // Role/divisi khusus untuk step ini
+    $table->boolean('is_final_step')->default(false);
+    $table->text('instructions')->nullable();
+    $table->json('actions')->nullable(); // misalnya ["approve", "reject", "request to direktur"]
 
-                $table->timestamps();
-            });
+    // 🔽 Tambahan hak akses subdivisi
+    $table->boolean('can_create')->default(false);
+    $table->boolean('can_edit')->default(false);
+    $table->boolean('can_delete')->default(false);
+    $table->boolean('can_approve')->default(false);
+    $table->boolean('can_reject')->default(false);
+
+    $table->timestamps();
+});
+
         }
 
         public function down(): void

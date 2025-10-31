@@ -19,8 +19,9 @@ class Submission extends Model
         'approval_note',
         'signature_path',
         'approved_at',
-        'approved_by',
+        'approved_by','division_id',
         'notes',
+        'document_id', // ✅ tambahkan ini
         'current_step', // urutan langkah sekarang
         'watermark_x',
         'watermark_y',

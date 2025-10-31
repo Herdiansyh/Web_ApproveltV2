@@ -9,12 +9,13 @@ use Inertia\Inertia;
 class DivisionController extends Controller
 {
     // Menampilkan daftar division
-    public function index()
-    {
-        return Inertia::render('Division/Index', [
-            'divisions' => Division::all(),
-        ]);
-    }
+ public function index()
+{
+    return Inertia::render('Division/Index', [
+        'divisions' => Division::with('subdivisions')->get(),
+    ]);
+}
+
 
     // Halaman buat division baru
     public function create()

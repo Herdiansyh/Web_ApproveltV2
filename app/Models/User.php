@@ -12,52 +12,44 @@ class User extends Authenticatable
 {
     use HasFactory, Notifiable;
 
-    /**
-     * Mass assignable attributes
-     */
     protected $fillable = [
         'name',
         'email',
         'password',
         'division_id',
+        'subdivision_id', // ✅ tambahkan ini
         'role',
     ];
 
-    /**
-     * Hidden attributes for arrays
-     */
     protected $hidden = [
         'password',
         'remember_token',
     ];
 
-    /**
-     * Attribute casting
-     */
     protected $casts = [
         'email_verified_at' => 'datetime',
         'password' => 'hashed',
     ];
 
-    /**
-     * User belongs to a division
-     */
+    // Relasi ke Divisi
     public function division(): BelongsTo
     {
         return $this->belongsTo(Division::class);
     }
 
-    /**
-     * User has many submissions
-     */
+    // Relasi ke Subdivisi
+    public function subdivision(): BelongsTo
+    {
+        return $this->belongsTo(Subdivision::class);
+    }
+
+    // Relasi ke submission
     public function submissions(): HasMany
     {
         return $this->hasMany(Submission::class);
     }
 
-    /**
-     * Role check helpers
-     */
+    // Helper role
     public function isManager(): bool
     {
         return $this->role === 'manager';
