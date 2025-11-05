@@ -1,5 +1,5 @@
 import React, { useEffect } from "react";
-import { useForm } from "@inertiajs/react";
+import { useForm, router } from "@inertiajs/react";
 import {
     Dialog,
     DialogContent,
@@ -38,26 +38,70 @@ export default function Create({ isOpen, onClose, subdivision, divisions }) {
         }
     }, [subdivision]);
 
+    // Fungsi untuk menampilkan notifikasi error
+    const showErrorAlert = (title, text = "") => {
+        Swal.fire({
+            icon: "error",
+            title: title,
+            text: text,
+            confirmButtonText: "OK",
+            confirmButtonColor: "#dc2626",
+        });
+    };
+
+    // Fungsi untuk menampilkan notifikasi error dari response server
+    const showServerErrorAlert = (error) => {
+        let errorMessage = "Terjadi kesalahan yang tidak diketahui";
+
+        if (typeof error === "string") {
+            errorMessage = error;
+        } else if (error?.message) {
+            errorMessage = error.message;
+        } else if (typeof error === "object") {
+            errorMessage = Object.values(error).flat().join(", ");
+        }
+
+        showErrorAlert("Operation Failed", errorMessage);
+    };
+
     const handleSubmit = (e) => {
         e.preventDefault();
 
-        const action = subdivision
-            ? put(route("subdivisions.update", subdivision.id))
-            : post(route("subdivisions.store"));
-
-        action.then(() => {
-            Swal.fire({
-                icon: "success",
-                title: subdivision ? "Updated" : "Created",
-                text: `Subdivision ${
-                    subdivision ? "updated" : "created"
-                } successfully!`,
-                timer: 2000,
-                showConfirmButton: false,
+        if (subdivision) {
+            put(route("subdivisions.update", subdivision.id), {
+                onSuccess: () => {
+                    reset();
+                    onClose();
+                    Swal.fire({
+                        icon: "success",
+                        title: "Subdivision updated",
+                        text: "The subdivision has been successfully updated!",
+                        timer: 2000,
+                        showConfirmButton: false,
+                    });
+                },
+                onError: (errors) => {
+                    showServerErrorAlert(errors);
+                },
             });
-            reset();
-            onClose();
-        });
+        } else {
+            post(route("subdivisions.store"), {
+                onSuccess: () => {
+                    reset();
+                    onClose();
+                    Swal.fire({
+                        icon: "success",
+                        title: "Subdivision created",
+                        text: "A new subdivision has been successfully created!",
+                        timer: 2000,
+                        showConfirmButton: false,
+                    });
+                },
+                onError: (errors) => {
+                    showServerErrorAlert(errors);
+                },
+            });
+        }
     };
 
     return (
@@ -78,6 +122,7 @@ export default function Create({ isOpen, onClose, subdivision, divisions }) {
                             id="name"
                             value={data.name}
                             onChange={(e) => setData("name", e.target.value)}
+                            className={errors.name ? "border-red-500" : ""}
                         />
                         {errors.name && (
                             <p className="text-sm text-red-600 mt-1">
@@ -94,7 +139,11 @@ export default function Create({ isOpen, onClose, subdivision, divisions }) {
                                 setData("division_id", value)
                             }
                         >
-                            <SelectTrigger className="w-full">
+                            <SelectTrigger
+                                className={`w-full ${
+                                    errors.division_id ? "border-red-500" : ""
+                                }`}
+                            >
                                 <SelectValue placeholder="Select a Division" />
                             </SelectTrigger>
                             <SelectContent>
@@ -115,32 +164,21 @@ export default function Create({ isOpen, onClose, subdivision, divisions }) {
                         )}
                     </div>
 
-                    <div>
-                        <Label htmlFor="description">Description</Label>
-                        <Input
-                            id="description"
-                            value={data.description}
-                            onChange={(e) =>
-                                setData("description", e.target.value)
-                            }
-                        />
-                        {errors.description && (
-                            <p className="text-sm text-red-600 mt-1">
-                                {errors.description}
-                            </p>
-                        )}
-                    </div>
-
                     <DialogFooter className="flex justify-end space-x-2">
                         <Button
                             type="button"
                             variant="outline"
                             onClick={onClose}
+                            disabled={processing}
                         >
                             Cancel
                         </Button>
                         <Button type="submit" disabled={processing}>
-                            {subdivision ? "Update" : "Create"}
+                            {processing
+                                ? "Processing..."
+                                : subdivision
+                                ? "Update"
+                                : "Create"}
                         </Button>
                     </DialogFooter>
                 </form>

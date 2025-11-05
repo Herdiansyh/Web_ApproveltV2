@@ -2,7 +2,6 @@
 
 use App\Http\Controllers\DivisionController;
 use App\Http\Controllers\DocumentController;
-use App\Http\Controllers\DocumentPermissionController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\SubdivisionController;
 use App\Http\Controllers\SubmissionController;
@@ -60,12 +59,14 @@ Route::middleware(['auth'])->group(function () {
     Route::resource('submissions', SubmissionController::class)->only(['index', 'show']);
     Route::get('submissions/{submission}/file', [SubmissionController::class, 'file'])->name('submissions.file');
     Route::post('submissions/{submission}/request', [SubmissionController::class, 'request'])->name('submissions.request');
+    Route::post('submissions/{submission}/request-next', [SubmissionController::class, 'requestNext'])
+    ->name('submissions.requestNext');
 
     // Manager-only routes
-    Route::middleware('role:manager')->group(function () {
         Route::post('submissions/{submission}/approve', [SubmissionController::class, 'approve'])->name('submissions.approve');
         Route::post('submissions/{submission}/reject', [SubmissionController::class, 'reject'])->name('submissions.reject');
-    });
+        
+  
 
     // Admin-only routes
     Route::middleware('role:admin')->group(function () {
@@ -87,31 +88,17 @@ Route::middleware(['auth'])->group(function () {
         // Document Management
         Route::resource('documents', DocumentController::class);
 
-        // Document Permission
-        Route::get('documents/{document}/permissions', [DocumentPermissionController::class, 'edit'])->name('document.permissions.edit');
-        Route::post('documents/{document}/permissions', [DocumentPermissionController::class, 'update'])->name('document.permissions.update');
-        Route::get('permissions', [DocumentPermissionController::class, 'index'])->name('permissions.index');
 
-    // Workflow Step Permission
-    Route::get('workflow-steps/{workflowStep}/permissions', [WorkflowStepPermissionController::class, 'index'])
+
+       // Workflow Step Permission Routes
+Route::prefix('workflows/{workflow}')->group(function () {
+    Route::get('/permissions', [WorkflowStepPermissionController::class, 'index'])
         ->name('workflow-steps.permissions.index');
-
-    Route::get('workflow-steps/{workflowStep}/permissions/create', [WorkflowStepPermissionController::class, 'create'])
-        ->name('workflow-steps.permissions.create');
-
-    Route::post('workflow-steps/{workflowStep}/permissions', [WorkflowStepPermissionController::class, 'store'])
+    Route::post('/permissions', [WorkflowStepPermissionController::class, 'store'])
         ->name('workflow-steps.permissions.store');
+});
 
-    Route::get('workflow-step-permissions/{permission}/edit', [WorkflowStepPermissionController::class, 'edit'])
-        ->name('workflow-steps.permissions.edit');
-
-    Route::put('workflow-step-permissions/{permission}', [WorkflowStepPermissionController::class, 'update'])
-        ->name('workflow-steps.permissions.update');
-
-    Route::delete('workflow-step-permissions/{permission}', [WorkflowStepPermissionController::class, 'destroy'])
-        ->name('workflow-steps.permissions.destroy'); });
-
-        
     });
+}); 
 
 require __DIR__.'/auth.php';

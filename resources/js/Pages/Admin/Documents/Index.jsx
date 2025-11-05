@@ -13,40 +13,26 @@ import {
 } from "@/Components/ui/table";
 import Sidebar from "@/Components/Sidebar";
 import Swal from "sweetalert2";
-import SubdivisionModal from "./Create.jsx";
+import DocumentModal from "./Create.jsx";
 import { Input } from "@/Components/ui/input.jsx";
-import { X } from "lucide-react";
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/Components/ui/select.jsx";
 
-export default function Index({ auth, subdivisions, divisions }) {
+export default function Index({ auth, documents, divisions }) {
     const [isModalOpen, setIsModalOpen] = useState(false);
-    const [editingSubdivision, setEditingSubdivision] = useState(null);
+    const [editingDocument, setEditingDocument] = useState(null);
     const [search, setSearch] = useState("");
-    const [selectedDivision, setSelectedDivision] = useState("");
 
-    const filteredSubdivisions = subdivisions.filter((sub) => {
-        const matchSearch = sub.name
-            .toLowerCase()
-            .includes(search.toLowerCase());
-        const matchSelect =
-            selectedDivision === "" ||
-            sub.division?.name?.toLowerCase() ===
-                selectedDivision.toLowerCase();
-        return matchSearch && matchSelect;
-    });
+    const handleSearch = (e) => setSearch(e.target.value);
 
-    const handleEdit = (subdivision) => {
-        setEditingSubdivision(subdivision);
+    const filteredDocuments = documents.filter((doc) =>
+        doc.name.toLowerCase().includes(search.toLowerCase())
+    );
+
+    const handleEdit = (doc) => {
+        setEditingDocument(doc);
         setIsModalOpen(true);
     };
 
-    const handleDelete = (id) => {
+    const handleDelete = (docId) => {
         Swal.fire({
             title: "Are you sure?",
             text: "This action cannot be undone.",
@@ -57,109 +43,86 @@ export default function Index({ auth, subdivisions, divisions }) {
             confirmButtonText: "Yes, delete it!",
         }).then((result) => {
             if (result.isConfirmed) {
-                router.delete(route("subdivisions.destroy", id), {
+                router.delete(route("documents.destroy", docId), {
                     onSuccess: () => {
+                        Swal.fire("Deleted!", "Document deleted.", "success");
+                    },
+                    onError: () => {
                         Swal.fire(
-                            "Deleted!",
-                            "Subdivision deleted.",
-                            "success"
+                            "Error",
+                            "Failed to delete document.",
+                            "error"
                         );
                     },
                 });
             }
         });
     };
-    console.log(subdivisions);
 
     return (
         <AuthenticatedLayout
             user={auth.user}
             header={
-                <h2 className="font-semibold text-xl text-gray-800 leading-tight">
-                    Subdivision Management
+                <h2 className="font-semibold text-xl text-gray-800">
+                    Document Management
                 </h2>
             }
         >
-            <Head title="Subdivision Management" />
+            <Head title="Document Management" />
 
             <div className="flex min-h-screen bg-background">
                 <Sidebar />
                 <div className="py-12 w-full overflow-auto relative">
                     <div className="mx-auto p-6 lg:px-8">
                         <h1 className="text-2xl font-bold absolute top-5">
-                            Subdivisions
+                            Documents
                         </h1>
 
                         <Card className="p-6">
-                            {/* Filter dan tombol tambah */}
+                            {/* Filter & Add Button */}
                             <div className="flex flex-col md:flex-row justify-between gap-3 mb-4">
                                 <div className="flex flex-col md:flex-row gap-2 w-full">
                                     <Input
                                         className="md:w-1/2"
-                                        placeholder="Search Subdivision..."
-                                        style={{ borderRadius: "8px" }}
+                                        placeholder="Search Document..."
                                         value={search}
-                                        onChange={(e) =>
-                                            setSearch(e.target.value)
-                                        }
+                                        onChange={handleSearch}
                                     />
                                 </div>
 
                                 <Button
                                     onClick={() => {
-                                        setEditingSubdivision(null);
+                                        setEditingDocument(null);
                                         setIsModalOpen(true);
                                     }}
-                                    className="w-[200px] h-9 text-sm"
-                                    style={{ borderRadius: "8px" }}
+                                    className="w-[180px] h-9 text-sm"
                                 >
-                                    + Add New Subdivision
+                                    + Add New Document
                                 </Button>
                             </div>
-                            <Select
-                                value={selectedDivision}
-                                onValueChange={(value) =>
-                                    setSelectedDivision(value)
-                                }
-                            >
-                                <SelectTrigger className="md:w-1/3">
-                                    <SelectValue placeholder="Filter by Division" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="all">
-                                        {" "}
-                                        {/* ✅ UBAH DARI "" KE "all" */} All
-                                        Divisions
-                                    </SelectItem>
-                                    {divisions.map((d) => (
-                                        <SelectItem
-                                            key={d.id}
-                                            value={d.name.toLowerCase()} // ✅ PASTIKAN VALUE TIDAK KOSONG
-                                        >
-                                            {d.name}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
 
-                            {/* Tabel Subdivisions */}
+                            {/* Table */}
                             <Table>
                                 <TableHeader>
                                     <TableRow>
                                         <TableHead>Name</TableHead>
+                                        <TableHead>Description</TableHead>
                                         <TableHead>Division</TableHead>
                                         <TableHead>Actions</TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {filteredSubdivisions.length > 0 ? (
-                                        filteredSubdivisions.map((sub) => (
-                                            <TableRow key={sub.id}>
+                                    {filteredDocuments.length > 0 ? (
+                                        filteredDocuments.map((doc) => (
+                                            <TableRow key={doc.id}>
                                                 <TableCell>
-                                                    {sub.name}
+                                                    {doc.name}
                                                 </TableCell>
                                                 <TableCell>
-                                                    {sub.division?.name || "-"}
+                                                    {doc.description || "-"}
+                                                </TableCell>
+                                                <TableCell>
+                                                    {doc.division?.name || "-"}
                                                 </TableCell>
                                                 <TableCell>
                                                     <div className="flex space-x-2">
@@ -167,12 +130,8 @@ export default function Index({ auth, subdivisions, divisions }) {
                                                             variant="outline"
                                                             size="sm"
                                                             onClick={() =>
-                                                                handleEdit(sub)
+                                                                handleEdit(doc)
                                                             }
-                                                            style={{
-                                                                borderRadius:
-                                                                    "15px",
-                                                            }}
                                                         >
                                                             Edit
                                                         </Button>
@@ -181,13 +140,9 @@ export default function Index({ auth, subdivisions, divisions }) {
                                                             size="sm"
                                                             onClick={() =>
                                                                 handleDelete(
-                                                                    sub.id
+                                                                    doc.id
                                                                 )
                                                             }
-                                                            style={{
-                                                                borderRadius:
-                                                                    "15px",
-                                                            }}
                                                         >
                                                             Delete
                                                         </Button>
@@ -201,7 +156,7 @@ export default function Index({ auth, subdivisions, divisions }) {
                                                 colSpan={4}
                                                 className="text-center text-gray-500"
                                             >
-                                                No subdivisions found.
+                                                No documents found.
                                             </TableCell>
                                         </TableRow>
                                     )}
@@ -212,13 +167,14 @@ export default function Index({ auth, subdivisions, divisions }) {
                 </div>
             </div>
 
-            <SubdivisionModal
+            {/* Modal Add/Edit Document */}
+            <DocumentModal
                 isOpen={isModalOpen}
                 onClose={() => {
                     setIsModalOpen(false);
-                    setEditingSubdivision(null);
+                    setEditingDocument(null);
                 }}
-                subdivision={editingSubdivision}
+                document={editingDocument}
                 divisions={divisions}
             />
         </AuthenticatedLayout>

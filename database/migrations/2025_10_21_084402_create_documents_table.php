@@ -6,22 +6,17 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
         Schema::create('documents', function (Blueprint $table) {
             $table->id();
-              $table->string('name'); // Nama jenis dokumen, misalnya: "Surat Permintaan Pembelian"
-            $table->text('description')->nullable(); // Deskripsi singkat dokumen
-           
+            $table->foreignId('division_id')->constrained('divisions')->onDelete('cascade');
+            $table->string('name'); // Nama dokumen yang juga berfungsi sebagai jenis dokumen
+            $table->text('description')->nullable(); // Deskripsi singkat
             $table->timestamps();
-        });    }
+        });
+    }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
         Schema::dropIfExists('documents');

@@ -11,7 +11,7 @@ class DivisionController extends Controller
     // Menampilkan daftar division
  public function index()
 {
-    return Inertia::render('Division/Index', [
+    return Inertia::render('Admin/Division/Index', [
         'divisions' => Division::with('subdivisions')->get(),
     ]);
 }
@@ -20,7 +20,7 @@ class DivisionController extends Controller
     // Halaman buat division baru
     public function create()
     {
-        return Inertia::render('Division/Create');
+        return Inertia::render('Admin/Division/Create');
     }
 
     // Simpan division baru
@@ -40,7 +40,7 @@ class DivisionController extends Controller
     // Halaman edit division
     public function edit(Division $division)
     {
-        return Inertia::render('Division/Edit', [
+        return Inertia::render('Admin/Division/Edit', [
             'division' => $division,
         ]);
     }

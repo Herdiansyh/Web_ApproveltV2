@@ -63,6 +63,13 @@ export default function Index({ auth, divisions }) {
                     onSuccess: () => {
                         Swal.fire("Deleted!", "Division deleted.", "success");
                     },
+                    onError: () => {
+                        Swal.fire(
+                            "Error",
+                            "Failed to delete division.",
+                            "error"
+                        );
+                    },
                 });
             }
         });

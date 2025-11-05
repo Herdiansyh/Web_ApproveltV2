@@ -19,7 +19,8 @@ class Submission extends Model
         'approval_note',
         'signature_path',
         'approved_at',
-        'approved_by','division_id',
+        'approved_by',
+        'division_id',
         'notes',
         'document_id', // ✅ tambahkan ini
         'current_step', // urutan langkah sekarang

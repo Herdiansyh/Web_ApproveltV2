@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Document;
+use App\Models\Division;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
@@ -13,46 +14,44 @@ class DocumentController extends Controller
 
     public function index()
     {
-        $this->authorize('viewAny', Document::class);
-
-        return Inertia::render('Documents/Index', [
-    'documents' => Document::with('permissions.subdivision')->get(),
-]);
-
+  
+        return Inertia::render('Admin/Documents/Index', [
+            'documents' => Document::with(['division'])->get(),
+            'divisions' => Division::all(),
+        ]);
     }
 
     public function store(Request $request)
     {
-        $this->authorize('create', Document::class);
-
+     
         $request->validate([
+            'division_id' => 'required|exists:divisions,id',
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
         ]);
 
-        Document::create($request->only('name', 'description'));
+        Document::create($request->only('division_id', 'name', 'description'));
 
         return back()->with('success', 'Dokumen berhasil ditambahkan.');
     }
 
     public function update(Request $request, Document $document)
     {
-        $this->authorize('update', $document);
-
+ 
         $request->validate([
+            'division_id' => 'required|exists:divisions,id',
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
         ]);
 
-        $document->update($request->only('name', 'description'));
+        $document->update($request->only('division_id', 'name', 'description'));
 
         return back()->with('success', 'Dokumen berhasil diperbarui.');
     }
 
     public function destroy(Document $document)
     {
-        $this->authorize('delete', $document);
-
+  
         $document->delete();
 
         return back()->with('success', 'Dokumen berhasil dihapus.');

@@ -48,7 +48,7 @@ export default function Sidebar() {
     };
 
     const navItems = [
-        ...(user.role === "employee" || user.role === "manager"
+        ...(user.role === "employee" || user.role === "direktur"
             ? [
                   {
                       label: "Dashboard",
@@ -79,16 +79,16 @@ export default function Sidebar() {
                       icon: <UserCircle2 className="h-5 w-5" />,
                   },
                   {
+                      label: "Subdivision Management",
+                      href: route("subdivisions.index"),
+                      active: route().current("subdivisions.index"),
+                      icon: <Layers className="h-5 w-5" />,
+                  },
+                  {
                       label: "User Management",
                       href: route("users.index"),
                       active: route().current("users.*"),
                       icon: <User2 className="h-5 w-5" />,
-                  },
-                  {
-                      label: "Workflow Management",
-                      href: route("workflows.index"),
-                      active: route().current("workflows.*"),
-                      icon: <Workflow className="h-5 w-5" />,
                   },
                   {
                       label: "Document Management",
@@ -96,25 +96,11 @@ export default function Sidebar() {
                       active: route().current("documents.*"),
                       icon: <DockIcon className="h-5 w-5" />,
                   },
-                  // 🔹 Tambahan: Permissions
                   {
-                      label: "Permissions",
-                      href: route("permissions.index"),
-                      active: route().current("permissions.*"),
-                      icon: <Shield className="h-5 w-5" />,
-                  },
-                  // 🔹 Tambahan: Workflow Step Permissions
-                  {
-                      label: "Workflow Step Permissions",
-                      href: route("workflow-steps.permissions.index", 1), // default step id
-                      active: route().current("workflow-steps.permissions.*"),
-                      icon: <Shield className="h-5 w-5" />,
-                  },
-                  {
-                      label: "Subdivision Management",
-                      href: route("subdivisions.index"),
-                      active: route().current("subdivisions.index"),
-                      icon: <Layers className="h-5 w-5" />,
+                      label: "Workflow Management",
+                      href: route("workflows.index"),
+                      active: route().current("workflows.*"),
+                      icon: <Workflow className="h-5 w-5" />,
                   },
               ]
             : []),

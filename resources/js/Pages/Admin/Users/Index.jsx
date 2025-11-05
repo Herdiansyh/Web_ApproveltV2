@@ -40,6 +40,33 @@ export default function Index({ auth, users, divisions, subdivisions, roles }) {
         subdivision_id: "",
     });
 
+    // Fungsi untuk menampilkan notifikasi error
+    const showErrorAlert = (title, text = "") => {
+        Swal.fire({
+            icon: "error",
+            title: title,
+            text: text,
+            confirmButtonText: "OK",
+            confirmButtonColor: "#dc2626",
+        });
+    };
+
+    // Fungsi untuk menampilkan notifikasi error dari response server
+    const showServerErrorAlert = (error) => {
+        let errorMessage = "Terjadi kesalahan yang tidak diketahui";
+
+        if (typeof error === "string") {
+            errorMessage = error;
+        } else if (error?.message) {
+            errorMessage = error.message;
+        } else if (typeof error === "object") {
+            // Jika error berupa object, kita gabungkan semua pesan error
+            errorMessage = Object.values(error).flat().join(", ");
+        }
+
+        showErrorAlert("Operation Failed", errorMessage);
+    };
+
     const handleSearch = (e) => setSearch(e.target.value);
 
     // Filter subdiv berdasarkan division yang dipilih di form
@@ -80,6 +107,9 @@ export default function Index({ auth, users, divisions, subdivisions, roles }) {
                           showConfirmButton: false,
                       });
                   },
+                  onError: (errors) => {
+                      showServerErrorAlert(errors);
+                  },
               })
             : post(route("users.store"), {
                   onSuccess: () => {
@@ -92,6 +122,9 @@ export default function Index({ auth, users, divisions, subdivisions, roles }) {
                           timer: 2000,
                           showConfirmButton: false,
                       });
+                  },
+                  onError: (errors) => {
+                      showServerErrorAlert(errors);
                   },
               });
     };
@@ -115,20 +148,53 @@ export default function Index({ auth, users, divisions, subdivisions, roles }) {
             icon: "warning",
             showCancelButton: true,
             confirmButtonText: "Yes, delete it!",
+            confirmButtonColor: "#dc2626",
+            cancelButtonText: "Cancel",
         }).then((result) => {
             if (result.isConfirmed) {
                 router.delete(route("users.destroy", userId), {
                     onSuccess: () => {
-                        Swal.fire(
-                            "Deleted!",
-                            "User has been deleted.",
-                            "success"
-                        );
+                        Swal.fire({
+                            title: "Deleted!",
+                            text: "User has been deleted.",
+                            icon: "success",
+                            timer: 2000,
+                            showConfirmButton: false,
+                        });
+                    },
+                    onError: (error) => {
+                        let errorMessage = "Failed to delete user";
+
+                        if (error?.message) {
+                            errorMessage = error.message;
+                        } else if (error?.error) {
+                            errorMessage = error.error;
+                        }
+
+                        showErrorAlert("Delete Failed", errorMessage);
                     },
                 });
             }
         });
     };
+
+    // Handle network errors atau unexpected errors
+    useEffect(() => {
+        const handleGlobalError = (event) => {
+            // Tangkap error global yang tidak tertangani
+            console.error("Global error caught:", event.error);
+            showErrorAlert(
+                "System Error",
+                "An unexpected error occurred. Please try again."
+            );
+        };
+
+        window.addEventListener("error", handleGlobalError);
+
+        return () => {
+            window.removeEventListener("error", handleGlobalError);
+        };
+    }, []);
 
     return (
         <AuthenticatedLayout

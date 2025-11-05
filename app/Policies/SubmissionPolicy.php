@@ -4,44 +4,32 @@ namespace App\Policies;
 
 use App\Models\User;
 use App\Models\Submission;
-use App\Models\SubmissionWorkflowStep;
-use App\Models\DocumentPermission;
+use App\Models\WorkflowStepPermission;
 
 class SubmissionPolicy
 {
-    /**
-     * Mengecek apakah subdivisi user punya permission tertentu terhadap dokumen
-     */
-    protected function hasSubdivisionPermission(User $user, Submission $submission, string $permissionField): bool
-    {
-        if (!$user->subdivision_id) {
-            return false;
-        }
-
-        $permission = DocumentPermission::where('document_id', $submission->document_id)
-            ->where('subdivision_id', $user->subdivision_id)
-            ->first();
-
-        return $permission && $permission->{$permissionField};
-    }
-
     /**
      * Cek apakah user boleh melihat submission
      */
     public function view(User $user, Submission $submission): bool
     {
-        // 1️⃣ Tetap izinkan pemilik, manager, admin, atau divisi terkait step
-        $basicAccess =
-            $user->id === $submission->user_id ||
-            in_array($user->role, ['manager', 'admin']) ||
-            SubmissionWorkflowStep::where('submission_id', $submission->id)
-                ->where('division_id', $user->division_id)
-                ->exists();
+        // pemilik, manager, admin selalu boleh
+        if ($user->id === $submission->user_id) return true;
+        if (in_array($user->role, ['manager', 'admin'])) return true;
 
-        // 2️⃣ Tambahkan pengecekan subdivisi
-        $hasPermission = $this->hasSubdivisionPermission($user, $submission, 'can_view');
+        // jika user punya subdivisi -> cek permission can_view pada step saat ini
+        if (!$user->subdivision_id) return false;
 
-        return $basicAccess && $hasPermission;
+        $workflowStep = $submission->workflow->steps
+            ->where('step_order', $submission->current_step)
+            ->first();
+
+        if (!$workflowStep) return false;
+
+        return WorkflowStepPermission::where('workflow_step_id', $workflowStep->id)
+            ->where('subdivision_id', $user->subdivision_id)
+            ->where('can_view', true)
+            ->exists();
     }
 
     /**
@@ -49,21 +37,8 @@ class SubmissionPolicy
      */
     public function create(User $user): bool
     {
-        // Semua employee dan admin boleh buat, tapi tetap cek subdivisi kalau ada
-        if (in_array($user->role, ['employee', 'admin'])) {
-            // Kalau user tidak punya subdivisi, izinkan saja (fallback)
-            if (!$user->subdivision_id) {
-                return true;
-            }
-
-            $permission = DocumentPermission::where('subdivision_id', $user->subdivision_id)
-                ->where('can_create', true)
-                ->exists();
-
-            return $permission;
-        }
-
-        return false;
+        // minimal role employee atau admin boleh buat
+        return in_array($user->role, ['employee', 'admin']);
     }
 
     /**
@@ -71,19 +46,18 @@ class SubmissionPolicy
      */
     public function approve(User $user, Submission $submission): bool
     {
-        // 1️⃣ Cek apakah user berasal dari divisi yang sedang aktif dalam workflow
-        $inCurrentStep = SubmissionWorkflowStep::where('submission_id', $submission->id)
+        if (!$user->subdivision_id) return false;
+
+        $workflowStep = $submission->workflow->steps
             ->where('step_order', $submission->current_step)
-            ->where('division_id', $user->division_id)
-            ->where(function ($q) {
-                $q->whereNull('status')->orWhere('status', 'pending');
-            })
+            ->first();
+
+        if (!$workflowStep) return false;
+
+        return WorkflowStepPermission::where('workflow_step_id', $workflowStep->id)
+            ->where('subdivision_id', $user->subdivision_id)
+            ->where('can_approve', true)
             ->exists();
-
-        // 2️⃣ Cek subdivisi-nya punya hak approve
-        $hasPermission = $this->hasSubdivisionPermission($user, $submission, 'can_approve');
-
-        return $inCurrentStep && $hasPermission;
     }
 
     /**
@@ -91,17 +65,17 @@ class SubmissionPolicy
      */
     public function reject(User $user, Submission $submission): bool
     {
-        // Sama seperti approve, tapi cek permission "can_reject"
-        $inCurrentStep = SubmissionWorkflowStep::where('submission_id', $submission->id)
+        if (!$user->subdivision_id) return false;
+
+        $workflowStep = $submission->workflow->steps
             ->where('step_order', $submission->current_step)
-            ->where('division_id', $user->division_id)
-            ->where(function ($q) {
-                $q->whereNull('status')->orWhere('status', 'pending');
-            })
+            ->first();
+
+        if (!$workflowStep) return false;
+
+        return WorkflowStepPermission::where('workflow_step_id', $workflowStep->id)
+            ->where('subdivision_id', $user->subdivision_id)
+            ->where('can_reject', true)
             ->exists();
-
-        $hasPermission = $this->hasSubdivisionPermission($user, $submission, 'can_reject');
-
-        return $inCurrentStep && $hasPermission;
     }
 }

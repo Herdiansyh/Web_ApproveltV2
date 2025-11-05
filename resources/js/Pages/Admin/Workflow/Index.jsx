@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
 import { Head, router, useForm } from "@inertiajs/react";
 import { Card } from "@/Components/ui/card";
@@ -22,34 +22,74 @@ import {
 } from "@/Components/ui/select";
 import { Badge } from "@/Components/ui/badge";
 import Sidebar from "@/Components/Sidebar";
+import { Edit, Trash2, Plus, ArrowRight, Settings } from "lucide-react";
 import Swal from "sweetalert2";
 
-export default function Index({ auth, workflows, divisions, documents }) {
+export default function Index({
+    flash,
+    auth,
+    workflows,
+    divisions,
+    documents,
+}) {
     const [showModal, setShowModal] = useState(false);
     const [editingWorkflow, setEditingWorkflow] = useState(null);
     const [filterText, setFilterText] = useState("");
-    const [filterSelect, setFilterSelect] = useState("");
+    const [filterDocument, setFilterDocument] = useState("all");
 
-    const { data, setData, post, put, processing, reset } = useForm({
+    const { data, setData, post, put, processing, reset, errors } = useForm({
         name: "",
         description: "",
-        document_id: documents[0]?.id || "",
-        steps: [{ division_id: "", actions: [] }],
+        document_id: "",
+        steps: [{ division_id: "", step_name: "" }],
     });
 
-    // === FILTER HANDLING ===
+    // Fungsi untuk menampilkan notifikasi error
+    const showErrorAlert = (title, text = "") => {
+        Swal.fire({
+            icon: "error",
+            title: title,
+            text: text,
+            confirmButtonText: "OK",
+            confirmButtonColor: "#dc2626",
+        });
+    };
+
+    // Fungsi untuk menampilkan notifikasi error dari response server
+    const showServerErrorAlert = (error) => {
+        let errorMessage = "Terjadi kesalahan yang tidak diketahui";
+
+        if (typeof error === "string") {
+            errorMessage = error;
+        } else if (error?.message) {
+            errorMessage = error.message;
+        } else if (typeof error === "object") {
+            errorMessage = Object.values(error).flat().join(", ");
+        }
+
+        showErrorAlert("Operation Failed", errorMessage);
+    };
+
+    // Filter workflows
     const filteredWorkflows = workflows.filter((wf) => {
         const matchText = wf.name
             .toLowerCase()
             .includes(filterText.toLowerCase());
-        const matchSelect = !filterSelect || wf.document?.name === filterSelect;
-        return matchText && matchSelect;
+        const matchDocument =
+            filterDocument === "all" || wf.document?.name === filterDocument;
+        return matchText && matchDocument;
     });
 
-    // === CRUD ===
+    // Modal handlers
     const openCreateModal = () => {
         setEditingWorkflow(null);
         reset();
+        setData({
+            name: "",
+            description: "",
+            document_id: "",
+            steps: [{ division_id: "", step_name: "", actions: [] }],
+        });
         setShowModal(true);
     };
 
@@ -58,18 +98,44 @@ export default function Index({ auth, workflows, divisions, documents }) {
         setData({
             name: workflow.name,
             description: workflow.description || "",
-            document_id: workflow.document_id || documents[0]?.id || "",
-            steps: workflow.steps?.map((s) => ({
-                id: s.id,
-                division_id: s.division?.id || "",
-                actions: Array.isArray(s.actions)
-                    ? s.actions
-                    : JSON.parse(s.actions || "[]"),
-            })) || [{ division_id: "", actions: [] }],
+            document_id: workflow.document_id?.toString() || "",
+            steps: workflow.steps?.map((s) => {
+                // Parse actions jika masih string
+                let actionsArray = [];
+                if (s.actions) {
+                    if (typeof s.actions === 'string') {
+                        try {
+                            actionsArray = JSON.parse(s.actions);
+                        } catch (e) {
+                            actionsArray = [];
+                        }
+                    } else if (Array.isArray(s.actions)) {
+                        actionsArray = s.actions;
+                    }
+                }
+                
+                // Load existing permissions
+                const permissionsArray = (s.permissions || []).map(p => ({
+                    subdivision_id: p.subdivision_id,
+                    can_view: p.can_view || false,
+                    can_approve: p.can_approve || false,
+                    can_reject: p.can_reject || false,
+                    can_request_next: p.can_request_next || false,
+                }));
+                
+                return {
+                    division_id: s.division_id?.toString() || "",
+                    step_name: s.role || `Step ${s.step_order}`,
+                    actions: actionsArray, // Include actions
+                    permissions: permissionsArray, // Include permissions
+                };
+            }) || [{ division_id: "", step_name: "", actions: [], permissions: [] }],
         });
         setShowModal(true);
     };
-
+    // Tambahkan actions statis sementara atau ambil dari props
+    const availableActions = ["Request To Next", "Approve", "Reject"];
+    // CRUD operations - SAMA PERSIS DENGAN USER MANAGEMENT
     const handleDelete = (id) => {
         Swal.fire({
             title: "Are you sure?",
@@ -77,79 +143,168 @@ export default function Index({ auth, workflows, divisions, documents }) {
             icon: "warning",
             showCancelButton: true,
             confirmButtonText: "Yes, delete it!",
+            confirmButtonColor: "#dc2626",
+            cancelButtonText: "Cancel",
         }).then((result) => {
             if (result.isConfirmed) {
                 router.delete(route("workflows.destroy", id), {
-                    onSuccess: () =>
-                        Swal.fire("Deleted!", "Workflow removed.", "success"),
+                    onSuccess: () => {
+                        Swal.fire({
+                            title: "Deleted!",
+                            text: "Workflow has been deleted.",
+                            icon: "success",
+                            timer: 2000,
+                            showConfirmButton: false,
+                        });
+                    },
+                    onError: (error) => {
+                        let errorMessage = "Failed to delete workflow";
+
+                        if (error?.message) {
+                            errorMessage = error.message;
+                        } else if (error?.error) {
+                            errorMessage = error.error;
+                        }
+
+                        showErrorAlert("Delete Failed", errorMessage);
+                    },
                 });
             }
         });
     };
 
-    // === HANDLE SUBMIT ===
+    const goToPermissions = (workflowId) => {
+        router.get(route("workflow-steps.permissions.index", workflowId));
+    };
+
+    // Form submit - SAMA PERSIS DENGAN USER MANAGEMENT
     const handleSubmit = (e) => {
         e.preventDefault();
 
-        const stepsWithDynamicActions = data.steps.map((step, i) => {
-            const nextStep = data.steps[i + 1];
-            const finalActions = [];
+        const hasEmptySteps = data.steps.some(
+            (step) => !step.division_id || !step.step_name
+        );
+        if (hasEmptySteps) {
+            Swal.fire({
+                icon: "error",
+                title: "Validation Error",
+                text: "Please select division and enter step name for all steps.",
+            });
+            return;
+        }
 
-            // Tambahkan action sesuai pilihan
-            if (step.actions.includes("approve")) finalActions.push("approve");
-            if (step.actions.includes("reject")) finalActions.push("reject");
+        if (!data.document_id) {
+            Swal.fire({
+                icon: "error",
+                title: "Validation Error",
+                text: "Please select a document type.",
+            });
+            return;
+        }
 
-            // Jika ada request dan ada step berikutnya, ubah jadi “request to [divisi berikutnya]”
-            if (step.actions.includes("request") && nextStep) {
-                const nextDivision = divisions.find(
-                    (d) => d.id === parseInt(nextStep.division_id)
-                );
-                if (nextDivision) {
-                    finalActions.push(`request to ${nextDivision.name}`);
-                } else {
-                    finalActions.push("request to next step");
+        // Siapkan payload - PASTIKAN 'role' ADA (bukan 'step_name')
+        const payload = {
+            name: data.name,
+            description: data.description,
+            document_id: parseInt(data.document_id),
+            steps: data.steps.map((step, index) => ({
+                division_id: parseInt(step.division_id),
+                role: step.step_name, // PASTIKAN INI 'role' BUKAN 'step_name'
+                actions: step.actions || [], // <--- ini penting
+                permissions: step.permissions || [], // Include permissions
+            })),
+        };
+
+        // SAMA PERSIS DENGAN USER MANAGEMENT
+        if (editingWorkflow) {
+            // Konfirmasi sebelum update
+            Swal.fire({
+                title: "Update Workflow?",
+                text: "Apakah Anda yakin ingin memperbarui workflow ini? Perubahan akan mempengaruhi workflow yang sudah dibuat.",
+                icon: "question",
+                showCancelButton: true,
+                confirmButtonText: "Ya, Update",
+                cancelButtonText: "Batal",
+                confirmButtonColor: "#3085d6",
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    put(route("workflows.update", editingWorkflow.id), payload, {
+                        onSuccess: () => {
+                            setEditingWorkflow(null);
+                            reset();
+                            Swal.fire({
+                                icon: "success",
+                                title: "Workflow Berhasil Diperbarui!",
+                                text: "Workflow telah berhasil diperbarui.",
+                                confirmButtonText: "OK",
+                                timer: 3000,
+                            });
+                        },
+                        onError: (errors) => {
+                            showServerErrorAlert(errors);
+                        },
+                    });
                 }
-            }
-
-            return { ...step, actions: finalActions };
-        });
-
-        const payload = { ...data, steps: stepsWithDynamicActions };
-        const action = editingWorkflow
-            ? route("workflows.update", editingWorkflow.id)
-            : route("workflows.store");
-        const request = editingWorkflow ? put : post;
-
-        request(action, {
-            data: payload,
-            onSuccess: () => {
-                setShowModal(false);
-                setEditingWorkflow(null);
-                reset();
-                Swal.fire({
-                    icon: "success",
-                    title: editingWorkflow
-                        ? "Workflow updated"
-                        : "Workflow created",
-                    timer: 2000,
-                    showConfirmButton: false,
-                });
-            },
-        });
+            });
+        } else {
+            post(route("workflows.store"), payload, {
+                onSuccess: () => {
+                    setShowModal(false);
+                    reset();
+                    Swal.fire({
+                        icon: "success",
+                        title: "Workflow created",
+                        text: "A new workflow has been successfully created!",
+                        timer: 2000,
+                        showConfirmButton: false,
+                    });
+                },
+                onError: (errors) => {
+                    showServerErrorAlert(errors);
+                },
+            });
+        }
     };
 
-    // === HANDLE STEPS ===
+    // Step management (tetap sama)
     const addStep = () =>
-        setData("steps", [...data.steps, { division_id: "", actions: [] }]);
+        setData("steps", [...data.steps, { division_id: "", step_name: "", actions: [] }]);
 
-    const removeStep = (index) => {
+    const removeStep = (index) =>
         setData(
             "steps",
             data.steps.filter((_, i) => i !== index)
         );
+
+    const updateStepDivision = (index, divisionId) => {
+        const updatedSteps = [...data.steps];
+        updatedSteps[index].division_id = divisionId;
+        if (!updatedSteps[index].step_name) {
+            const division = divisions.find(
+                (d) => d.id.toString() === divisionId
+            );
+            if (division)
+                updatedSteps[index].step_name = `${division.name} Approval`;
+        }
+        setData("steps", updatedSteps);
     };
 
-    // === UI ===
+    const updateStepName = (index, name) => {
+        const updatedSteps = [...data.steps];
+        updatedSteps[index].step_name = name;
+        setData("steps", updatedSteps);
+    };
+    useEffect(() => {
+        if (flash) {
+            Swal.fire({
+                icon: "success",
+                title: "Success",
+                text: flash,
+                timer: 2000,
+                showConfirmButton: false,
+            });
+        }
+    }, [flash]);
     return (
         <AuthenticatedLayout
             user={auth.user}
@@ -158,34 +313,33 @@ export default function Index({ auth, workflows, divisions, documents }) {
             }
         >
             <Head title="Workflow Management" />
-            <div className="flex min-h-screen bg-background relative">
+            <div className="flex min-h-screen bg-background">
                 <Sidebar />
                 <div className="py-12 w-full overflow-auto">
                     <div className="mx-auto p-6 lg:px-8">
                         <Card className="p-6 shadow-sm">
-                            {/* Filter */}
-                            <div className="flex flex-col md:flex-row justify-between mb-4 gap-2">
-                                <div className="flex gap-2">
+                            {/* Filters & Create Button */}
+                            <div className="flex flex-col md:flex-row justify-between mb-6 gap-4">
+                                <div className="flex flex-col md:flex-row gap-2 flex-1">
                                     <Input
                                         placeholder="Search workflows..."
                                         value={filterText}
                                         onChange={(e) =>
                                             setFilterText(e.target.value)
                                         }
-                                        className="border border-gray-300"
-                                        style={{ borderRadius: "8px" }}
+                                        className="md:w-64"
                                     />
                                     <Select
-                                        value={filterSelect}
-                                        onValueChange={setFilterSelect}
+                                        value={filterDocument}
+                                        onValueChange={setFilterDocument}
                                     >
-                                        <SelectTrigger
-                                            style={{ borderRadius: "8px" }}
-                                            className="border border-gray-300"
-                                        >
-                                            <SelectValue placeholder="Filter by document" />
+                                        <SelectTrigger className="md:w-64">
+                                            <SelectValue placeholder="Filter by document type" />
                                         </SelectTrigger>
                                         <SelectContent>
+                                            <SelectItem value="all">
+                                                All Documents
+                                            </SelectItem>
                                             {documents.map((doc) => (
                                                 <SelectItem
                                                     key={doc.id}
@@ -197,9 +351,12 @@ export default function Index({ auth, workflows, divisions, documents }) {
                                         </SelectContent>
                                     </Select>
                                 </div>
-
-                                <Button onClick={openCreateModal}>
-                                    + Add Workflow
+                                <Button
+                                    onClick={openCreateModal}
+                                    className="md:w-auto"
+                                >
+                                    <Plus className="h-4 w-4 mr-2" /> Create
+                                    Workflow
                                 </Button>
                             </div>
 
@@ -209,8 +366,8 @@ export default function Index({ auth, workflows, divisions, documents }) {
                                     <TableRow>
                                         <TableHead>Name</TableHead>
                                         <TableHead>Document</TableHead>
-                                        <TableHead>Description</TableHead>
                                         <TableHead>Steps</TableHead>
+                                        <TableHead>Status</TableHead>
                                         <TableHead>Actions</TableHead>
                                     </TableRow>
                                 </TableHeader>
@@ -218,25 +375,63 @@ export default function Index({ auth, workflows, divisions, documents }) {
                                     {filteredWorkflows.length > 0 ? (
                                         filteredWorkflows.map((wf) => (
                                             <TableRow key={wf.id}>
-                                                <TableCell>{wf.name}</TableCell>
+                                                <TableCell className="font-medium">
+                                                    {wf.name}
+                                                </TableCell>
                                                 <TableCell>
                                                     {wf.document?.name || "-"}
                                                 </TableCell>
                                                 <TableCell>
-                                                    {wf.description || "-"}
+                                                    <div className="flex items-center text-sm text-gray-600">
+                                                        {wf.steps?.map(
+                                                            (step, idx) => (
+                                                                <React.Fragment
+                                                                    key={idx}
+                                                                >
+                                                                    <span>
+                                                                        {step
+                                                                            .division
+                                                                            ?.name ||
+                                                                            "N/A"}
+                                                                    </span>
+                                                                    {idx <
+                                                                        wf.steps
+                                                                            .length -
+                                                                            1 && (
+                                                                        <ArrowRight className="h-4 w-4 mx-1" />
+                                                                    )}
+                                                                </React.Fragment>
+                                                            )
+                                                        )}
+                                                    </div>
                                                 </TableCell>
                                                 <TableCell>
-                                                    {wf.steps
-                                                        ?.map(
-                                                            (s) =>
-                                                                s.division
-                                                                    ?.name ||
-                                                                "-"
-                                                        )
-                                                        .join(" → ")}
+                                                    <Badge
+                                                        className={
+                                                            wf.is_active
+                                                                ? "bg-green-100 text-green-800"
+                                                                : "bg-gray-100 text-gray-800"
+                                                        }
+                                                    >
+                                                        {wf.is_active
+                                                            ? "Active"
+                                                            : "Inactive"}
+                                                    </Badge>
                                                 </TableCell>
                                                 <TableCell>
                                                     <div className="flex space-x-2">
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            onClick={() =>
+                                                                goToPermissions(
+                                                                    wf.id
+                                                                )
+                                                            }
+                                                        >
+                                                            <Settings className="h-4 w-4 mr-1" />{" "}
+                                                            Permissions
+                                                        </Button>
                                                         <Button
                                                             variant="outline"
                                                             size="sm"
@@ -246,6 +441,7 @@ export default function Index({ auth, workflows, divisions, documents }) {
                                                                 )
                                                             }
                                                         >
+                                                            <Edit className="h-4 w-4 mr-1" />{" "}
                                                             Edit
                                                         </Button>
                                                         <Button
@@ -257,6 +453,7 @@ export default function Index({ auth, workflows, divisions, documents }) {
                                                                 )
                                                             }
                                                         >
+                                                            <Trash2 className="h-4 w-4 mr-1" />{" "}
                                                             Delete
                                                         </Button>
                                                     </div>
@@ -267,7 +464,7 @@ export default function Index({ auth, workflows, divisions, documents }) {
                                         <TableRow>
                                             <TableCell
                                                 colSpan={5}
-                                                className="text-center text-gray-500"
+                                                className="text-center text-gray-500 py-8"
                                             >
                                                 No workflows found.
                                             </TableCell>
@@ -280,42 +477,56 @@ export default function Index({ auth, workflows, divisions, documents }) {
                 </div>
             </div>
 
-            {/* Modal */}
+            {/* Modal Create/Edit */}
             {showModal && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4">
-                    <Card className="w-full max-w-lg p-6">
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+                    <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6">
                         <h3 className="text-lg font-semibold mb-4">
                             {editingWorkflow
                                 ? "Edit Workflow"
-                                : "Create Workflow"}
+                                : "Create New Workflow"}
                         </h3>
-                        <form onSubmit={handleSubmit}>
-                            <div className="space-y-4">
+                        <form onSubmit={handleSubmit} className="space-y-4">
+                            {/* Workflow Name & Document */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
-                                    <Label>Name</Label>
+                                    <Label htmlFor="name">
+                                        Workflow Name *
+                                    </Label>
                                     <Input
+                                        id="name"
                                         value={data.name}
                                         onChange={(e) =>
                                             setData("name", e.target.value)
                                         }
-                                    />
-                                </div>
-
-                                <div>
-                                    <Label>Document</Label>
-                                    <Select
-                                        value={
-                                            data.document_id?.toString() || ""
+                                        className={
+                                            errors.name ? "border-red-500" : ""
                                         }
-                                        onValueChange={(value) =>
-                                            setData(
-                                                "document_id",
-                                                parseInt(value)
-                                            )
+                                    />
+                                    {errors.name && (
+                                        <p className="text-red-500 text-sm">
+                                            {errors.name}
+                                        </p>
+                                    )}
+                                </div>
+                                <div>
+                                    <Label htmlFor="document_id">
+                                        Document Type *
+                                    </Label>
+                                    <Select
+                                        value={data.document_id?.toString()}
+                                        onValueChange={(val) =>
+                                            setData("document_id", val)
                                         }
                                     >
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="Select document" />
+                                        <SelectTrigger
+                                            className={
+                                                errors.document_id
+                                                    ? "border-red-500"
+                                                    : ""
+                                            }
+                                        >
+                                            <SelectValue placeholder="Select Document" />
                                         </SelectTrigger>
                                         <SelectContent>
                                             {documents.map((doc) => (
@@ -328,176 +539,151 @@ export default function Index({ auth, workflows, divisions, documents }) {
                                             ))}
                                         </SelectContent>
                                     </Select>
-                                </div>
-
-                                <div>
-                                    <Label>Description</Label>
-                                    <Input
-                                        value={data.description}
-                                        onChange={(e) =>
-                                            setData(
-                                                "description",
-                                                e.target.value
-                                            )
-                                        }
-                                    />
-                                </div>
-
-                                <div>
-                                    <Label>Steps</Label>
-                                    {data.steps.map((step, i) => {
-                                        const nextDivisionName = data.steps[
-                                            i + 1
-                                        ]?.division_id
-                                            ? divisions.find(
-                                                  (d) =>
-                                                      d.id ===
-                                                      parseInt(
-                                                          data.steps[i + 1]
-                                                              .division_id
-                                                      )
-                                              )?.name
-                                            : "next step";
-
-                                        return (
-                                            <div
-                                                key={i}
-                                                className="flex flex-col gap-2 mb-4 border p-3 rounded-md"
-                                            >
-                                                <div className="flex items-center gap-2">
-                                                    <Select
-                                                        value={
-                                                            step.division_id?.toString() ||
-                                                            ""
-                                                        }
-                                                        onValueChange={(
-                                                            value
-                                                        ) => {
-                                                            const updated = [
-                                                                ...data.steps,
-                                                            ];
-                                                            updated[
-                                                                i
-                                                            ].division_id =
-                                                                parseInt(value);
-                                                            setData(
-                                                                "steps",
-                                                                updated
-                                                            );
-                                                        }}
-                                                    >
-                                                        <SelectTrigger>
-                                                            <SelectValue placeholder="Select division" />
-                                                        </SelectTrigger>
-                                                        <SelectContent>
-                                                            {divisions.map(
-                                                                (d) => (
-                                                                    <SelectItem
-                                                                        key={
-                                                                            d.id
-                                                                        }
-                                                                        value={d.id.toString()}
-                                                                    >
-                                                                        {d.name}
-                                                                    </SelectItem>
-                                                                )
-                                                            )}
-                                                        </SelectContent>
-                                                    </Select>
-
-                                                    <Button
-                                                        variant="destructive"
-                                                        size="sm"
-                                                        onClick={() =>
-                                                            removeStep(i)
-                                                        }
-                                                    >
-                                                        Remove
-                                                    </Button>
-                                                </div>
-
-                                                <div>
-                                                    <div className="flex gap-4">
-                                                        {[
-                                                            "approve",
-                                                            "reject",
-                                                            "request_to",
-                                                        ].map((action) => (
-                                                            <label
-                                                                key={action}
-                                                                className="flex items-center gap-1"
-                                                            >
-                                                                <input
-                                                                    type="checkbox"
-                                                                    checked={step.actions.includes(
-                                                                        action
-                                                                    )}
-                                                                    onChange={(
-                                                                        e
-                                                                    ) => {
-                                                                        const updatedSteps =
-                                                                            [
-                                                                                ...data.steps,
-                                                                            ];
-                                                                        if (
-                                                                            e
-                                                                                .target
-                                                                                .checked
-                                                                        ) {
-                                                                            updatedSteps[
-                                                                                i
-                                                                            ].actions.push(
-                                                                                action
-                                                                            );
-                                                                        } else {
-                                                                            updatedSteps[
-                                                                                i
-                                                                            ].actions =
-                                                                                updatedSteps[
-                                                                                    i
-                                                                                ].actions.filter(
-                                                                                    (
-                                                                                        a
-                                                                                    ) =>
-                                                                                        a !==
-                                                                                        action
-                                                                                );
-                                                                        }
-                                                                        setData(
-                                                                            "steps",
-                                                                            updatedSteps
-                                                                        );
-                                                                    }}
-                                                                />
-                                                                {action ===
-                                                                "request_to"
-                                                                    ? "Request To Next Step"
-                                                                    : action
-                                                                          .charAt(
-                                                                              0
-                                                                          )
-                                                                          .toUpperCase() +
-                                                                      action.slice(
-                                                                          1
-                                                                      )}
-                                                            </label>
-                                                        ))}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={addStep}
-                                    >
-                                        + Add Step
-                                    </Button>
+                                    {errors.document_id && (
+                                        <p className="text-red-500 text-sm">
+                                            {errors.document_id}
+                                        </p>
+                                    )}
                                 </div>
                             </div>
 
-                            <div className="flex justify-end gap-2 mt-6">
+                            {/* Description */}
+                            <div>
+                                <Label htmlFor="description">Description</Label>
+                                <textarea
+                                    id="description"
+                                    value={data.description}
+                                    onChange={(e) =>
+                                        setData("description", e.target.value)
+                                    }
+                                    className="w-full border rounded p-2"
+                                    rows={3}
+                                />
+                            </div>
+
+                            {/* Steps */}
+                            <div>
+                                <Label>Steps *</Label>
+                                {data.steps.map((step, index) => (
+                                    <div
+                                        key={index}
+                                        className="flex flex-col gap-2 mb-2 border p-2 rounded"
+                                    >
+                                        <div className="flex items-center gap-2">
+                                            <Select
+                                                value={step.division_id}
+                                                onValueChange={(val) =>
+                                                    updateStepDivision(
+                                                        index,
+                                                        val
+                                                    )
+                                                }
+                                            >
+                                                <SelectTrigger className="w-48">
+                                                    <SelectValue placeholder="Select Division" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {divisions.map((d) => (
+                                                        <SelectItem
+                                                            key={d.id}
+                                                            value={d.id.toString()}
+                                                        >
+                                                            {d.name}
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+
+                                            <Input
+                                                placeholder="Step Name"
+                                                value={step.step_name}
+                                                onChange={(e) =>
+                                                    updateStepName(
+                                                        index,
+                                                        e.target.value
+                                                    )
+                                                }
+                                                className="flex-1"
+                                            />
+
+                                            {data.steps.length > 1 && (
+                                                <Button
+                                                    type="button"
+                                                    variant="destructive"
+                                                    size="sm"
+                                                    onClick={() =>
+                                                        removeStep(index)
+                                                    }
+                                                >
+                                                    Delete
+                                                </Button>
+                                            )}
+                                        </div>
+
+                                        {/* Actions checkboxes */}
+                                        <div className="flex items-center gap-4 mt-1 flex-wrap">
+                                            {availableActions.map((action) => (
+                                                <label
+                                                    key={action}
+                                                    className="flex items-center gap-1"
+                                                >
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={
+                                                            step.actions?.includes(
+                                                                action
+                                                            ) || false
+                                                        }
+                                                        onChange={(e) => {
+                                                            const updatedSteps =
+                                                                [...data.steps];
+                                                            if (
+                                                                e.target.checked
+                                                            ) {
+                                                                updatedSteps[
+                                                                    index
+                                                                ].actions = [
+                                                                    ...(step.actions ||
+                                                                        []),
+                                                                    action,
+                                                                ];
+                                                            } else {
+                                                                updatedSteps[
+                                                                    index
+                                                                ].actions = (
+                                                                    step.actions ||
+                                                                    []
+                                                                ).filter(
+                                                                    (a) =>
+                                                                        a !==
+                                                                        action
+                                                                );
+                                                            }
+                                                            setData(
+                                                                "steps",
+                                                                updatedSteps
+                                                            );
+                                                        }}
+                                                    />
+                                                    <span className="text-sm">
+                                                        {action}
+                                                    </span>
+                                                </label>
+                                            ))}
+                                        </div>
+                                    </div>
+                                ))}
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={addStep}
+                                >
+                                    <Plus className="h-4 w-4 mr-1" /> Add Step
+                                </Button>
+                            </div>
+
+                            {/* Actions */}
+                            <div className="flex justify-end gap-2 mt-4">
                                 <Button
                                     type="button"
                                     variant="outline"
@@ -506,11 +692,16 @@ export default function Index({ auth, workflows, divisions, documents }) {
                                         setEditingWorkflow(null);
                                         reset();
                                     }}
+                                    disabled={processing}
                                 >
                                     Cancel
                                 </Button>
                                 <Button type="submit" disabled={processing}>
-                                    {editingWorkflow ? "Update" : "Create"}
+                                    {processing
+                                        ? "Processing..."
+                                        : editingWorkflow
+                                        ? "Update Workflow"
+                                        : "Create Workflow"}
                                 </Button>
                             </div>
                         </form>

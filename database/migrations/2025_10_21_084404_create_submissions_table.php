@@ -6,42 +6,38 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    public function up(): void
-    {
-        Schema::create('submissions', function (Blueprint $table) {
-            $table->id();
-            
-            // Relasi ke pembuat
-            $table->foreignId('user_id')->constrained()->onDelete('cascade');
-            $table->foreignId('division_id')->nullable()->constrained()->onDelete('cascade');
-            
-            $table->string('title');
-            $table->text('description')->nullable();
-            $table->string('file_path');
-            $table->string('signature_path')->nullable();
+ public function up(): void
+{
+    Schema::create('submissions', function (Blueprint $table) {
+        $table->id();
 
-            // workflow dinamis
-            $table->foreignId('workflow_id')->nullable()->constrained('workflows')->onDelete('set null');
-            $table->integer('current_step')->default(1);
+        $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
+        $table->foreignId('division_id')->nullable()->constrained('divisions')->nullOnDelete();
 
-            // status dan approval
-            $table->enum('status', ['pending', 'approved', 'rejected'])->default('pending');
-            $table->timestamp('approved_at')->nullable();
-            $table->foreignId('approved_by')->nullable()->constrained('users')->onDelete('set null');
-            $table->text('approval_note')->nullable();
-            $table->text('notes')->nullable();
-$table->foreignId('document_id')->nullable()->constrained('documents')->onDelete('set null');
+        $table->string('title');
+        $table->text('description')->nullable();
+        $table->string('file_path')->nullable();
+        $table->string('signature_path')->nullable();
 
-            // posisi watermark
-            $table->float('watermark_x')->nullable();
-            $table->float('watermark_y')->nullable();
-            $table->float('watermark_width')->nullable();
-            $table->float('watermark_height')->nullable();
+        $table->foreignId('workflow_id')->nullable()->constrained('workflows')->nullOnDelete();
+        $table->integer('current_step')->default(1);
 
-            $table->timestamps();
-        });
-    }
+        $table->enum('status', ['pending', 'approved', 'rejected'])->default('pending');
+        $table->timestamp('approved_at')->nullable();
+        $table->foreignId('approved_by')->nullable()->constrained('users')->nullOnDelete();
+        $table->text('approval_note')->nullable();
+        $table->text('notes')->nullable();
 
+        $table->foreignId('document_id')->nullable()->constrained('documents')->nullOnDelete();
+
+        $table->float('watermark_x')->nullable();
+        $table->float('watermark_y')->nullable();
+        $table->float('watermark_width')->nullable();
+        $table->float('watermark_height')->nullable();
+
+        $table->timestamps();
+    });
+}
     public function down(): void
     {
         Schema::dropIfExists('submissions');

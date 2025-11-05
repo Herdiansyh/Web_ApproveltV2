@@ -9,7 +9,7 @@ class Workflow extends Model
 {
     use HasFactory;
 
-  protected $fillable = [
+    protected $fillable = [
         'name',
         'description',
         'division_from_id',
@@ -17,31 +17,28 @@ class Workflow extends Model
         'is_active',
         'total_steps',
         'document_id',
+        'flow_definition',
     ];
 
-    /**
-     * Relasi ke WorkflowStep
-     * Satu workflow bisa punya banyak step
-     */
+    // Relasi ke steps
     public function steps()
     {
-        return $this->hasMany(WorkflowStep::class);
+        return $this->hasMany(WorkflowStep::class)->orderBy('step_order');
     }
-public function document() {
-    return $this->belongsTo(Document::class);
-}
 
-    /**
-     * Relasi ke divisi asal
-     */
+    // Relasi ke dokumen
+    public function document()
+    {
+        return $this->belongsTo(Document::class);
+    }
+
+    // Relasi ke divisi asal
     public function divisionFrom()
     {
         return $this->belongsTo(Division::class, 'division_from_id');
     }
 
-    /**
-     * Relasi ke divisi tujuan
-     */
+    // Relasi ke divisi tujuan
     public function divisionTo()
     {
         return $this->belongsTo(Division::class, 'division_to_id');

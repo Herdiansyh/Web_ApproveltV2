@@ -12,10 +12,11 @@ import { Label } from "@/Components/ui/label";
 import { Button } from "@/Components/ui/button";
 import Swal from "sweetalert2";
 
-export default function Create({ isOpen, onClose, document }) {
+export default function Create({ isOpen, onClose, document, divisions }) {
     const { data, setData, post, put, processing, errors, reset } = useForm({
         name: "",
         description: "",
+        division_id: "",
     });
 
     useEffect(() => {
@@ -23,6 +24,7 @@ export default function Create({ isOpen, onClose, document }) {
             setData({
                 name: document.name,
                 description: document.description || "",
+                division_id: document.division_id || "",
             });
         } else {
             reset();
@@ -74,7 +76,7 @@ export default function Create({ isOpen, onClose, document }) {
 
                 <form onSubmit={handleSubmit} className="space-y-4 mt-4">
                     <div>
-                        <Label htmlFor="name">Name</Label>
+                        <Label htmlFor="name">Document Name</Label>
                         <Input
                             id="name"
                             type="text"
@@ -101,6 +103,30 @@ export default function Create({ isOpen, onClose, document }) {
                         {errors.description && (
                             <p className="text-sm text-red-600 mt-1">
                                 {errors.description}
+                            </p>
+                        )}
+                    </div>
+
+                    <div>
+                        <Label htmlFor="division">Division</Label>
+                        <select
+                            id="division"
+                            className="w-full border rounded-md p-2"
+                            value={data.division_id}
+                            onChange={(e) =>
+                                setData("division_id", e.target.value)
+                            }
+                        >
+                            <option value="">Select Division</option>
+                            {divisions.map((div) => (
+                                <option key={div.id} value={div.id}>
+                                    {div.name}
+                                </option>
+                            ))}
+                        </select>
+                        {errors.division_id && (
+                            <p className="text-sm text-red-600 mt-1">
+                                {errors.division_id}
                             </p>
                         )}
                     </div>

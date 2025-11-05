@@ -16,9 +16,9 @@ import {
     SelectValue,
 } from "@/Components/ui/select";
 
-export default function Create({ auth, userDivision, documents }) {
+export default function Create({ auth, userDivision, workflows }) {
     const { data, setData, post, processing, errors, reset } = useForm({
-        document_id: "",
+        workflow_id: "",
         title: "",
         description: "",
         file: null,
@@ -43,10 +43,10 @@ export default function Create({ auth, userDivision, documents }) {
     const submit = (e) => {
         e.preventDefault();
 
-        if (!data.document_id) {
+        if (!data.workflow_id) {
             Swal.fire({
                 icon: "warning",
-                title: "Pilih jenis dokumen terlebih dahulu",
+                title: "Pilih workflow terlebih dahulu",
             });
             return;
         }
@@ -114,52 +114,50 @@ export default function Create({ auth, userDivision, documents }) {
                                 encType="multipart/form-data"
                             >
                                 <div className="space-y-6">
-                                    {/* Pilih Jenis Dokumen */}
+                                    {/* Pilih Workflow */}
                                     <div>
-                                        <Label>Jenis Dokumen</Label>
-
-                                        <Label>Jenis Dokumen</Label>
+                                        <Label>Workflow</Label>
                                         <Select
-                                            value={data.document_id}
+                                            value={data.workflow_id}
                                             onValueChange={(value) =>
-                                                setData("document_id", value)
+                                                setData("workflow_id", value)
                                             }
                                         >
                                             <SelectTrigger className="w-full mt-1">
-                                                <SelectValue placeholder="-- Pilih Jenis Dokumen --" />
+                                                <SelectValue placeholder="-- Pilih Workflow --" />
                                             </SelectTrigger>
                                             <SelectContent>
-                                                {documents?.length > 0 ? (
-                                                    documents.map((doc) => (
-                                                        <SelectItem
-                                                            key={doc.id}
-                                                            value={String(
-                                                                doc.id
-                                                            )}
-                                                        >
-                                                            {doc.name}
-                                                        </SelectItem>
-                                                    ))
+                                                {workflows?.length > 0 ? (
+                                                    workflows.map((wf) =>
+                                                        wf.id ? (
+                                                            <SelectItem
+                                                                key={wf.id}
+                                                                value={String(
+                                                                    wf.id
+                                                                )}
+                                                            >
+                                                                {
+                                                                    wf.document
+                                                                        ?.name
+                                                                }{" "}
+                                                                - {wf.name}
+                                                            </SelectItem>
+                                                        ) : null
+                                                    )
                                                 ) : (
                                                     <SelectItem
                                                         disabled
-                                                        value=""
+                                                        value="wd"
                                                     >
-                                                        Tidak ada dokumen
+                                                        Tidak ada workflow
                                                         tersedia
                                                     </SelectItem>
                                                 )}
                                             </SelectContent>
                                         </Select>
-                                        {errors.document_id && (
+                                        {errors.workflow_id && (
                                             <p className="text-red-600 text-sm mt-1">
-                                                {errors.document_id}
-                                            </p>
-                                        )}
-
-                                        {errors.document_id && (
-                                            <p className="text-red-600 text-sm mt-1">
-                                                {errors.document_id}
+                                                {errors.workflow_id}
                                             </p>
                                         )}
                                     </div>

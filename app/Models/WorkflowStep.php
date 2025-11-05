@@ -15,10 +15,9 @@ class WorkflowStep extends Model
         'step_order',
         'role',
         'is_final_step',
+        'is_active',
         'instructions',
         'actions',
-
-        // 🔹 Kolom hak akses subdivisi
         'can_create',
         'can_edit',
         'can_delete',
@@ -27,41 +26,42 @@ class WorkflowStep extends Model
     ];
 
     protected $casts = [
-        'actions' => 'array', // JSON otomatis jadi array
+        'actions' => 'array',
         'can_create' => 'boolean',
         'can_edit' => 'boolean',
         'can_delete' => 'boolean',
         'can_approve' => 'boolean',
         'can_reject' => 'boolean',
         'is_final_step' => 'boolean',
+        'is_active' => 'boolean',
     ];
+        // 🔥 Accessor untuk memastikan actions selalu array (bahkan saat serialize Inertia)
 
-    /**
-     * Relasi ke Workflow (template workflow)
-     */
+   public function getActionsAttribute($value)
+    {
+        if (is_null($value)) {
+            return [];
+        }
+        
+        if (is_string($value)) {
+            return json_decode($value, true) ?? [];
+        }
+        
+        return $value;
+    }
     public function workflow()
     {
         return $this->belongsTo(Workflow::class);
     }
 
-    /**
-     * Relasi ke Division (pemilik step)
-     */
     public function division()
     {
         return $this->belongsTo(Division::class);
-    }
-
-    /**
-     * Relasi ke Submission (jika nanti digunakan untuk runtime tracking)
-     */
-    public function submission()
-    {
-        return $this->belongsTo(Submission::class);
     }
     public function permissions()
 {
     return $this->hasMany(WorkflowStepPermission::class);
 }
+
 
 }

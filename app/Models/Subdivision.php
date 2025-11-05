@@ -24,10 +24,6 @@ class Subdivision extends Model
         return $this->hasMany(User::class);
     }
 
-    public function documentPermissions()
-{
-    return $this->hasMany(DocumentPermission::class);
-}
 
 public function workflowStepPermissions()
 {

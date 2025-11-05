@@ -18,6 +18,7 @@ export default function Index({ auth, submissions }) {
     const SubmissionFilter = submissions.data.filter((submission) =>
         submission.title.toLowerCase().includes(Filter.toLowerCase())
     );
+    console.log(submissions);
     return (
         <AuthenticatedLayout
             user={auth.user}
@@ -166,22 +167,24 @@ export default function Index({ auth, submissions }) {
                                                             <td className="px-6 py-4">
                                                                 <span
                                                                     className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                                                        submission.status ===
-                                                                        "approved"
+                                                                        submission.status?.toLowerCase().includes("approved") ||
+                                                                        submission.status === "approved"
                                                                             ? "bg-green-100 text-green-800"
-                                                                            : submission.status ===
-                                                                              "rejected"
+                                                                            : submission.status?.toLowerCase() === "rejected" ||
+                                                                              submission.status === "rejected"
                                                                             ? "bg-destructive text-destructive-foreground"
                                                                             : "bg-yellow-100 text-yellow-800"
                                                                     }`}
                                                                 >
-                                                                    {submission.status ===
-                                                                    "pending"
+                                                                    {submission.status === "pending"
                                                                         ? "Menunggu Persetujuan"
-                                                                        : submission.status ===
-                                                                          "approved"
-                                                                        ? "Disetujui"
-                                                                        : "Ditolak"}
+                                                                        : submission.status?.toLowerCase().includes("approved")
+                                                                        ? submission.status
+                                                                        : submission.status?.toLowerCase().includes("waiting")
+                                                                        ? submission.status
+                                                                        : submission.status?.toLowerCase() === "rejected"
+                                                                        ? "Ditolak"
+                                                                        : submission.status || "Menunggu"}
                                                                 </span>
                                                             </td>
 

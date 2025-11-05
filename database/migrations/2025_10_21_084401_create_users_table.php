@@ -23,7 +23,7 @@ return new class extends Migration
                   ->nullOnDelete();
 
             // role user
-            $table->enum('role', ['employee', 'manager', 'admin'])
+            $table->enum('role', ['employee', 'direktur', 'admin'])
                   ->default('employee');
 
             // relasi ke division

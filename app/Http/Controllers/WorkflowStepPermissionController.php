@@ -2,96 +2,70 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Workflow;
 use App\Models\WorkflowStep;
-use App\Models\WorkflowStepPermission;
 use App\Models\Subdivision;
+use App\Models\WorkflowStepPermission;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
+use Illuminate\Support\Facades\DB;
 
 class WorkflowStepPermissionController extends Controller
 {
-    // Tampilkan semua permission untuk satu workflow step
-    public function index(WorkflowStep $workflowStep)
+    public function index(Workflow $workflow)
     {
-        $permissions = $workflowStep->permissions()->with('subdivision')->get();
-        $subdivisions = Subdivision::all();
+        // ambil step milik workflow, include division dan permissions -> subdivision
+        $steps = WorkflowStep::where('workflow_id', $workflow->id)
+    ->with(['division', 'permissions'])
+    ->orderBy('step_order')
+    ->get();
+
+
+        // ambil semua division_id yang digunakan di steps
+        $divisionIds = $steps->pluck('division_id')->unique()->filter()->values()->all();
+
+        // ambil hanya subdivisions yang relevan (hanya subdivisi yang milik division diatas)
+        $subdivisions = Subdivision::whereIn('division_id', $divisionIds)
+            ->orderBy('division_id')
+            ->orderBy('name')
+            ->get();
 
         return Inertia::render('Admin/WorkflowStepPermission/Index', [
-            'workflowStep' => $workflowStep,
-            'permissions' => $permissions,
+            'workflow' => $workflow,
+            'steps' => $steps,
             'subdivisions' => $subdivisions,
         ]);
     }
 
-    // Tampilkan form untuk menambah permission baru
-    public function create(WorkflowStep $workflowStep)
+    public function store(Request $request, Workflow $workflow)
     {
-        $subdivisions = Subdivision::all();
-
-        return Inertia::render('Admin/WorkflowStepPermission/Create', [
-            'workflowStep' => $workflowStep,
-            'subdivisions' => $subdivisions,
-        ]);
-    }
-
-    // Simpan permission baru
-    public function store(Request $request, WorkflowStep $workflowStep)
-    {
-        $request->validate([
-            'subdivision_id' => 'required|exists:subdivisions,id',
-            'can_read' => 'boolean',
-            'can_edit' => 'boolean',
-            'can_delete' => 'boolean',
-            'can_approve' => 'boolean',
-            'can_reject' => 'boolean',
-            'can_upload' => 'boolean',
-            'can_download' => 'boolean',
+        $data = $request->validate([
+            'permissions' => 'required|array',
+            'permissions.*.workflow_step_id' => 'required|exists:workflow_steps,id',
+            'permissions.*.subdivision_id' => 'required|exists:subdivisions,id',
+            'permissions.*.can_view' => 'boolean',
+            'permissions.*.can_approve' => 'boolean',
+            'permissions.*.can_reject' => 'boolean',
+            'permissions.*.can_request_next' => 'boolean',
         ]);
 
-        $workflowStep->permissions()->create($request->all());
+        DB::transaction(function () use ($data) {
+            foreach ($data['permissions'] as $perm) {
+                WorkflowStepPermission::updateOrCreate(
+                    [
+                        'workflow_step_id' => $perm['workflow_step_id'],
+                        'subdivision_id' => $perm['subdivision_id'],
+                    ],
+                    [
+                        'can_view' => $perm['can_view'] ?? false,
+                        'can_approve' => $perm['can_approve'] ?? false,
+                        'can_reject' => $perm['can_reject'] ?? false,
+                        'can_request_next' => $perm['can_request_next'] ?? false,
+                    ]
+                );
+            }
+        });
 
-        return redirect()->route('workflow-steps.permissions.index', $workflowStep->id)
-                         ->with('success', 'Permission created successfully.');
-    }
-
-    // Tampilkan form edit permission
-    public function edit(WorkflowStepPermission $permission)
-    {
-        $subdivisions = Subdivision::all();
-
-        return Inertia::render('Admin/WorkflowStepPermission/Edit', [
-            'permission' => $permission,
-            'subdivisions' => $subdivisions,
-        ]);
-    }
-
-    // Update permission
-    public function update(Request $request, WorkflowStepPermission $permission)
-    {
-        $request->validate([
-            'subdivision_id' => 'required|exists:subdivisions,id',
-            'can_read' => 'boolean',
-            'can_edit' => 'boolean',
-            'can_delete' => 'boolean',
-            'can_approve' => 'boolean',
-            'can_reject' => 'boolean',
-            'can_upload' => 'boolean',
-            'can_download' => 'boolean',
-        ]);
-
-        $permission->update($request->all());
-
-        return redirect()->route('workflow-steps.permissions.index', $permission->workflow_step_id)
-                         ->with('success', 'Permission updated successfully.');
-    }
-
-    // Hapus permission
-    public function destroy(WorkflowStepPermission $permission)
-    {
-        $workflowStepId = $permission->workflow_step_id;
-        $permission->delete();
-
-        return redirect()->route('workflow-steps.permissions.index', $workflowStepId)
-                         ->with('success', 'Permission deleted successfully.');
+        return redirect()->back()->with('success', 'Permissions updated successfully.');
     }
 }

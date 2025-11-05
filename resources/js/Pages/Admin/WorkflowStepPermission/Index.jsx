@@ -1,131 +1,240 @@
-import React, { useState, useMemo } from "react";
-import { usePage, router } from "@inertiajs/react";
-import {
-    Table,
-    TableHead,
-    TableRow,
-    TableCell,
-    TableBody,
-} from "@/Components/ui/table";
-import { Input } from "@/Components/ui/input";
+import React, { useMemo } from "react";
+import { Head, useForm } from "@inertiajs/react";
+import { Card } from "@/Components/ui/card";
 import { Button } from "@/Components/ui/button";
+import { Checkbox } from "@/Components/ui/checkbox";
 import Sidebar from "@/Components/Sidebar";
 import Swal from "sweetalert2";
 
-export default function WorkflowStepPermissionIndex() {
-    const { workflowStep, permissions = [], users = [] } = usePage().props;
+export default function WorkflowStepPermissionIndex({
+    workflow,
+    steps = [],
+    subdivisions = [],
+}) {
+    // buat map subdivisi per division untuk lookup cepat
+    const subdivisionsByDivision = useMemo(() => {
+        const map = {};
+        (subdivisions || []).forEach((sub) => {
+            if (!map[sub.division_id]) map[sub.division_id] = [];
+            map[sub.division_id].push(sub);
+        });
+        return map;
+    }, [subdivisions]);
 
-    const [search, setSearch] = useState("");
-
-    const filteredPermissions = useMemo(() => {
-        if (!permissions) return [];
-        return permissions.filter((perm) =>
-            perm.user.name.toLowerCase().includes(search.toLowerCase())
-        );
-    }, [permissions, search]);
-
-    const handleDelete = (id) => {
-        Swal.fire({
-            title: "Are you sure?",
-            text: "This action cannot be undone!",
-            icon: "warning",
-            showCancelButton: true,
-            confirmButtonText: "Yes, delete it!",
-        }).then((result) => {
-            if (result.isConfirmed) {
-                router.delete(route("workflow-steps.permissions.destroy", id), {
-                    onSuccess: () => {
-                        Swal.fire("Deleted!", "Permission removed.", "success");
-                    },
+    // inisialisasi permissions hanya untuk subdivisi yang relevan tiap step
+    const initialPermissions = useMemo(() => {
+        const perms = [];
+        (steps || []).forEach((step) => {
+            const subs = subdivisionsByDivision[step.division_id] || [];
+            subs.forEach((sub) => {
+                const existing =
+                    (step.permissions || []).find(
+                        (p) => p.subdivision_id === sub.id
+                    ) || {};
+                perms.push({
+                    workflow_step_id: step.id,
+                    subdivision_id: sub.id,
+                    can_view: !!existing.can_view,
+                    can_approve: !!existing.can_approve,
+                    can_reject: !!existing.can_reject,
+                    can_request_next: !!existing.can_request_next,
                 });
+            });
+        });
+        return perms;
+    }, [steps, subdivisionsByDivision]);
+
+    const { data, setData, post, processing } = useForm({
+        permissions: initialPermissions,
+    });
+
+    // helper: get perm object for step+sub
+    const findPerm = (stepId, subId) =>
+        data.permissions.find(
+            (p) => p.workflow_step_id === stepId && p.subdivision_id === subId
+        );
+
+    const togglePermission = (stepId, subId, field) => {
+        const updated = data.permissions.map((perm) => {
+            if (
+                perm.workflow_step_id === stepId &&
+                perm.subdivision_id === subId
+            ) {
+                return { ...perm, [field]: !perm[field] };
             }
+            return perm;
+        });
+        setData("permissions", updated);
+    };
+
+    const handleSubmit = (e) => {
+        e.preventDefault();
+        post(route("workflow-steps.permissions.store", workflow.id), {
+            onSuccess: () =>
+                Swal.fire("Success", "Permissions updated!", "success"),
         });
     };
 
     return (
-        <div className="flex min-h-screen bg-background">
+        <div className="flex min-h-screen bg-gray-50">
             <Sidebar />
-            <div className="py-12 w-full overflow-auto relative p-6">
-                <h1 className="text-2xl font-bold mb-4">
-                    Workflow Step Permissions - {workflowStep.name}
-                </h1>
+            <div className="flex-1 p-8">
+                <Head title={`Workflow Permissions - ${workflow.name}`} />
+                <Card className="p-6">
+                    <h2 className="text-xl font-semibold mb-4">
+                        Workflow: {workflow.name}
+                    </h2>
 
-                <div className="mb-4 flex gap-2 items-center">
-                    <Input
-                        placeholder="Search user..."
-                        value={search}
-                        onChange={(e) => setSearch(e.target.value)}
-                        className="max-w-xs"
-                    />
-                </div>
-
-                <Table>
-                    <TableHead>
-                        <TableRow>
-                            <TableCell>No</TableCell>
-                            <TableCell>User</TableCell>
-                            <TableCell>Actions</TableCell>
-                        </TableRow>
-                    </TableHead>
-                    <TableBody>
-                        {filteredPermissions.length > 0 ? (
-                            filteredPermissions.map((perm, idx) => (
-                                <TableRow key={perm.id}>
-                                    <TableCell>{idx + 1}</TableCell>
-                                    <TableCell>{perm.user.name}</TableCell>
-                                    <TableCell>
-                                        <div className="flex gap-2">
-                                            <Button
-                                                size="sm"
-                                                variant="outline"
-                                                onClick={() =>
-                                                    router.get(
-                                                        route(
-                                                            "workflow-steps.permissions.edit",
-                                                            perm.id
-                                                        )
-                                                    )
-                                                }
+                    {!steps || steps.length === 0 ? (
+                        <p className="text-gray-500 text-center py-10">
+                            Belum ada step dalam workflow ini.
+                        </p>
+                    ) : (
+                        <form onSubmit={handleSubmit}>
+                            <table className="w-full border-collapse border text-sm">
+                                <thead>
+                                    <tr className="bg-gray-100">
+                                        <th className="border p-2 text-left w-48">
+                                            Step
+                                        </th>
+                                        <th className="border p-2 text-left">
+                                            Subdivisi (hanya subdivisi milik
+                                            division step)
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {steps.map((step) => {
+                                        const stepName =
+                                            step.role ||
+                                            `Step ${
+                                                step.step_order || step.id
+                                            }`;
+                                        const subs =
+                                            subdivisionsByDivision[
+                                                step.division_id
+                                            ] || [];
+                                        return (
+                                            <tr
+                                                key={step.id}
+                                                className="align-top"
                                             >
-                                                Edit
-                                            </Button>
-                                            <Button
-                                                size="sm"
-                                                variant="destructive"
-                                                onClick={() =>
-                                                    handleDelete(perm.id)
-                                                }
-                                            >
-                                                Delete
-                                            </Button>
-                                        </div>
-                                    </TableCell>
-                                </TableRow>
-                            ))
-                        ) : (
-                            <TableRow>
-                                <TableCell colSpan={3} className="text-center">
-                                    No permissions found
-                                </TableCell>
-                            </TableRow>
-                        )}
-                    </TableBody>
-                </Table>
+                                                <td className="border p-2 font-medium bg-gray-50">
+                                                    {stepName}
+                                                </td>
+                                                <td className="border p-2">
+                                                    {subs.length === 0 ? (
+                                                        <div className="text-sm text-gray-500">
+                                                            Tidak ada subdivisi
+                                                            untuk division ini.
+                                                        </div>
+                                                    ) : (
+                                                        subs.map((sub) => {
+                                                            const perm =
+                                                                findPerm(
+                                                                    step.id,
+                                                                    sub.id
+                                                                ) || {};
+                                                            return (
+                                                                <div
+                                                                    key={sub.id}
+                                                                    className="mb-3"
+                                                                >
+                                                                    <div className="font-medium">
+                                                                        {
+                                                                            sub.name
+                                                                        }
+                                                                    </div>
+                                                                    <div className="flex items-center gap-3 mt-1">
+                                                                        <label className="inline-flex items-center gap-2">
+                                                                            <Checkbox
+                                                                                checked={
+                                                                                    !!perm.can_view
+                                                                                }
+                                                                                onCheckedChange={() =>
+                                                                                    togglePermission(
+                                                                                        step.id,
+                                                                                        sub.id,
+                                                                                        "can_view"
+                                                                                    )
+                                                                                }
+                                                                            />
+                                                                            <span className="text-sm">
+                                                                                View
+                                                                            </span>
+                                                                        </label>
+                                                                        <label className="inline-flex items-center gap-2">
+                                                                            <Checkbox
+                                                                                checked={
+                                                                                    !!perm.can_approve
+                                                                                }
+                                                                                onCheckedChange={() =>
+                                                                                    togglePermission(
+                                                                                        step.id,
+                                                                                        sub.id,
+                                                                                        "can_approve"
+                                                                                    )
+                                                                                }
+                                                                            />
+                                                                            <span className="text-sm">
+                                                                                Approve
+                                                                            </span>
+                                                                        </label>
+                                                                        <label className="inline-flex items-center gap-2">
+                                                                            <Checkbox
+                                                                                checked={
+                                                                                    !!perm.can_reject
+                                                                                }
+                                                                                onCheckedChange={() =>
+                                                                                    togglePermission(
+                                                                                        step.id,
+                                                                                        sub.id,
+                                                                                        "can_reject"
+                                                                                    )
+                                                                                }
+                                                                            />
+                                                                            <span className="text-sm">
+                                                                                Reject
+                                                                            </span>
+                                                                        </label>
+                                                                        <label className="inline-flex items-center gap-2">
+                                                                            <Checkbox
+                                                                                checked={
+                                                                                    !!perm.can_request_next
+                                                                                }
+                                                                                onCheckedChange={() =>
+                                                                                    togglePermission(
+                                                                                        step.id,
+                                                                                        sub.id,
+                                                                                        "can_request_next"
+                                                                                    )
+                                                                                }
+                                                                            />
+                                                                            <span className="text-sm">
+                                                                                Request
+                                                                                Next
+                                                                            </span>
+                                                                        </label>
+                                                                    </div>
+                                                                </div>
+                                                            );
+                                                        })
+                                                    )}
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
 
-                <div className="mt-4">
-                    <Button
-                        onClick={() =>
-                            router.get(
-                                route(
-                                    "workflow-steps.permissions.create",
-                                    workflowStep.id
-                                )
-                            )
-                        }
-                    >
-                        + Add Permission
-                    </Button>
-                </div>
+                            <div className="flex justify-end mt-6">
+                                <Button type="submit" disabled={processing}>
+                                    {processing ? "Saving..." : "Save Changes"}
+                                </Button>
+                            </div>
+                        </form>
+                    )}
+                </Card>
             </div>
         </div>
     );

@@ -9,16 +9,20 @@ class Document extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['name', 'description'];
+    protected $fillable = ['division_id', 'name', 'description'];
 
-    // Nanti kalau sudah dikaitkan ke workflow:
+    // Relasi ke Division
+    public function division()
+    {
+        return $this->belongsTo(Division::class);
+    }
+
+    // Relasi ke Workflow
     public function workflows()
     {
         return $this->hasMany(Workflow::class, 'document_id');
     }
-    public function permissions()
-{
-    return $this->hasMany(DocumentPermission::class);
-}
 
+    // Relasi ke Permission
+   
 }

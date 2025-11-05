@@ -13,7 +13,7 @@ class InitialDataSeeder extends Seeder
     {
         // Create divisions
         $divisions = [
-            ['name' => 'General', 'description' => 'General Division'],
+            ['name' => 'Direktur', 'description' => 'Direktur Division'],
             ['name' => 'HR', 'description' => 'Human Resources'],
             ['name' => 'IT', 'description' => 'Information Technology'],
             ['name' => 'Finance', 'description' => 'Finance Department'],
@@ -26,37 +26,37 @@ class InitialDataSeeder extends Seeder
 
         // Create manager account
         User::create([
-            'name' => 'Direktur',
+            'name' => 'Rudi',
             'email' => 'direktur@direktur.com',
             'password' => Hash::make('123123123'),
-            'role' => 'manager',
-            'division_id' => Division::where('name', 'General')->first()->id,
+            'role' => 'Direktur',
+            'division_id' => Division::where('name', 'Direktur')->first()->id,
             'email_verified_at' => now(),
         ]);
         // Create admin account
         User::create([
-            'name' => 'Admin',
+            'name' => 'Budi',
             'email' => 'admin@admin.com',
             'password' => Hash::make('123123123'),
             'role' => 'admin',
-            'division_id' => Division::where('name', 'General')->first()->id,
+            'division_id' => Division::where('name', 'Direktur')->first()->id,
             'email_verified_at' => now(),
         ]);
 
         // Create some example employees
         $employees = [
             [
-                'name' => 'HR Staff',
+                'name' => 'Olive',
                 'email' => 'hr@example.com',
                 'division' => 'HR'
             ],
             [
-                'name' => 'IT Staff',
+                'name' => 'Ramdan',
                 'email' => 'it@example.com',
                 'division' => 'IT'
             ],
             [
-                'name' => 'Finance Staff',
+                'name' => 'Ziva',
                 'email' => 'finance@example.com',
                 'division' => 'Finance'
             ]
