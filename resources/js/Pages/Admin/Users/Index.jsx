@@ -22,7 +22,7 @@ import {
 } from "@/Components/ui/select";
 import Sidebar from "@/Components/Sidebar";
 import Swal from "sweetalert2";
-import { X } from "lucide-react";
+import { User, X } from "lucide-react";
 
 export default function Index({ auth, users, divisions, subdivisions, roles }) {
     const [showCreateModal, setShowCreateModal] = useState(false);
@@ -73,7 +73,7 @@ export default function Index({ auth, users, divisions, subdivisions, roles }) {
     useEffect(() => {
         if (data.division_id) {
             const filtered = subdivisions.filter(
-                (sub) => String(sub.division_id) === String(data.division_id)
+                (sub) => sub.division_id === parseInt(data.division_id)
             );
             setFilteredSubdivisions(filtered);
         } else {
@@ -131,14 +131,25 @@ export default function Index({ auth, users, divisions, subdivisions, roles }) {
 
     const handleEdit = (user) => {
         setEditingUser(user);
-        setData({
-            name: user.name,
-            email: user.email,
-            password: "",
-            role: user.role,
-            division_id: user.division_id || "",
-            subdivision_id: user.subdivision_id || "",
-        });
+        // Set semua data user dulu, tapi kosongkan subdivision_id sementara
+        setTimeout(() => {
+            setData({
+                name: user.name,
+                email: user.email,
+                password: "",
+                role: user.role,
+                division_id: user.division_id,
+                subdivision_id: user.subdivision_id,
+            });
+        }, 0);
+        // Setelah filteredSubdivisions sudah kebentuk (karena division_id berubah),
+        // baru set subdivision_id supaya dropdown bisa nemu datanya
+        setTimeout(() => {
+            setData((prev) => ({
+                ...prev,
+                subdivision_id: user.subdivision_id,
+            }));
+        }, 100);
     };
 
     const handleDelete = (userId) => {
@@ -195,7 +206,7 @@ export default function Index({ auth, users, divisions, subdivisions, roles }) {
             window.removeEventListener("error", handleGlobalError);
         };
     }, []);
-
+    console.log(users.subdivision?.name);
     return (
         <AuthenticatedLayout
             user={auth.user}
@@ -214,10 +225,11 @@ export default function Index({ auth, users, divisions, subdivisions, roles }) {
                             <div className="flex flex-col md:flex-row justify-between gap-3 mb-4">
                                 <div className="flex flex-col md:flex-row gap-2 w-full">
                                     <Input
-                                        className="md:w-1/2"
+                                        className="md:w-1/2 text-[0.8rem]"
                                         placeholder="Search User..."
                                         value={search}
                                         onChange={handleSearch}
+                                        style={{ borderRadius: "15px" }}
                                     />
                                     <Select
                                         value={selectedDivision}
@@ -225,7 +237,10 @@ export default function Index({ auth, users, divisions, subdivisions, roles }) {
                                             setSelectedDivision(value)
                                         }
                                     >
-                                        <SelectTrigger className="md:w-1/4 border border-gray-300">
+                                        <SelectTrigger
+                                            style={{ borderRadius: "15px" }}
+                                            className="md:w-1/4 border text-[0.8rem] border-gray-300"
+                                        >
                                             <SelectValue placeholder="Filter by Division..." />
                                         </SelectTrigger>
                                         <SelectContent>
@@ -247,7 +262,8 @@ export default function Index({ auth, users, divisions, subdivisions, roles }) {
                                         reset();
                                         setShowCreateModal(true);
                                     }}
-                                    className="w-[180px] h-9 text-sm"
+                                    className="sm:w-[180px] w-full h-9 text-sm"
+                                    style={{ borderRadius: "15px" }}
                                 >
                                     + Add New User
                                 </Button>
@@ -319,6 +335,10 @@ export default function Index({ auth, users, divisions, subdivisions, roles }) {
                                                             onClick={() =>
                                                                 handleEdit(user)
                                                             }
+                                                            style={{
+                                                                borderRadius:
+                                                                    "15px",
+                                                            }}
                                                         >
                                                             Edit
                                                         </Button>
@@ -332,6 +352,10 @@ export default function Index({ auth, users, divisions, subdivisions, roles }) {
                                                                         user.id
                                                                     )
                                                                 }
+                                                                style={{
+                                                                    borderRadius:
+                                                                        "15px",
+                                                                }}
                                                             >
                                                                 Delete
                                                             </Button>
@@ -504,10 +528,15 @@ export default function Index({ auth, users, divisions, subdivisions, roles }) {
                                         setEditingUser(null);
                                         reset();
                                     }}
+                                    style={{ borderRadius: "15px" }}
                                 >
                                     Cancel
                                 </Button>
-                                <Button type="submit" disabled={processing}>
+                                <Button
+                                    type="submit"
+                                    style={{ borderRadius: "15px" }}
+                                    disabled={processing}
+                                >
                                     {editingUser ? "Update" : "Create"}
                                 </Button>
                             </div>

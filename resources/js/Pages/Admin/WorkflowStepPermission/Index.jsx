@@ -11,22 +11,11 @@ export default function WorkflowStepPermissionIndex({
     steps = [],
     subdivisions = [],
 }) {
-    // buat map subdivisi per division untuk lookup cepat
-    const subdivisionsByDivision = useMemo(() => {
-        const map = {};
-        (subdivisions || []).forEach((sub) => {
-            if (!map[sub.division_id]) map[sub.division_id] = [];
-            map[sub.division_id].push(sub);
-        });
-        return map;
-    }, [subdivisions]);
-
-    // inisialisasi permissions hanya untuk subdivisi yang relevan tiap step
+    // inisialisasi permissions untuk SEMUA subdivisi pada setiap step
     const initialPermissions = useMemo(() => {
         const perms = [];
         (steps || []).forEach((step) => {
-            const subs = subdivisionsByDivision[step.division_id] || [];
-            subs.forEach((sub) => {
+            (subdivisions || []).forEach((sub) => {
                 const existing =
                     (step.permissions || []).find(
                         (p) => p.subdivision_id === sub.id
@@ -42,7 +31,7 @@ export default function WorkflowStepPermissionIndex({
             });
         });
         return perms;
-    }, [steps, subdivisionsByDivision]);
+    }, [steps, subdivisions]);
 
     const { data, setData, post, processing } = useForm({
         permissions: initialPermissions,
@@ -98,8 +87,7 @@ export default function WorkflowStepPermissionIndex({
                                             Step
                                         </th>
                                         <th className="border p-2 text-left">
-                                            Subdivisi (hanya subdivisi milik
-                                            division step)
+                                            Subdivisi (semua subdivisi)
                                         </th>
                                     </tr>
                                 </thead>
@@ -110,10 +98,6 @@ export default function WorkflowStepPermissionIndex({
                                             `Step ${
                                                 step.step_order || step.id
                                             }`;
-                                        const subs =
-                                            subdivisionsByDivision[
-                                                step.division_id
-                                            ] || [];
                                         return (
                                             <tr
                                                 key={step.id}
@@ -123,13 +107,16 @@ export default function WorkflowStepPermissionIndex({
                                                     {stepName}
                                                 </td>
                                                 <td className="border p-2">
-                                                    {subs.length === 0 ? (
+                                                    {(subdivisions || [])
+                                                        .length === 0 ? (
                                                         <div className="text-sm text-gray-500">
                                                             Tidak ada subdivisi
-                                                            untuk division ini.
+                                                            yang terdaftar.
                                                         </div>
                                                     ) : (
-                                                        subs.map((sub) => {
+                                                        (
+                                                            subdivisions || []
+                                                        ).map((sub) => {
                                                             const perm =
                                                                 findPerm(
                                                                     step.id,
@@ -228,7 +215,11 @@ export default function WorkflowStepPermissionIndex({
                             </table>
 
                             <div className="flex justify-end mt-6">
-                                <Button type="submit" disabled={processing}>
+                                <Button
+                                    type="submit"
+                                    style={{ borderRadius: "15px" }}
+                                    disabled={processing}
+                                >
                                     {processing ? "Saving..." : "Save Changes"}
                                 </Button>
                             </div>

@@ -218,138 +218,74 @@ export default function Show({
                                             </a>
                                         </PrimaryButton>
 
-                                        <DropdownMenu>
-                                            <DropdownMenuTrigger asChild>
-                                                <Button
-                                                    className="max-w-20 h-6 tracking-wide bg-blue-500 text-white"
-                                                    style={{
-                                                        borderRadius: "5px",
-                                                    }}
-                                                >
-                                                    Action
-                                                    <div
+                                        {canApprove && Array.isArray(currentStep?.actions) && currentStep.actions.length > 0 && (
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                    <Button
+                                                        className="max-w-20 h-6 tracking-wide bg-blue-500 text-white"
                                                         style={{
-                                                            rotate: "90deg",
-                                                            fontSize: "10px",
+                                                            borderRadius: "5px",
                                                         }}
                                                     >
-                                                        <span>&lt;</span>
-                                                        <span>&gt;</span>
-                                                    </div>
-                                                </Button>
-                                            </DropdownMenuTrigger>
-
-                                            <DropdownMenuContent
-                                                align="end"
-                                                className="w-52"
-                                            >
-                                                {(currentStep?.actions || [])
-                                                    .length === 0 ? (
-                                                    <>
-                                                        <DropdownMenuItem
-                                                            onClick={
-                                                                handleNoAccess
-                                                            }
-                                                            className="cursor-pointer"
+                                                        Action
+                                                        <div
+                                                            style={{
+                                                                rotate: "90deg",
+                                                                fontSize: "10px",
+                                                            }}
                                                         >
-                                                            Tidak ada aksi
-                                                            tersedia
-                                                        </DropdownMenuItem>
-                                                    </>
-                                                ) : (
-                                                    currentStep.actions.map(
+                                                            <span>&lt;</span>
+                                                            <span>&gt;</span>
+                                                        </div>
+                                                    </Button>
+                                                </DropdownMenuTrigger>
+
+                                                <DropdownMenuContent
+                                                    align="end"
+                                                    className="w-52"
+                                                >
+                                                    {currentStep.actions.map(
                                                         (action, index) => {
-                                                            const a =
-                                                                action.toLowerCase();
-                                                            if (
-                                                                a.includes(
-                                                                    "approve"
-                                                                )
-                                                            ) {
+                                                            const a = String(action).toLowerCase();
+                                                            if (a.includes("approve")) {
                                                                 return (
                                                                     <DropdownMenuItem
-                                                                        key={
-                                                                            index
-                                                                        }
-                                                                        onClick={() =>
-                                                                            canApprove
-                                                                                ? setShowApproveModal(
-                                                                                      true
-                                                                                  )
-                                                                                : handleNoAccess()
-                                                                        }
+                                                                        key={index}
+                                                                        onClick={() => setShowApproveModal(true)}
                                                                         className="hover:text-green-700 cursor-pointer border-b border-gray-200"
                                                                     >
-                                                                        Setujui
-                                                                        Pengajuan
+                                                                        Setujui Pengajuan
                                                                     </DropdownMenuItem>
                                                                 );
                                                             }
-                                                            if (
-                                                                a.includes(
-                                                                    "reject"
-                                                                )
-                                                            ) {
+                                                            if (a.includes("reject")) {
                                                                 return (
                                                                     <DropdownMenuItem
-                                                                        key={
-                                                                            index
-                                                                        }
-                                                                        onClick={() =>
-                                                                            canApprove
-                                                                                ? setShowRejectModal(
-                                                                                      true
-                                                                                  )
-                                                                                : handleNoAccess()
-                                                                        }
+                                                                        key={index}
+                                                                        onClick={() => setShowRejectModal(true)}
                                                                         className="hover:text-red-700 cursor-pointer border-b border-gray-200"
                                                                     >
-                                                                        Tolak
-                                                                        Pengajuan
+                                                                        Tolak Pengajuan
                                                                     </DropdownMenuItem>
                                                                 );
                                                             }
-                                                            // Handle "Request To Next" or similar actions
-                                                            if (
-                                                                a.includes(
-                                                                    "request"
-                                                                ) ||
-                                                                a.includes("next")
-                                                            ) {
+                                                            if (a.includes("request") || a.includes("next")) {
                                                                 return (
                                                                     <DropdownMenuItem
-                                                                        key={
-                                                                            index
-                                                                        }
-                                                                        onClick={() =>
-                                                                            canApprove
-                                                                                ? handleRequestNext()
-                                                                                : handleNoAccess()
-                                                                        }
+                                                                        key={index}
+                                                                        onClick={handleRequestNext}
                                                                         className="hover:text-blue-700 cursor-pointer border-b border-gray-200"
                                                                     >
-                                                                        Teruskan ke Langkah
-                                                                        Berikutnya
+                                                                        Teruskan ke Langkah Berikutnya
                                                                     </DropdownMenuItem>
                                                                 );
                                                             }
-                                                            return (
-                                                                <DropdownMenuItem
-                                                                    key={index}
-                                                                    onClick={() =>
-                                                                        handleNoAccess()
-                                                                    }
-                                                                    className="hover:text-gray-400 cursor-not-allowed border-b border-gray-200"
-                                                                >
-                                                                    {action} (Belum
-                                                                    tersedia)
-                                                                </DropdownMenuItem>
-                                                            );
+                                                            return null;
                                                         }
-                                                    )
-                                                )}
-                                            </DropdownMenuContent>
-                                        </DropdownMenu>
+                                                    )}
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
+                                        )}
                                     </div>
                                 )}
                             </div>

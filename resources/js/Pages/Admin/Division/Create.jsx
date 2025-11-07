@@ -65,7 +65,7 @@ export default function Create({ isOpen, onClose, division }) {
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="sm:max-w-md">
+            <DialogContent className="sm:max-w-md ">
                 <DialogHeader>
                     <DialogTitle>
                         {division ? "Edit Division" : "Create New Division"}
@@ -105,7 +105,7 @@ export default function Create({ isOpen, onClose, division }) {
                         )}
                     </div>
 
-                    <DialogFooter className="flex justify-end space-x-2">
+                    <DialogFooter className="flex justify-center sm:justify-end gap-2">
                         <Button
                             type="button"
                             variant="outline"

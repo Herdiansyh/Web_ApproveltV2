@@ -21,12 +21,8 @@ class WorkflowStepPermissionController extends Controller
     ->get();
 
 
-        // ambil semua division_id yang digunakan di steps
-        $divisionIds = $steps->pluck('division_id')->unique()->filter()->values()->all();
-
-        // ambil hanya subdivisions yang relevan (hanya subdivisi yang milik division diatas)
-        $subdivisions = Subdivision::whereIn('division_id', $divisionIds)
-            ->orderBy('division_id')
+        // ambil semua subdivisions (bukan hanya milik division step)
+        $subdivisions = Subdivision::orderBy('division_id')
             ->orderBy('name')
             ->get();
 

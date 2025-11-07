@@ -104,9 +104,9 @@ export default function Create({ auth, userDivision, workflows }) {
             }
         >
             <Head title="Buat Pengajuan" />
-            <div className="flex min-h-screen bg-background">
+            <div className="flex min-h-screen bg-background ">
                 <Sidebar />
-                <div className="py-12 w-full">
+                <div className="p-5 w-full">
                     <div className="mx-auto sm:px-6 lg:px-8">
                         <Card className="p-6 shadow-md">
                             <form
@@ -116,7 +116,7 @@ export default function Create({ auth, userDivision, workflows }) {
                                 <div className="space-y-6">
                                     {/* Pilih Workflow */}
                                     <div>
-                                        <Label>Workflow</Label>
+                                        <Label>Document Type</Label>
                                         <Select
                                             value={data.workflow_id}
                                             onValueChange={(value) =>
@@ -124,7 +124,7 @@ export default function Create({ auth, userDivision, workflows }) {
                                             }
                                         >
                                             <SelectTrigger className="w-full mt-1">
-                                                <SelectValue placeholder="-- Pilih Workflow --" />
+                                                <SelectValue placeholder="-- Choose DocType --" />
                                             </SelectTrigger>
                                             <SelectContent>
                                                 {workflows?.length > 0 ? (
@@ -139,8 +139,7 @@ export default function Create({ auth, userDivision, workflows }) {
                                                                 {
                                                                     wf.document
                                                                         ?.name
-                                                                }{" "}
-                                                                - {wf.name}
+                                                                }
                                                             </SelectItem>
                                                         ) : null
                                                     )
@@ -149,8 +148,7 @@ export default function Create({ auth, userDivision, workflows }) {
                                                         disabled
                                                         value="wd"
                                                     >
-                                                        Tidak ada workflow
-                                                        tersedia
+                                                        No documents available
                                                     </SelectItem>
                                                 )}
                                             </SelectContent>

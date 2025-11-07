@@ -37,21 +37,23 @@ export default function ForDivision({ auth, submissions }) {
             <Head title="Pengajuan Masuk" />
             <div className="flex min-h-screen bg-background">
                 <Sidebar />
-                <div className="py-12 w-full overflow-auto">
+                <div className="py-12 w-full overflow-auto px-5">
                     <div className="mx-auto sm:px-6 lg:px-8">
-                        <div className="bg-card shadow-sm sm:rounded-lg">
+                        <div className="bg-card shadow-sm sm:rounded-lg ">
                             <div className="p-6 text-card-foreground">
                                 <span className="block   text-lg font-bold tracking-wider">
                                     Lihat list pengajuan
                                 </span>{" "}
-                                <Input
-                                    type="text"
-                                    className="border w-50 h-7 mt-3  border-gray-500 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                                    style={{ borderRadius: "10px" }}
-                                    placeholder="Search Dokumen..."
-                                    value={filter}
-                                    onChange={handleFilterChange}
-                                />
+                                <div>
+                                    <Input
+                                        type="text"
+                                        className="border w-50 h-7 mt-3  border-gray-500 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                                        style={{ borderRadius: "10px" }}
+                                        placeholder="Search Dokumen..."
+                                        value={filter}
+                                        onChange={handleFilterChange}
+                                    />
+                                </div>
                                 {/* dropdown untuk filer */}
                                 <Table className="mt-6">
                                     <TableHeader>
@@ -77,24 +79,42 @@ export default function ForDivision({ auth, submissions }) {
                                                 <TableCell>
                                                     <span
                                                         className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-                                                            submission.status?.toLowerCase().includes("approved") ||
-                                                            submission.status === "approved"
+                                                            submission.status
+                                                                ?.toLowerCase()
+                                                                .includes(
+                                                                    "approved"
+                                                                ) ||
+                                                            submission.status ===
+                                                                "approved"
                                                                 ? "bg-green-100 text-green-800"
-                                                                : submission.status?.toLowerCase() === "rejected" ||
-                                                                  submission.status === "rejected"
+                                                                : submission.status?.toLowerCase() ===
+                                                                      "rejected" ||
+                                                                  submission.status ===
+                                                                      "rejected"
                                                                 ? "bg-destructive text-destructive-foreground"
                                                                 : "bg-yellow-100 text-yellow-800"
                                                         }`}
                                                     >
-                                                        {submission.status === "pending"
+                                                        {submission.status ===
+                                                        "pending"
                                                             ? "Menunggu Persetujuan"
-                                                            : submission.status?.toLowerCase().includes("approved")
+                                                            : submission.status
+                                                                  ?.toLowerCase()
+                                                                  .includes(
+                                                                      "approved"
+                                                                  )
                                                             ? submission.status
-                                                            : submission.status?.toLowerCase().includes("waiting")
+                                                            : submission.status
+                                                                  ?.toLowerCase()
+                                                                  .includes(
+                                                                      "waiting"
+                                                                  )
                                                             ? submission.status
-                                                            : submission.status?.toLowerCase() === "rejected"
+                                                            : submission.status?.toLowerCase() ===
+                                                              "rejected"
                                                             ? "Ditolak"
-                                                            : submission.status || "Menunggu"}
+                                                            : submission.status ||
+                                                              "Menunggu"}
                                                     </span>
                                                 </TableCell>
                                                 <TableCell>
@@ -120,22 +140,21 @@ export default function ForDivision({ auth, submissions }) {
                                     </TableBody>
                                 </Table>
                                 {/* Pagination */}
-                                <div className="mt-6 flex flex-wrap items-center">
-                                    {submissions.links &&
-                                        submissions.links.map((link, index) => (
-                                            <Link
-                                                key={index}
-                                                href={link.url || "#"}
-                                                className={`px-3 py-1 mx-1 rounded ${
-                                                    link.active
-                                                        ? "bg-primary text-primary-foreground"
-                                                        : "text-foreground hover:bg-muted hover:text-foreground"
-                                                }`}
-                                                dangerouslySetInnerHTML={{
-                                                    __html: link.label,
-                                                }}
-                                            />
-                                        ))}
+                                <div className="mt-6 flex flex-wrap justify-start gap-1">
+                                    {submissions.links?.map((link, index) => (
+                                        <Link
+                                            key={index}
+                                            href={link.url || "#"}
+                                            className={`px-3 py-1 rounded text-[0.6rem] sm:text-base transition-colors duration-150 ${
+                                                link.active
+                                                    ? "bg-primary text-primary-foreground"
+                                                    : "text-muted-foreground hover:text-primary hover:bg-muted"
+                                            }`}
+                                            dangerouslySetInnerHTML={{
+                                                __html: link.label,
+                                            }}
+                                        />
+                                    ))}
                                 </div>
                             </div>
                         </div>

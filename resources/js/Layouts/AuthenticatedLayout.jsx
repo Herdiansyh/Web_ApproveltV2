@@ -23,13 +23,13 @@ export default function AuthenticatedLayout({ header, children }) {
     };
 
     return (
-        <div className="min-h-screen bg-background text-foreground">
+        <div className="min-h-screen bg-background text-foreground ">
             {header && (
                 <header className="bg-card text-card-foreground shadow">
                     <div className="mx-auto py-4 flex justify-between px-4 sm:px-6 lg:px-8">
                         <div className="flex items-center gap-2">
                             {" "}
-                            <img src="icon.png" className="w-10" alt="" />
+                            <img src="/icon.png" className="w-10" alt="" />
                             <h2 className="text-xl font-semibold leading-tight">
                                 E-Approval
                             </h2>

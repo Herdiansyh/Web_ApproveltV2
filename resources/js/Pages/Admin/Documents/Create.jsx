@@ -131,7 +131,7 @@ export default function Create({ isOpen, onClose, document, divisions }) {
                         )}
                     </div>
 
-                    <DialogFooter className="flex justify-end space-x-2">
+                    <DialogFooter className="flex justify-end gap-2">
                         <Button
                             type="button"
                             variant="outline"

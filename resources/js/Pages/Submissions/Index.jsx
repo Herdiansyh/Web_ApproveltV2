@@ -42,49 +42,62 @@ export default function Index({ auth, submissions }) {
                                 </span>
 
                                 {auth.user.role === "employee" && (
-                                    <div className="mb-6 flex justify-between gap-2 mt-5 ">
+                                    <div className="mb-6 flex  justify-between gap-2 mt-5 ">
                                         {" "}
-                                        <div className="flex gap-2">
-                                            <Input
-                                                style={{ borderRadius: "10px" }}
-                                                className="border w-50 h-7 border-gray-600"
-                                                placeholder="Search Document..."
-                                                value={Filter}
-                                                onChange={handleFilterChange}
-                                            />
-                                            <select
-                                                className="border w-20 h-7  border-gray-600 rounded-lg px-3 py-2 bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                                                style={{
-                                                    borderRadius: "10px",
-                                                    fontSize: "0.75rem",
-                                                }}
-                                            >
-                                                {submissions.data.map(
-                                                    (submission, index) => (
-                                                        <option key={index}>
-                                                            {
-                                                                submission
-                                                                    .workflow
-                                                                    ?.document
-                                                                    ?.name
-                                                            }
-                                                        </option>
-                                                    )
-                                                )}
+                                        <div className="sm:flex-row w-full md:justify-between  flex gap-2 flex-col">
+                                            <div className="flex gap-2 flex-col md:flex-row">
+                                                <Input
+                                                    style={{
+                                                        borderRadius: "10px",
+                                                    }}
+                                                    className="border w-50 h-7 border-gray-600"
+                                                    placeholder="Search Document..."
+                                                    value={Filter}
+                                                    onChange={
+                                                        handleFilterChange
+                                                    }
+                                                />
+                                                <select
+                                                    className="border w-30 h-7  border-gray-600 rounded-lg px-3 py-2 bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                                                    style={{
+                                                        borderRadius: "10px",
+                                                        fontSize: "0.6rem",
+                                                    }}
+                                                >
+                                                    {submissions.data.map(
+                                                        (submission, index) => (
+                                                            <option key={index}>
+                                                                {
+                                                                    submission
+                                                                        .workflow
+                                                                        ?.document
+                                                                        ?.name
+                                                                }
+                                                            </option>
+                                                        )
+                                                    )}
 
-                                                {/* Add more options as needed */}
-                                            </select>
+                                                    {/* Add more options as needed */}
+                                                </select>
+                                            </div>
+                                            <div>
+                                                <Link
+                                                    href={route(
+                                                        "submissions.create"
+                                                    )}
+                                                >
+                                                    <PrimaryButton
+                                                        style={{
+                                                            borderRadius:
+                                                                "15px",
+                                                        }}
+                                                        className="bg-primary !text-[0.5rem] md:text-sm text-primary-foreground hover:bg-primary/90"
+                                                    >
+                                                        Buat Pengajuan Baru
+                                                    </PrimaryButton>
+                                                </Link>
+                                            </div>
                                         </div>
-                                        <Link
-                                            href={route("submissions.create")}
-                                        >
-                                            <PrimaryButton
-                                                style={{ borderRadius: "15px" }}
-                                                className="bg-primary !text-[0.6rem] text-primary-foreground hover:bg-primary/90"
-                                            >
-                                                Buat Pengajuan Baru
-                                            </PrimaryButton>
-                                        </Link>
                                     </div>
                                 )}
 
@@ -167,24 +180,42 @@ export default function Index({ auth, submissions }) {
                                                             <td className="px-6 py-4">
                                                                 <span
                                                                     className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                                                        submission.status?.toLowerCase().includes("approved") ||
-                                                                        submission.status === "approved"
+                                                                        submission.status
+                                                                            ?.toLowerCase()
+                                                                            .includes(
+                                                                                "approved"
+                                                                            ) ||
+                                                                        submission.status ===
+                                                                            "approved"
                                                                             ? "bg-green-100 text-green-800"
-                                                                            : submission.status?.toLowerCase() === "rejected" ||
-                                                                              submission.status === "rejected"
+                                                                            : submission.status?.toLowerCase() ===
+                                                                                  "rejected" ||
+                                                                              submission.status ===
+                                                                                  "rejected"
                                                                             ? "bg-destructive text-destructive-foreground"
                                                                             : "bg-yellow-100 text-yellow-800"
                                                                     }`}
                                                                 >
-                                                                    {submission.status === "pending"
+                                                                    {submission.status ===
+                                                                    "pending"
                                                                         ? "Menunggu Persetujuan"
-                                                                        : submission.status?.toLowerCase().includes("approved")
+                                                                        : submission.status
+                                                                              ?.toLowerCase()
+                                                                              .includes(
+                                                                                  "approved"
+                                                                              )
                                                                         ? submission.status
-                                                                        : submission.status?.toLowerCase().includes("waiting")
+                                                                        : submission.status
+                                                                              ?.toLowerCase()
+                                                                              .includes(
+                                                                                  "waiting"
+                                                                              )
                                                                         ? submission.status
-                                                                        : submission.status?.toLowerCase() === "rejected"
+                                                                        : submission.status?.toLowerCase() ===
+                                                                          "rejected"
                                                                         ? "Ditolak"
-                                                                        : submission.status || "Menunggu"}
+                                                                        : submission.status ||
+                                                                          "Menunggu"}
                                                                 </span>
                                                             </td>
 
@@ -225,15 +256,15 @@ export default function Index({ auth, submissions }) {
                                 </div>
 
                                 {/* Pagination */}
-                                <div className="mt-6 flex justify-start">
+                                <div className="mt-6 flex flex-wrap justify-start gap-1">
                                     {submissions.links?.map((link, index) => (
                                         <Link
                                             key={index}
                                             href={link.url || "#"}
-                                            className={`px-3 py-1 mx-1 rounded ${
+                                            className={`px-3 py-1 rounded text-[0.6rem] sm:text-base transition-colors duration-150 ${
                                                 link.active
                                                     ? "bg-primary text-primary-foreground"
-                                                    : "text-muted-foreground hover:text-primary"
+                                                    : "text-muted-foreground hover:text-primary hover:bg-muted"
                                             }`}
                                             dangerouslySetInnerHTML={{
                                                 __html: link.label,

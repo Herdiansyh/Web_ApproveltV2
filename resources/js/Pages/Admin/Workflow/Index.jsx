@@ -103,7 +103,7 @@ export default function Index({
                 // Parse actions jika masih string
                 let actionsArray = [];
                 if (s.actions) {
-                    if (typeof s.actions === 'string') {
+                    if (typeof s.actions === "string") {
                         try {
                             actionsArray = JSON.parse(s.actions);
                         } catch (e) {
@@ -113,23 +113,30 @@ export default function Index({
                         actionsArray = s.actions;
                     }
                 }
-                
+
                 // Load existing permissions
-                const permissionsArray = (s.permissions || []).map(p => ({
+                const permissionsArray = (s.permissions || []).map((p) => ({
                     subdivision_id: p.subdivision_id,
                     can_view: p.can_view || false,
                     can_approve: p.can_approve || false,
                     can_reject: p.can_reject || false,
                     can_request_next: p.can_request_next || false,
                 }));
-                
+
                 return {
                     division_id: s.division_id?.toString() || "",
                     step_name: s.role || `Step ${s.step_order}`,
                     actions: actionsArray, // Include actions
                     permissions: permissionsArray, // Include permissions
                 };
-            }) || [{ division_id: "", step_name: "", actions: [], permissions: [] }],
+            }) || [
+                {
+                    division_id: "",
+                    step_name: "",
+                    actions: [],
+                    permissions: [],
+                },
+            ],
         });
         setShowModal(true);
     };
@@ -228,22 +235,26 @@ export default function Index({
                 confirmButtonColor: "#3085d6",
             }).then((result) => {
                 if (result.isConfirmed) {
-                    put(route("workflows.update", editingWorkflow.id), payload, {
-                        onSuccess: () => {
-                            setEditingWorkflow(null);
-                            reset();
-                            Swal.fire({
-                                icon: "success",
-                                title: "Workflow Berhasil Diperbarui!",
-                                text: "Workflow telah berhasil diperbarui.",
-                                confirmButtonText: "OK",
-                                timer: 3000,
-                            });
-                        },
-                        onError: (errors) => {
-                            showServerErrorAlert(errors);
-                        },
-                    });
+                    put(
+                        route("workflows.update", editingWorkflow.id),
+                        payload,
+                        {
+                            onSuccess: () => {
+                                setEditingWorkflow(null);
+                                reset();
+                                Swal.fire({
+                                    icon: "success",
+                                    title: "Workflow Berhasil Diperbarui!",
+                                    text: "Workflow telah berhasil diperbarui.",
+                                    confirmButtonText: "OK",
+                                    timer: 3000,
+                                });
+                            },
+                            onError: (errors) => {
+                                showServerErrorAlert(errors);
+                            },
+                        }
+                    );
                 }
             });
         } else {
@@ -268,7 +279,10 @@ export default function Index({
 
     // Step management (tetap sama)
     const addStep = () =>
-        setData("steps", [...data.steps, { division_id: "", step_name: "", actions: [] }]);
+        setData("steps", [
+            ...data.steps,
+            { division_id: "", step_name: "", actions: [] },
+        ]);
 
     const removeStep = (index) =>
         setData(
@@ -320,20 +334,24 @@ export default function Index({
                         <Card className="p-6 shadow-sm">
                             {/* Filters & Create Button */}
                             <div className="flex flex-col md:flex-row justify-between mb-6 gap-4">
-                                <div className="flex flex-col md:flex-row gap-2 flex-1">
+                                <div className="flex flex-col lg:flex-row gap-2 flex-1">
                                     <Input
                                         placeholder="Search workflows..."
                                         value={filterText}
                                         onChange={(e) =>
                                             setFilterText(e.target.value)
                                         }
-                                        className="md:w-64"
+                                        className="md:w-64 text-[0.8rem]"
+                                        style={{ borderRadius: "15px" }}
                                     />
                                     <Select
                                         value={filterDocument}
                                         onValueChange={setFilterDocument}
                                     >
-                                        <SelectTrigger className="md:w-64">
+                                        <SelectTrigger
+                                            style={{ borderRadius: "15px" }}
+                                            className="md:w-64 text-[0.8rem]"
+                                        >
                                             <SelectValue placeholder="Filter by document type" />
                                         </SelectTrigger>
                                         <SelectContent>
@@ -354,9 +372,10 @@ export default function Index({
                                 <Button
                                     onClick={openCreateModal}
                                     className="md:w-auto"
+                                    style={{ borderRadius: "15px" }}
                                 >
-                                    <Plus className="h-4 w-4 mr-2" /> Create
-                                    Workflow
+                                    <Plus className="h-4 w-4 mr-2 text-[0.8rem]" />{" "}
+                                    Create Workflow
                                 </Button>
                             </div>
 
@@ -412,6 +431,10 @@ export default function Index({
                                                                 ? "bg-green-100 text-green-800"
                                                                 : "bg-gray-100 text-gray-800"
                                                         }
+                                                        style={{
+                                                            borderRadius:
+                                                                "15px",
+                                                        }}
                                                     >
                                                         {wf.is_active
                                                             ? "Active"
@@ -428,6 +451,10 @@ export default function Index({
                                                                     wf.id
                                                                 )
                                                             }
+                                                            style={{
+                                                                borderRadius:
+                                                                    "15px",
+                                                            }}
                                                         >
                                                             <Settings className="h-4 w-4 mr-1" />{" "}
                                                             Permissions
@@ -440,6 +467,10 @@ export default function Index({
                                                                     wf
                                                                 )
                                                             }
+                                                            style={{
+                                                                borderRadius:
+                                                                    "15px",
+                                                            }}
                                                         >
                                                             <Edit className="h-4 w-4 mr-1" />{" "}
                                                             Edit
@@ -452,8 +483,12 @@ export default function Index({
                                                                     wf.id
                                                                 )
                                                             }
+                                                            style={{
+                                                                borderRadius:
+                                                                    "15px",
+                                                            }}
                                                         >
-                                                            <Trash2 className="h-4 w-4 mr-1" />{" "}
+                                                            <Trash2 className="h-4 w-4 " />{" "}
                                                             Delete
                                                         </Button>
                                                     </div>
@@ -569,7 +604,7 @@ export default function Index({
                                         key={index}
                                         className="flex flex-col gap-2 mb-2 border p-2 rounded"
                                     >
-                                        <div className="flex items-center gap-2">
+                                        <div className="flex  gap-2 flex-col sm:flex-row">
                                             <Select
                                                 value={step.division_id}
                                                 onValueChange={(val) =>
@@ -579,7 +614,7 @@ export default function Index({
                                                     )
                                                 }
                                             >
-                                                <SelectTrigger className="w-48">
+                                                <SelectTrigger className="w-full ">
                                                     <SelectValue placeholder="Select Division" />
                                                 </SelectTrigger>
                                                 <SelectContent>
@@ -603,7 +638,7 @@ export default function Index({
                                                         e.target.value
                                                     )
                                                 }
-                                                className="flex-1"
+                                                className="text-sm"
                                             />
 
                                             {data.steps.length > 1 && (
@@ -614,6 +649,9 @@ export default function Index({
                                                     onClick={() =>
                                                         removeStep(index)
                                                     }
+                                                    style={{
+                                                        borderRadius: "15px",
+                                                    }}
                                                 >
                                                     Delete
                                                 </Button>
@@ -677,6 +715,7 @@ export default function Index({
                                     type="button"
                                     variant="outline"
                                     onClick={addStep}
+                                    style={{ borderRadius: "15px" }}
                                 >
                                     <Plus className="h-4 w-4 mr-1" /> Add Step
                                 </Button>
@@ -693,10 +732,15 @@ export default function Index({
                                         reset();
                                     }}
                                     disabled={processing}
+                                    style={{ borderRadius: "15px" }}
                                 >
                                     Cancel
                                 </Button>
-                                <Button type="submit" disabled={processing}>
+                                <Button
+                                    type="submit"
+                                    disabled={processing}
+                                    style={{ borderRadius: "15px" }}
+                                >
                                     {processing
                                         ? "Processing..."
                                         : editingWorkflow

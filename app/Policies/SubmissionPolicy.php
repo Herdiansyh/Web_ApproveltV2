@@ -17,18 +17,18 @@ class SubmissionPolicy
         if ($user->id === $submission->user_id) return true;
         if (in_array($user->role, ['manager', 'admin'])) return true;
 
-        // jika user punya subdivisi -> cek permission can_view pada step saat ini
-        if (!$user->subdivision_id) return false;
+        // Guard: butuh subdivision dan workflow
+        if (!$user->subdivision_id || !$submission->workflow) return false;
 
-        $workflowStep = $submission->workflow->steps
-            ->where('step_order', $submission->current_step)
-            ->first();
+        // Izinkan lintas divisi jika subdivision user memang diberi can_view di workflow step terkait
 
-        if (!$workflowStep) return false;
-
-        return WorkflowStepPermission::where('workflow_step_id', $workflowStep->id)
-            ->where('subdivision_id', $user->subdivision_id)
-            ->where('can_view', true)
+        // Boleh melihat jika subdivision user punya can_view pada SALAH SATU step di workflow pengajuan
+        return $submission->workflow
+            ->steps()
+            ->whereHas('permissions', function ($q) use ($user) {
+                $q->where('subdivision_id', $user->subdivision_id)
+                  ->where('can_view', true);
+            })
             ->exists();
     }
 

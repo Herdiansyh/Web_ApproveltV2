@@ -164,16 +164,26 @@ export default function Create({ isOpen, onClose, subdivision, divisions }) {
                         )}
                     </div>
 
-                    <DialogFooter className="flex justify-end space-x-2">
+                    <DialogFooter className="flex justify-end gap-2">
                         <Button
                             type="button"
                             variant="outline"
                             onClick={onClose}
                             disabled={processing}
+                            style={{
+                                borderRadius: "15px",
+                            }}
                         >
                             Cancel
                         </Button>
-                        <Button type="submit" disabled={processing}>
+                        <Button
+                            type="submit"
+                            disabled={processing}
+                            style={{
+                                borderRadius: "15px",
+                            }}
+                            className="hover:bg-gray-800"
+                        >
                             {processing
                                 ? "Processing..."
                                 : subdivision

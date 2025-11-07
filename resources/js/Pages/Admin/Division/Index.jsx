@@ -23,12 +23,19 @@ import {
     DialogFooter,
 } from "@/Components/ui/dialog";
 import { X } from "lucide-react";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/Components/ui/select.jsx";
 
 export default function Index({ auth, divisions }) {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingDivision, setEditingDivision] = useState(null);
     const [search, setSearch] = useState("");
-    const [selectedDivision, setSelectedDivision] = useState("");
+    const [selectedDivision, setSelectedDivision] = useState("all");
     const [selectedDivisionForSub, setSelectedDivisionForSub] = useState(null); // ⬅️ for subdivision modal
 
     const handleSearch = (e) => setSearch(e.target.value);
@@ -38,7 +45,7 @@ export default function Index({ auth, divisions }) {
             .toLowerCase()
             .includes(search.toLowerCase());
         const matchSelect =
-            selectedDivision === "" ||
+            selectedDivision === "all" ||
             division.name.toLowerCase() === selectedDivision.toLowerCase();
         return matchSearch && matchSelect;
     });
@@ -97,13 +104,46 @@ export default function Index({ auth, divisions }) {
                         <Card className="p-6">
                             {/* Filter & Add Button */}
                             <div className="flex flex-col md:flex-row justify-between gap-3 mb-4">
-                                <div className="flex flex-col md:flex-row gap-2 w-full">
+                                <div className="flex flex-col lg:flex-row gap-2 w-full">
                                     <Input
-                                        className="md:w-1/2"
+                                        className="lg:w-1/3"
                                         placeholder="Search Division..."
                                         value={search}
                                         onChange={handleSearch}
+                                        style={{
+                                            borderRadius: "15px",
+                                        }}
                                     />
+                                    <Select
+                                        value={selectedDivision}
+                                        onValueChange={(value) =>
+                                            setSelectedDivision(value)
+                                        }
+                                    >
+                                        <SelectTrigger
+                                            style={{
+                                                borderRadius: "15px",
+                                            }}
+                                            className="lg:w-1/4 text-[0.8rem]"
+                                        >
+                                            <SelectValue placeholder="Filter" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="all">
+                                                {" "}
+                                                {/* ✅ UBAH DARI "" KE "all" */}{" "}
+                                                All Divisions
+                                            </SelectItem>
+                                            {divisions.map((d) => (
+                                                <SelectItem
+                                                    key={d.id}
+                                                    value={d.name.toLowerCase()} // ✅ PASTIKAN VALUE TIDAK KOSONG
+                                                >
+                                                    {d.name}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
                                 </div>
 
                                 <Button
@@ -111,7 +151,10 @@ export default function Index({ auth, divisions }) {
                                         setEditingDivision(null);
                                         setIsModalOpen(true);
                                     }}
-                                    className="w-[180px] h-9 text-sm"
+                                    className="md:w-[180px] w-full  h-9 text-sm "
+                                    style={{
+                                        borderRadius: "15px",
+                                    }}
                                 >
                                     + Add New Division
                                 </Button>
@@ -156,6 +199,10 @@ export default function Index({ auth, divisions }) {
                                                                     division
                                                                 )
                                                             }
+                                                            style={{
+                                                                borderRadius:
+                                                                    "15px",
+                                                            }}
                                                         >
                                                             Edit
                                                         </Button>
@@ -167,6 +214,10 @@ export default function Index({ auth, divisions }) {
                                                                     division.id
                                                                 )
                                                             }
+                                                            style={{
+                                                                borderRadius:
+                                                                    "15px",
+                                                            }}
                                                         >
                                                             Delete
                                                         </Button>

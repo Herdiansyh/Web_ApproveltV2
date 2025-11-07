@@ -48,14 +48,14 @@ export default function Sidebar() {
     };
 
     const navItems = [
+        {
+            label: "Dashboard",
+            href: route("dashboard"),
+            active: route().current("dashboard"),
+            icon: <FileText className="h-5 w-5" />,
+        },
         ...(user.role === "employee" || user.role === "direktur"
             ? [
-                  {
-                      label: "Dashboard",
-                      href: route("dashboard"),
-                      active: route().current("dashboard"),
-                      icon: <FileText className="h-5 w-5" />,
-                  },
                   {
                       label: "Lihat List Persetujuan",
                       href: route("submissions.forDivision"),
@@ -91,7 +91,7 @@ export default function Sidebar() {
                       icon: <User2 className="h-5 w-5" />,
                   },
                   {
-                      label: "Document Management",
+                      label: "Document type",
                       href: route("documents.index"),
                       active: route().current("documents.*"),
                       icon: <DockIcon className="h-5 w-5" />,
@@ -171,14 +171,18 @@ export default function Sidebar() {
                     <p className="text-sm text-muted-foreground">
                         Apakah Anda yakin ingin keluar dari aplikasi?
                     </p>
-                    <DialogFooter className="mt-4">
+                    <DialogFooter className="mt-4 flex gap-2">
                         <Button
                             variant="outline"
                             onClick={() => setLogoutDialog(false)}
                         >
                             Batal
                         </Button>
-                        <Button variant="destructive" onClick={confirmLogout}>
+                        <Button
+                            variant="destructive"
+                            className="hover:bg-orange-700"
+                            onClick={confirmLogout}
+                        >
                             Ya, Logout
                         </Button>
                     </DialogFooter>

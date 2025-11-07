@@ -28,14 +28,14 @@ export default function Index({ auth, subdivisions, divisions }) {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingSubdivision, setEditingSubdivision] = useState(null);
     const [search, setSearch] = useState("");
-    const [selectedDivision, setSelectedDivision] = useState("");
+    const [selectedDivision, setSelectedDivision] = useState("all");
 
     const filteredSubdivisions = subdivisions.filter((sub) => {
         const matchSearch = sub.name
             .toLowerCase()
             .includes(search.toLowerCase());
         const matchSelect =
-            selectedDivision === "" ||
+            selectedDivision === "all" ||
             sub.division?.name?.toLowerCase() ===
                 selectedDivision.toLowerCase();
         return matchSearch && matchSelect;
@@ -92,55 +92,65 @@ export default function Index({ auth, subdivisions, divisions }) {
 
                         <Card className="p-6">
                             {/* Filter dan tombol tambah */}
-                            <div className="flex flex-col md:flex-row justify-between gap-3 mb-4">
+                            <div className="flex  md:flex-row justify-between gap-3 mb-4">
                                 <div className="flex flex-col md:flex-row gap-2 w-full">
-                                    <Input
-                                        className="md:w-1/2"
-                                        placeholder="Search Subdivision..."
-                                        style={{ borderRadius: "8px" }}
-                                        value={search}
-                                        onChange={(e) =>
-                                            setSearch(e.target.value)
-                                        }
-                                    />
-                                </div>
-
-                                <Button
-                                    onClick={() => {
-                                        setEditingSubdivision(null);
-                                        setIsModalOpen(true);
-                                    }}
-                                    className="w-[200px] h-9 text-sm"
-                                    style={{ borderRadius: "8px" }}
-                                >
-                                    + Add New Subdivision
-                                </Button>
-                            </div>
-                            <Select
-                                value={selectedDivision}
-                                onValueChange={(value) =>
-                                    setSelectedDivision(value)
-                                }
-                            >
-                                <SelectTrigger className="md:w-1/3">
-                                    <SelectValue placeholder="Filter by Division" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="all">
-                                        {" "}
-                                        {/* ✅ UBAH DARI "" KE "all" */} All
-                                        Divisions
-                                    </SelectItem>
-                                    {divisions.map((d) => (
-                                        <SelectItem
-                                            key={d.id}
-                                            value={d.name.toLowerCase()} // ✅ PASTIKAN VALUE TIDAK KOSONG
+                                    <div className="flex lg:flex-row flex-col w-full gap-2">
+                                        <Input
+                                            className="lg:w-1/3 text-[0.8rem]"
+                                            placeholder="Search Subdivision..."
+                                            style={{
+                                                borderRadius: "15px",
+                                            }}
+                                            value={search}
+                                            onChange={(e) =>
+                                                setSearch(e.target.value)
+                                            }
+                                        />{" "}
+                                        <Select
+                                            value={selectedDivision}
+                                            onValueChange={(value) =>
+                                                setSelectedDivision(value)
+                                            }
                                         >
-                                            {d.name}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
+                                            <SelectTrigger
+                                                style={{
+                                                    borderRadius: "15px",
+                                                }}
+                                                className="lg:w-1/4 text-[0.8rem]"
+                                            >
+                                                <SelectValue placeholder="Filter" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="all">
+                                                    {" "}
+                                                    {/* ✅ UBAH DARI "" KE "all" */}{" "}
+                                                    All Divisions
+                                                </SelectItem>
+                                                {divisions.map((d) => (
+                                                    <SelectItem
+                                                        key={d.id}
+                                                        value={d.name.toLowerCase()} // ✅ PASTIKAN VALUE TIDAK KOSONG
+                                                    >
+                                                        {d.name}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                    <Button
+                                        onClick={() => {
+                                            setEditingSubdivision(null);
+                                            setIsModalOpen(true);
+                                        }}
+                                        className="md:w-[200px] w-full h-9 text-[0.8rem] sm:text-sm"
+                                        style={{
+                                            borderRadius: "15px",
+                                        }}
+                                    >
+                                        + Add New Subdivision
+                                    </Button>
+                                </div>
+                            </div>
 
                             {/* Tabel Subdivisions */}
                             <Table>

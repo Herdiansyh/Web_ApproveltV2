@@ -15,22 +15,32 @@ import Sidebar from "@/Components/Sidebar";
 import Swal from "sweetalert2";
 import DocumentModal from "./Create.jsx";
 import { Input } from "@/Components/ui/input.jsx";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/Components/ui/select.jsx";
 
 export default function Index({ auth, documents, divisions }) {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingDocument, setEditingDocument] = useState(null);
     const [search, setSearch] = useState("");
-
+    const [filterDocument, setFilterDocument] = useState("all");
     const handleSearch = (e) => setSearch(e.target.value);
-
-    const filteredDocuments = documents.filter((doc) =>
-        doc.name.toLowerCase().includes(search.toLowerCase())
-    );
 
     const handleEdit = (doc) => {
         setEditingDocument(doc);
         setIsModalOpen(true);
     };
+
+    const filteredDocuments = documents.filter((doc) => {
+        const matchText = doc.name.toLowerCase().includes(search.toLowerCase());
+        const matchDocument =
+            filterDocument === "all" || doc.name === filterDocument;
+        return matchText && matchDocument;
+    });
 
     const handleDelete = (docId) => {
         Swal.fire({
@@ -75,7 +85,7 @@ export default function Index({ auth, documents, divisions }) {
                 <div className="py-12 w-full overflow-auto relative">
                     <div className="mx-auto p-6 lg:px-8">
                         <h1 className="text-2xl font-bold absolute top-5">
-                            Documents
+                            Documents Type
                         </h1>
 
                         <Card className="p-6">
@@ -83,11 +93,36 @@ export default function Index({ auth, documents, divisions }) {
                             <div className="flex flex-col md:flex-row justify-between gap-3 mb-4">
                                 <div className="flex flex-col md:flex-row gap-2 w-full">
                                     <Input
-                                        className="md:w-1/2"
+                                        className="md:w-1/2 text-[0.8rem]"
                                         placeholder="Search Document..."
                                         value={search}
                                         onChange={handleSearch}
+                                        style={{ borderRadius: "15px" }}
                                     />
+                                    <Select
+                                        value={filterDocument}
+                                        onValueChange={setFilterDocument}
+                                    >
+                                        <SelectTrigger
+                                            style={{ borderRadius: "15px" }}
+                                            className="md:w-64 text-[0.8rem]"
+                                        >
+                                            <SelectValue placeholder="Filter by document type" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="all">
+                                                All Documents
+                                            </SelectItem>
+                                            {documents.map((doc) => (
+                                                <SelectItem
+                                                    key={doc.id}
+                                                    value={doc.name}
+                                                >
+                                                    {doc.name}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
                                 </div>
 
                                 <Button
@@ -95,7 +130,8 @@ export default function Index({ auth, documents, divisions }) {
                                         setEditingDocument(null);
                                         setIsModalOpen(true);
                                     }}
-                                    className="w-[180px] h-9 text-sm"
+                                    className="md:w-[180px] w-full h-9 text-[0.8rem]"
+                                    style={{ borderRadius: "15px" }}
                                 >
                                     + Add New Document
                                 </Button>
@@ -132,6 +168,10 @@ export default function Index({ auth, documents, divisions }) {
                                                             onClick={() =>
                                                                 handleEdit(doc)
                                                             }
+                                                            style={{
+                                                                borderRadius:
+                                                                    "15px",
+                                                            }}
                                                         >
                                                             Edit
                                                         </Button>
@@ -143,6 +183,10 @@ export default function Index({ auth, documents, divisions }) {
                                                                     doc.id
                                                                 )
                                                             }
+                                                            style={{
+                                                                borderRadius:
+                                                                    "15px",
+                                                            }}
                                                         >
                                                             Delete
                                                         </Button>
