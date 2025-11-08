@@ -30,7 +30,10 @@ export default function Register() {
     return (
         <GuestLayout>
             <Head title="Register" />
-            <Card className="w-full max-w-md shadow-lg bg-card text-card-foreground">
+            <Card
+                style={{ borderRadius: "15px" }}
+                className="w-full max-w-md shadow-lg bg-card text-card-foreground"
+            >
                 <CardHeader>
                     <CardTitle className="text-center flex flex-col items-center text-2xl font-semibold">
                         <img src="/icon.png" alt="" className="w-12 " />
@@ -130,7 +133,8 @@ export default function Register() {
                             <Button
                                 type="submit"
                                 disabled={processing}
-                                className="rounded-lg"
+                                style={{ borderRadius: "15px" }}
+                                className="w-full"
                             >
                                 {processing ? "Processing..." : "Register"}
                             </Button>

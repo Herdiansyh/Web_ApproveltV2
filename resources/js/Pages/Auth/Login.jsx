@@ -25,7 +25,10 @@ export default function Login({ status, canResetPassword }) {
         <GuestLayout>
             <Head title="Log in" />
 
-            <Card className="w-full max-w-md shadow-lg">
+            <Card
+                className="w-full max-w-md shadow-lg"
+                style={{ borderRadius: "15px" }}
+            >
                 <CardHeader>
                     <CardTitle className="text-2xl flex flex-col items-center  font-semibold text-center">
                         <img src="/icon.png" alt="" className="w-12 " />
@@ -107,6 +110,7 @@ export default function Login({ status, canResetPassword }) {
                         <Button
                             type="submit"
                             className="w-full"
+                            style={{ borderRadius: "15px" }}
                             disabled={processing}
                         >
                             Log in

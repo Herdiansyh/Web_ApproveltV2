@@ -45,13 +45,13 @@ Route::get('/dashboard', function () {
 
     // Statistik spesifik untuk user yang login
     // 1) Total pengajuan yang dibuat oleh user ini
-    $totalSubmission = \App\Models\Submission::where('user_id', $user->id)->count();
+    $totalSubmission = Submission::where('user_id', $user->id)->count();
 
     // 2) Menunggu persetujuan oleh user/divisi ini
     //    - current step dimiliki oleh divisi user
     //    - step saat ini statusnya pending pada SubmissionWorkflowStep
     //    - subdivision user memiliki can_approve pada step tersebut
-    $waitingApproval = \App\Models\Submission::query()
+    $waitingApproval = Submission::query()
         ->whereNotNull('workflow_id')
         ->whereHas('workflow.steps', function ($q) use ($user) {
             $q->whereColumn('workflow_steps.step_order', 'submissions.current_step')
