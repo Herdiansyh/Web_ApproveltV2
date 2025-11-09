@@ -132,7 +132,7 @@ Route::middleware(['auth'])->group(function () {
 
     // Submission routes (common)
     Route::get('/submissions/division', [SubmissionController::class, 'forDivision'])->name('submissions.forDivision');
-    Route::resource('submissions', SubmissionController::class)->only(['index', 'show']);
+    Route::resource('submissions', SubmissionController::class)->only(['index', 'show', 'edit', 'update', 'destroy']);
     Route::get('submissions/{submission}/file', [SubmissionController::class, 'file'])->name('submissions.file');
     Route::post('submissions/{submission}/request', [SubmissionController::class, 'request'])->name('submissions.request');
     Route::post('submissions/{submission}/request-next', [SubmissionController::class, 'requestNext'])

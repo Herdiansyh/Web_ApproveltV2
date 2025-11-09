@@ -43,6 +43,8 @@ class WorkflowStepPermissionController extends Controller
             'permissions.*.can_approve' => 'boolean',
             'permissions.*.can_reject' => 'boolean',
             'permissions.*.can_request_next' => 'boolean',
+            'permissions.*.can_edit' => 'boolean',
+            'permissions.*.can_delete' => 'boolean',
         ]);
 
         DB::transaction(function () use ($data) {
@@ -57,6 +59,8 @@ class WorkflowStepPermissionController extends Controller
                         'can_approve' => $perm['can_approve'] ?? false,
                         'can_reject' => $perm['can_reject'] ?? false,
                         'can_request_next' => $perm['can_request_next'] ?? false,
+                        'can_edit' => $perm['can_edit'] ?? false,
+                        'can_delete' => $perm['can_delete'] ?? false,
                     ]
                 );
             }

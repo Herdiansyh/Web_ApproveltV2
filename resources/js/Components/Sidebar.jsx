@@ -7,10 +7,8 @@ import {
     UserCircle2,
     CheckCircle2,
     LogOut,
-    Menu,
     Workflow,
     DockIcon,
-    Shield,
     Layers,
 } from "lucide-react";
 
@@ -31,17 +29,9 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 
-export default function Sidebar() {
-    const [open, setOpen] = useState(true);
+export default function Sidebar({ open }) {
     const [logoutDialog, setLogoutDialog] = useState(false);
     const user = usePage().props.auth.user;
-
-    useEffect(() => {
-        const handleResize = () => setOpen(window.innerWidth >= 768);
-        handleResize();
-        window.addEventListener("resize", handleResize);
-        return () => window.removeEventListener("resize", handleResize);
-    }, []);
 
     const confirmLogout = () => {
         router.post(route("logout"));
@@ -91,7 +81,7 @@ export default function Sidebar() {
                       icon: <User2 className="h-5 w-5" />,
                   },
                   {
-                      label: "Document type",
+                      label: "Document Type",
                       href: route("documents.index"),
                       active: route().current("documents.*"),
                       icon: <DockIcon className="h-5 w-5" />,
@@ -110,21 +100,12 @@ export default function Sidebar() {
         <TooltipProvider delayDuration={0}>
             <aside
                 className={cn(
-                    "flex flex-col transition-all duration-300 border-r bg-sidebar text-sidebar-foreground",
-                    open ? "min-w-64 px-4 py-5" : "w-20 items-center px-2 py-5"
+                    "flex flex-col transition-all duration-300 border-r bg-sidebar text-sidebar-foreground font-sans", // <--- font ABeeZee aktif di sini
+                    open
+                        ? "min-w-64 px-4 py-5"
+                        : "w-0 hidden items-center px-2 py-5"
                 )}
             >
-                <div className="flex items-center justify-end mb-6">
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        className="text-muted-foreground hover:text-foreground"
-                        onClick={() => setOpen(!open)}
-                    >
-                        <Menu className="h-5 w-5" />
-                    </Button>
-                </div>
-
                 <nav className="flex flex-col gap-3">
                     {navItems.map((item) => (
                         <Tooltip key={item.label}>

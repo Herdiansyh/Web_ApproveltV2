@@ -20,9 +20,9 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/Components/ui/select";
-import Sidebar from "@/Components/Sidebar";
 import Swal from "sweetalert2";
-import { User, X } from "lucide-react";
+import { X } from "lucide-react";
+import Header from "@/Components/Header";
 
 export default function Index({ auth, users, divisions, subdivisions, roles }) {
     const [showCreateModal, setShowCreateModal] = useState(false);
@@ -214,7 +214,7 @@ export default function Index({ auth, users, divisions, subdivisions, roles }) {
         >
             <Head title="User Management" />
             <div className="flex min-h-screen bg-background">
-                <Sidebar />
+                <Header />
                 <div className="py-12 w-full overflow-auto relative">
                     <div className="mx-auto p-6 lg:px-8 ">
                         <h1 className="absolute top-5 text-2xl font-bold">

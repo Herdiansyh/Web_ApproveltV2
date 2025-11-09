@@ -1,5 +1,5 @@
 import React, { useEffect } from "react";
-import { useForm, router } from "@inertiajs/react";
+import { useForm } from "@inertiajs/react";
 import {
     Dialog,
     DialogContent,

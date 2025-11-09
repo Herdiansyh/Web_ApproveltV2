@@ -21,9 +21,11 @@ import {
     SelectValue,
 } from "@/Components/ui/select";
 import { Badge } from "@/Components/ui/badge";
-import Sidebar from "@/Components/Sidebar";
 import { Edit, Trash2, Plus, ArrowRight, Settings } from "lucide-react";
 import Swal from "sweetalert2";
+import Header from "@/Components/Header";
+import Footer from "@/Components/Footer";
+import { Separator } from "@/Components/ui/separator";
 
 export default function Index({
     flash,
@@ -328,7 +330,7 @@ export default function Index({
         >
             <Head title="Workflow Management" />
             <div className="flex min-h-screen bg-background">
-                <Sidebar />
+                <Header />
                 <div className="py-12 w-full overflow-auto">
                     <div className="mx-auto p-6 lg:px-8">
                         <Card className="p-6 shadow-sm">
@@ -511,7 +513,6 @@ export default function Index({
                     </div>
                 </div>
             </div>
-
             {/* Modal Create/Edit */}
             {showModal && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
@@ -749,9 +750,12 @@ export default function Index({
                                 </Button>
                             </div>
                         </form>
-                    </Card>
+                    </Card>{" "}
                 </div>
-            )}
+            )}{" "}
+            <Separator className="my-10" />
+            {/* Footer */}
+            <Footer />
         </AuthenticatedLayout>
     );
 }

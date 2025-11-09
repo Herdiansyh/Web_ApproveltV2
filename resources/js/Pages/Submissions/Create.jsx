@@ -6,7 +6,6 @@ import { Button } from "@/Components/ui/button";
 import { Input } from "@/Components/ui/input";
 import { Label } from "@/Components/ui/label";
 import { Textarea } from "@/Components/ui/textarea";
-import Sidebar from "@/Components/Sidebar";
 import Swal from "sweetalert2";
 import {
     Select,
@@ -15,6 +14,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/Components/ui/select";
+import Header from "@/Components/Header";
 
 export default function Create({ auth, userDivision, workflows }) {
     const { data, setData, post, processing, errors, reset } = useForm({
@@ -105,7 +105,7 @@ export default function Create({ auth, userDivision, workflows }) {
         >
             <Head title="Buat Pengajuan" />
             <div className="flex min-h-screen bg-background ">
-                <Sidebar />
+                <Header />
                 <div className="p-5 w-full">
                     <div className="mx-auto sm:px-6 lg:px-8">
                         <Card className="p-6 shadow-md">
@@ -237,7 +237,7 @@ export default function Create({ auth, userDivision, workflows }) {
                             </form>
                         </Card>
                     </div>
-                </div>
+                </div>{" "}
             </div>
         </AuthenticatedLayout>
     );

@@ -22,6 +22,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/Components/ui/select.jsx";
+import Header from "@/Components/Header.jsx";
 
 export default function Index({ auth, documents, divisions }) {
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -81,7 +82,7 @@ export default function Index({ auth, documents, divisions }) {
             <Head title="Document Management" />
 
             <div className="flex min-h-screen bg-background">
-                <Sidebar />
+                <Header />
                 <div className="py-12 w-full overflow-auto relative">
                     <div className="mx-auto p-6 lg:px-8">
                         <h1 className="text-2xl font-bold absolute top-5">

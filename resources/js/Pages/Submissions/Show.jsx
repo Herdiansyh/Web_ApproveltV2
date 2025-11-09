@@ -13,6 +13,7 @@ import {
     DropdownMenuTrigger,
 } from "@/Components/ui/dropdown-menu";
 import PrimaryButton from "@/Components/PrimaryButton";
+import Header from "@/Components/Header";
 
 export default function Show({
     auth,
@@ -123,7 +124,9 @@ export default function Show({
                         Swal.fire({
                             icon: "error",
                             title: "Gagal",
-                            text: errors?.message || "Terjadi kesalahan saat meneruskan pengajuan.",
+                            text:
+                                errors?.message ||
+                                "Terjadi kesalahan saat meneruskan pengajuan.",
                             confirmButtonText: "OK",
                         });
                     },
@@ -143,7 +146,7 @@ export default function Show({
         >
             <Head title="Detail Pengajuan" />
             <div className="flex min-h-screen bg-background">
-                <Sidebar />
+                <Header />
                 <div className="py-12 w-full">
                     <div className="max-w-7xl mx-auto sm:px-6 lg:px-8">
                         <Card className="p-6">
@@ -165,24 +168,34 @@ export default function Show({
                                         </span>{" "}
                                         <span
                                             className={`font-semibold ${
-                                                submission.status?.toLowerCase().includes("approved") ||
+                                                submission.status
+                                                    ?.toLowerCase()
+                                                    .includes("approved") ||
                                                 submission.status === "approved"
                                                     ? "text-green-600"
-                                                    : submission.status?.toLowerCase() === "rejected" ||
-                                                      submission.status === "rejected"
+                                                    : submission.status?.toLowerCase() ===
+                                                          "rejected" ||
+                                                      submission.status ===
+                                                          "rejected"
                                                     ? "text-red-600"
                                                     : "text-yellow-600"
                                             }`}
                                         >
                                             {submission.status === "pending"
                                                 ? "Menunggu Persetujuan"
-                                                : submission.status?.toLowerCase().includes("approved")
+                                                : submission.status
+                                                      ?.toLowerCase()
+                                                      .includes("approved")
                                                 ? submission.status
-                                                : submission.status?.toLowerCase().includes("waiting")
+                                                : submission.status
+                                                      ?.toLowerCase()
+                                                      .includes("waiting")
                                                 ? submission.status
-                                                : submission.status?.toLowerCase() === "rejected"
+                                                : submission.status?.toLowerCase() ===
+                                                  "rejected"
                                                 ? "Ditolak"
-                                                : submission.status || "Menunggu"}
+                                                : submission.status ||
+                                                  "Menunggu"}
                                         </span>
                                     </p>
                                     {submission.approval_note && (
@@ -200,94 +213,152 @@ export default function Show({
                                     )}
                                 </div>
 
-                                {((submission.status === "pending" ||
-                                    submission.status?.toLowerCase().includes("waiting")) &&
-                                    currentSubmissionStep?.status === "pending") && (
-                                    <div className="flex flex-col gap-2 items-end">
-                                        <PrimaryButton
-                                            style={{ borderRadius: "15px" }}
-                                            className="bg-primary !text-[0.6rem] text-primary-foreground hover:bg-primary/90"
-                                            asChild
-                                        >
-                                            <a
-                                                href={fileUrl}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
+                                {(submission.status === "pending" ||
+                                    submission.status
+                                        ?.toLowerCase()
+                                        .includes("waiting")) &&
+                                    currentSubmissionStep?.status ===
+                                        "pending" && (
+                                        <div className="flex flex-col gap-2 items-end">
+                                            <PrimaryButton
+                                                style={{ borderRadius: "15px" }}
+                                                className="bg-primary !text-[0.6rem] text-primary-foreground hover:bg-primary/90"
+                                                asChild
                                             >
-                                                Unduh Dokumen
-                                            </a>
-                                        </PrimaryButton>
-
-                                        {canApprove && Array.isArray(currentStep?.actions) && currentStep.actions.length > 0 && (
-                                            <DropdownMenu>
-                                                <DropdownMenuTrigger asChild>
-                                                    <Button
-                                                        className="max-w-20 h-6 tracking-wide bg-blue-500 text-white"
-                                                        style={{
-                                                            borderRadius: "5px",
-                                                        }}
-                                                    >
-                                                        Action
-                                                        <div
-                                                            style={{
-                                                                rotate: "90deg",
-                                                                fontSize: "10px",
-                                                            }}
-                                                        >
-                                                            <span>&lt;</span>
-                                                            <span>&gt;</span>
-                                                        </div>
-                                                    </Button>
-                                                </DropdownMenuTrigger>
-
-                                                <DropdownMenuContent
-                                                    align="end"
-                                                    className="w-52"
+                                                <a
+                                                    href={fileUrl}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
                                                 >
-                                                    {currentStep.actions.map(
-                                                        (action, index) => {
-                                                            const a = String(action).toLowerCase();
-                                                            if (a.includes("approve")) {
-                                                                return (
-                                                                    <DropdownMenuItem
-                                                                        key={index}
-                                                                        onClick={() => setShowApproveModal(true)}
-                                                                        className="hover:text-green-700 cursor-pointer border-b border-gray-200"
-                                                                    >
-                                                                        Setujui Pengajuan
-                                                                    </DropdownMenuItem>
-                                                                );
-                                                            }
-                                                            if (a.includes("reject")) {
-                                                                return (
-                                                                    <DropdownMenuItem
-                                                                        key={index}
-                                                                        onClick={() => setShowRejectModal(true)}
-                                                                        className="hover:text-red-700 cursor-pointer border-b border-gray-200"
-                                                                    >
-                                                                        Tolak Pengajuan
-                                                                    </DropdownMenuItem>
-                                                                );
-                                                            }
-                                                            if (a.includes("request") || a.includes("next")) {
-                                                                return (
-                                                                    <DropdownMenuItem
-                                                                        key={index}
-                                                                        onClick={handleRequestNext}
-                                                                        className="hover:text-blue-700 cursor-pointer border-b border-gray-200"
-                                                                    >
-                                                                        Teruskan ke Langkah Berikutnya
-                                                                    </DropdownMenuItem>
-                                                                );
-                                                            }
-                                                            return null;
-                                                        }
-                                                    )}
-                                                </DropdownMenuContent>
-                                            </DropdownMenu>
-                                        )}
-                                    </div>
-                                )}
+                                                    Unduh Dokumen
+                                                </a>
+                                            </PrimaryButton>
+
+                                            {canApprove &&
+                                                Array.isArray(
+                                                    currentStep?.actions
+                                                ) &&
+                                                currentStep.actions.length >
+                                                    0 && (
+                                                    <DropdownMenu>
+                                                        <DropdownMenuTrigger
+                                                            asChild
+                                                        >
+                                                            <Button
+                                                                className="max-w-20 h-6 tracking-wide bg-blue-500 text-white"
+                                                                style={{
+                                                                    borderRadius:
+                                                                        "5px",
+                                                                }}
+                                                            >
+                                                                Action
+                                                                <div
+                                                                    style={{
+                                                                        rotate: "90deg",
+                                                                        fontSize:
+                                                                            "10px",
+                                                                    }}
+                                                                >
+                                                                    <span>
+                                                                        &lt;
+                                                                    </span>
+                                                                    <span>
+                                                                        &gt;
+                                                                    </span>
+                                                                </div>
+                                                            </Button>
+                                                        </DropdownMenuTrigger>
+
+                                                        <DropdownMenuContent
+                                                            align="end"
+                                                            className="w-52"
+                                                        >
+                                                            {currentStep.actions.map(
+                                                                (
+                                                                    action,
+                                                                    index
+                                                                ) => {
+                                                                    const a =
+                                                                        String(
+                                                                            action
+                                                                        ).toLowerCase();
+                                                                    if (
+                                                                        a.includes(
+                                                                            "approve"
+                                                                        )
+                                                                    ) {
+                                                                        return (
+                                                                            <DropdownMenuItem
+                                                                                key={
+                                                                                    index
+                                                                                }
+                                                                                onClick={() =>
+                                                                                    setShowApproveModal(
+                                                                                        true
+                                                                                    )
+                                                                                }
+                                                                                className="hover:text-green-700 cursor-pointer border-b border-gray-200"
+                                                                            >
+                                                                                Setujui
+                                                                                Pengajuan
+                                                                            </DropdownMenuItem>
+                                                                        );
+                                                                    }
+                                                                    if (
+                                                                        a.includes(
+                                                                            "reject"
+                                                                        )
+                                                                    ) {
+                                                                        return (
+                                                                            <DropdownMenuItem
+                                                                                key={
+                                                                                    index
+                                                                                }
+                                                                                onClick={() =>
+                                                                                    setShowRejectModal(
+                                                                                        true
+                                                                                    )
+                                                                                }
+                                                                                className="hover:text-red-700 cursor-pointer border-b border-gray-200"
+                                                                            >
+                                                                                Tolak
+                                                                                Pengajuan
+                                                                            </DropdownMenuItem>
+                                                                        );
+                                                                    }
+                                                                    if (
+                                                                        a.includes(
+                                                                            "request"
+                                                                        ) ||
+                                                                        a.includes(
+                                                                            "next"
+                                                                        )
+                                                                    ) {
+                                                                        return (
+                                                                            <DropdownMenuItem
+                                                                                key={
+                                                                                    index
+                                                                                }
+                                                                                onClick={
+                                                                                    handleRequestNext
+                                                                                }
+                                                                                className="hover:text-blue-700 cursor-pointer border-b border-gray-200"
+                                                                            >
+                                                                                Teruskan
+                                                                                ke
+                                                                                Langkah
+                                                                                Berikutnya
+                                                                            </DropdownMenuItem>
+                                                                        );
+                                                                    }
+                                                                    return null;
+                                                                }
+                                                            )}
+                                                        </DropdownMenuContent>
+                                                    </DropdownMenu>
+                                                )}
+                                        </div>
+                                    )}
                             </div>
 
                             {/* MODAL APPROVE */}
@@ -401,7 +472,7 @@ export default function Show({
                             </div>
                         </Card>
                     </div>
-                </div>
+                </div>{" "}
             </div>
         </AuthenticatedLayout>
     );

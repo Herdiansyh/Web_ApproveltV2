@@ -1,6 +1,5 @@
 import { Head, Link } from "@inertiajs/react";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
-import Sidebar from "@/Components/Sidebar";
 import { TooltipProvider } from "@/Components/ui/tooltip";
 import {
     Card,
@@ -12,8 +11,10 @@ import {
 import { Button } from "@/Components/ui/button";
 import { Separator } from "@/Components/ui/separator";
 import { ChartPie, CheckCircle, Clock, Bell, ArrowRight } from "lucide-react";
+import Header from "@/Components/Header";
+import Footer from "@/Components/Footer";
 
-export default function Dashboard({ auth, stats, pendingItems = [] }) {
+export default function Dashboard({ auth, stats }) {
     return (
         <AuthenticatedLayout
             header={
@@ -26,7 +27,7 @@ export default function Dashboard({ auth, stats, pendingItems = [] }) {
 
             <div className="flex min-h-screen bg-background">
                 <TooltipProvider>
-                    <Sidebar />
+                    <Header />
                 </TooltipProvider>
 
                 <div className="flex-1 p-8 md:p-12 space-y-8">
@@ -63,7 +64,7 @@ export default function Dashboard({ auth, stats, pendingItems = [] }) {
                                 <div className="flex items-start gap-3">
                                     <div
                                         style={{ borderRadius: "15px" }}
-                                        className="hover:bg-orange-500 mt-0.5 inline-flex h-10 w-20 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-md"
+                                        className="hover:bg-orange-500 mt-0.5 inline-flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-md"
                                     >
                                         <Bell className="h-5 w-5" />
                                     </div>
@@ -76,44 +77,6 @@ export default function Dashboard({ auth, stats, pendingItems = [] }) {
                                             Mohon review dan ambil tindakan pada
                                             pengajuan berikut.
                                         </CardDescription>
-
-                                        {pendingItems?.length > 0 && (
-                                            <ul className="mt-3 space-y-2">
-                                                {pendingItems.map((item) => (
-                                                    <li
-                                                        style={{
-                                                            borderRadius:
-                                                                "15px",
-                                                        }}
-                                                        key={item.id}
-                                                        className="flex items-center justify-between rounded-lg border border-border bg-muted px-3 py-2 text-sm shadow-sm"
-                                                    >
-                                                        <span className="truncate pr-2 font-medium text-foreground">
-                                                            {item.title}
-                                                        </span>
-                                                        <Button
-                                                            style={{
-                                                                borderRadius:
-                                                                    "15px",
-                                                            }}
-                                                            asChild
-                                                            size="sm"
-                                                            className="bg-primary text-primary-foreground hover:bg-primary/90"
-                                                        >
-                                                            <Link
-                                                                href={route(
-                                                                    "submissions.forDivision"
-                                                                )}
-                                                                className="flex items-center gap-1"
-                                                            >
-                                                                Review
-                                                                <ArrowRight className="h-3.5 w-3.5" />
-                                                            </Link>
-                                                        </Button>
-                                                    </li>
-                                                ))}
-                                            </ul>
-                                        )}
                                     </div>
                                 </div>
 
@@ -234,10 +197,7 @@ export default function Dashboard({ auth, stats, pendingItems = [] }) {
                     <Separator className="my-10" />
 
                     {/* Footer */}
-                    <p className="text-sm text-muted-foreground text-center">
-                        © {new Date().getFullYear()} E-Approval System. Made
-                        with ❤️ from IT.
-                    </p>
+                    <Footer />
                 </div>
             </div>
         </AuthenticatedLayout>

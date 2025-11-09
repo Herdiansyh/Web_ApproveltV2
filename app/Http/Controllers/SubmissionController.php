@@ -26,15 +26,34 @@ class SubmissionController extends Controller
     {
         $user = Auth::user();
 
-        $submissions = Submission::with([
+        $submissionsQuery = Submission::with([
                 'workflow.document',
                 'workflow.steps.division',
                 'workflowSteps.division'
             ])
             ->whereNotNull('workflow_id')
             ->where('user_id', $user->id)
-            ->latest()
-            ->paginate(10);
+            ->latest();
+
+        $submissions = $submissionsQuery->paginate(10);
+
+        // Attach permission info for the current user's subdivision (for showing edit/delete buttons)
+        if ($user->subdivision_id) {
+            foreach ($submissions as $s) {
+                $wfStep = $s->workflow
+                    ? $s->workflow->steps->where('step_order', $s->current_step)->first()
+                    : null;
+
+                // Only expose permission when same division as the submission owner
+                $perm = ($wfStep && $user->division_id === $s->division_id)
+                    ? WorkflowStepPermission::where('workflow_step_id', $wfStep->id)
+                        ->where('subdivision_id', $user->subdivision_id)
+                        ->first()
+                    : null;
+
+                $s->permission_for_me = $perm;
+            }
+        }
 
         return Inertia::render('Submissions/Index', [
             'submissions' => $submissions,
@@ -103,7 +122,8 @@ class SubmissionController extends Controller
                         ->first()
                     : null;
 
-                $perm = $wfStep
+                // Only expose permission when same division as the submission owner
+                $perm = ($wfStep && $user->division_id === $s->division_id)
                     ? WorkflowStepPermission::where('workflow_step_id', $wfStep->id)
                         ->where('subdivision_id', $subdivisionId)
                         ->first()
@@ -522,4 +542,62 @@ class SubmissionController extends Controller
 
         return back()->with('success', 'Pengajuan diteruskan ke langkah berikutnya.');
     }
+
+/** ------------------------
+ *  EDIT PENGAJUAN (FORM)
+ *  ------------------------ */
+public function edit(Submission $submission)
+{
+    $this->authorize('update', $submission);
+
+    return Inertia::render('Submissions/Edit', [
+        'submission' => $submission,
+    ]);
+}
+
+/** ------------------------
+ *  UPDATE PENGAJUAN
+ *  ------------------------ */
+public function update(Request $request, Submission $submission)
+{
+    $this->authorize('update', $submission);
+
+    $validated = $request->validate([
+        'title' => 'required|string|max:255',
+        'description' => 'nullable|string',
+        'file' => 'nullable|file|max:10240',
+    ]);
+
+    if ($request->hasFile('file')) {
+        // delete old file
+        if ($submission->file_path && Storage::disk('private')->exists($submission->file_path)) {
+            Storage::disk('private')->delete($submission->file_path);
+        }
+        $filePath = $request->file('file')->store('submissions', 'private');
+        $submission->file_path = $filePath;
+    }
+
+    $submission->title = $validated['title'];
+    $submission->description = $validated['description'] ?? $submission->description;
+    $submission->save();
+
+    return redirect()->route('submissions.index')->with('success', 'Pengajuan berhasil diperbarui.');
+}
+
+/** ------------------------
+ *  HAPUS PENGAJUAN
+ *  ------------------------ */
+public function destroy(Submission $submission)
+{
+    $this->authorize('delete', $submission);
+
+    // delete file
+    if ($submission->file_path && Storage::disk('private')->exists($submission->file_path)) {
+        Storage::disk('private')->delete($submission->file_path);
+    }
+
+    $submission->delete();
+
+    return redirect()->route('submissions.index')->with('success', 'Pengajuan berhasil dihapus.');
+}
 }

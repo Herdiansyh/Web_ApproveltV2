@@ -4,7 +4,7 @@ import DeleteUserForm from "./Partials/DeleteUserForm";
 import UpdatePasswordForm from "./Partials/UpdatePasswordForm";
 import UpdateProfileInformationForm from "./Partials/UpdateProfileInformationForm";
 import { TooltipProvider } from "@/Components/ui/tooltip";
-import Sidebar from "@/Components/Sidebar";
+import Header from "@/Components/Header";
 
 export default function Edit({ mustVerifyEmail, status }) {
     return (
@@ -21,7 +21,7 @@ export default function Edit({ mustVerifyEmail, status }) {
             <Head title="Profile" />{" "}
             <div className="flex min-h-screen bg-gray-100">
                 <TooltipProvider>
-                    <Sidebar />
+                    <Header />
                 </TooltipProvider>
 
                 <div className="py-12">

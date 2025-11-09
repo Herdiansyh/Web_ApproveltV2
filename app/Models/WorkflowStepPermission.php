@@ -16,6 +16,8 @@ class WorkflowStepPermission extends Model
         'can_approve',
         'can_reject',
         'can_request_next',
+        'can_edit',
+        'can_delete',
     ];
 
     protected $casts = [
@@ -23,6 +25,8 @@ class WorkflowStepPermission extends Model
         'can_approve' => 'boolean',
         'can_reject' => 'boolean',
         'can_request_next' => 'boolean',
+        'can_edit' => 'boolean',
+        'can_delete' => 'boolean',
     ];
 
     public function workflowStep()

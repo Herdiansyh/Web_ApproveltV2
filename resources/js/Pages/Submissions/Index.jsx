@@ -1,13 +1,32 @@
 import React, { useState } from "react";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
-import { Head, Link } from "@inertiajs/react";
+import { Head, Link, router } from "@inertiajs/react";
 import PrimaryButton from "@/Components/PrimaryButton";
 import Sidebar from "@/Components/Sidebar";
-import { TooltipProvider } from "@/Components/ui/tooltip";
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from "@/Components/ui/tooltip";
 import { Input } from "@/Components/ui/input";
+import { Button } from "@/Components/ui/button";
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from "@/Components/ui/dialog";
+import Header from "@/Components/Header";
+import { Separator } from "@/Components/ui/separator";
+import Footer from "@/Components/Footer";
 
 export default function Index({ auth, submissions }) {
     const [Filter, setFilter] = useState("");
+    const [confirmOpen, setConfirmOpen] = useState(false);
+    const [toDeleteId, setToDeleteId] = useState(null);
     //function to handle filter
     const handleFilterChange = (e) => {
         setFilter(e.target.value);
@@ -31,7 +50,7 @@ export default function Index({ auth, submissions }) {
             <Head title="Submissions" />
             <div className="flex min-h-screen bg-background text-foreground">
                 <TooltipProvider>
-                    <Sidebar />
+                    <Header />
                 </TooltipProvider>
                 <div className="py-12 w-full overflow-auto">
                     <div className="mx-auto sm:px-6 px-8 lg:px-8 overflow-x-auto">
@@ -228,7 +247,7 @@ export default function Index({ auth, submissions }) {
                                                             </td>
 
                                                             <td className="px-6 py-4 text-center">
-                                                                <div className="flex justify-center space-x-2">
+                                                                <div className="flex justify-center gap-2">
                                                                     <Link
                                                                         href={route(
                                                                             "submissions.show",
@@ -245,6 +264,54 @@ export default function Index({ auth, submissions }) {
                                                                             ? "Review"
                                                                             : "Lihat"}
                                                                     </Link>
+
+                                                                    <>
+                                                                        {(auth?.user?.id === submission.user_id ||
+                                                                            submission?.permission_for_me?.can_edit) && (
+                                                                            <TooltipProvider>
+                                                                                <Tooltip>
+                                                                                    <TooltipTrigger
+                                                                                        asChild
+                                                                                    >
+                                                                                        <Link
+                                                                                            href={route(
+                                                                                                "submissions.edit",
+                                                                                                submission.id
+                                                                                            )}
+                                                                                        >
+                                                                                            <Button
+                                                                                                size="sm"
+                                                                                                variant="secondary"
+                                                                                            >
+                                                                                                Edit
+                                                                                            </Button>
+                                                                                        </Link>
+                                                                                    </TooltipTrigger>
+                                                                                    <TooltipContent>
+                                                                                        Edit
+                                                                                        pengajuan
+                                                                                    </TooltipContent>
+                                                                                </Tooltip>
+                                                                            </TooltipProvider>
+                                                                        )}
+                                                                        {(auth?.user?.id === submission.user_id ||
+                                                                            submission?.permission_for_me?.can_delete) && (
+                                                                            <Button
+                                                                                size="sm"
+                                                                                variant="destructive"
+                                                                                onClick={() => {
+                                                                                    setToDeleteId(
+                                                                                        submission.id
+                                                                                    );
+                                                                                    setConfirmOpen(
+                                                                                        true
+                                                                                    );
+                                                                                }}
+                                                                            >
+                                                                                Hapus
+                                                                            </Button>
+                                                                        )}
+                                                                    </>
                                                                 </div>
                                                             </td>
                                                         </tr>
@@ -254,6 +321,59 @@ export default function Index({ auth, submissions }) {
                                         </tbody>
                                     </table>
                                 </div>
+
+                                <Dialog
+                                    open={confirmOpen}
+                                    onOpenChange={setConfirmOpen}
+                                >
+                                    <DialogContent>
+                                        <DialogHeader>
+                                            <DialogTitle>
+                                                Hapus Pengajuan?
+                                            </DialogTitle>
+                                            <DialogDescription>
+                                                Tindakan ini tidak dapat
+                                                dibatalkan.
+                                            </DialogDescription>
+                                        </DialogHeader>
+                                        <DialogFooter>
+                                            <Button
+                                                variant="secondary"
+                                                onClick={() =>
+                                                    setConfirmOpen(false)
+                                                }
+                                            >
+                                                Batal
+                                            </Button>
+                                            <Button
+                                                variant="destructive"
+                                                onClick={() => {
+                                                    if (toDeleteId) {
+                                                        router.delete(
+                                                            route(
+                                                                "submissions.destroy",
+                                                                toDeleteId
+                                                            ),
+                                                            {
+                                                                onFinish:
+                                                                    () => {
+                                                                        setConfirmOpen(
+                                                                            false
+                                                                        );
+                                                                        setToDeleteId(
+                                                                            null
+                                                                        );
+                                                                    },
+                                                            }
+                                                        );
+                                                    }
+                                                }}
+                                            >
+                                                Hapus
+                                            </Button>
+                                        </DialogFooter>
+                                    </DialogContent>
+                                </Dialog>
 
                                 {/* Pagination */}
                                 <div className="mt-6 flex flex-wrap justify-start gap-1">
@@ -275,7 +395,7 @@ export default function Index({ auth, submissions }) {
                             </div>
                         </div>
                     </div>
-                </div>
+                </div>{" "}
             </div>
         </AuthenticatedLayout>
     );

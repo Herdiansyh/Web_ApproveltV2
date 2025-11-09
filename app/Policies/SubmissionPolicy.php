@@ -78,4 +78,58 @@ class SubmissionPolicy
             ->where('can_reject', true)
             ->exists();
     }
+
+    /**
+     * Update allowed only for creator with can_edit on current step
+     */
+    public function update(User $user, Submission $submission): bool
+    {
+        // Owner can always edit
+        if ($user->id === $submission->user_id) return true;
+
+        // Require subdivision and workflow
+        if (!$user->subdivision_id || !$submission->workflow) return false;
+
+        // Only users in the same division as the owner may edit
+        if ($user->division_id !== $submission->division_id) return false;
+
+        // Check permission on current workflow step for the user's subdivision
+        $workflowStep = $submission->workflow->steps
+            ->where('step_order', $submission->current_step)
+            ->first();
+
+        if (!$workflowStep) return false;
+
+        return WorkflowStepPermission::where('workflow_step_id', $workflowStep->id)
+            ->where('subdivision_id', $user->subdivision_id)
+            ->where('can_edit', true)
+            ->exists();
+    }
+
+    /**
+     * Delete allowed only for creator with can_delete on current step
+     */
+    public function delete(User $user, Submission $submission): bool
+    {
+        // Owner can always delete
+        if ($user->id === $submission->user_id) return true;
+
+        // Require subdivision and workflow
+        if (!$user->subdivision_id || !$submission->workflow) return false;
+
+        // Only users in the same division as the owner may delete
+        if ($user->division_id !== $submission->division_id) return false;
+
+        // Check permission on current workflow step for the user's subdivision
+        $workflowStep = $submission->workflow->steps
+            ->where('step_order', $submission->current_step)
+            ->first();
+
+        if (!$workflowStep) return false;
+
+        return WorkflowStepPermission::where('workflow_step_id', $workflowStep->id)
+            ->where('subdivision_id', $user->subdivision_id)
+            ->where('can_delete', true)
+            ->exists();
+    }
 }

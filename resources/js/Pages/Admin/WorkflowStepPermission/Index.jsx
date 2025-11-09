@@ -3,8 +3,8 @@ import { Head, useForm } from "@inertiajs/react";
 import { Card } from "@/Components/ui/card";
 import { Button } from "@/Components/ui/button";
 import { Checkbox } from "@/Components/ui/checkbox";
-import Sidebar from "@/Components/Sidebar";
 import Swal from "sweetalert2";
+import Header from "@/Components/Header";
 
 export default function WorkflowStepPermissionIndex({
     workflow,
@@ -27,6 +27,8 @@ export default function WorkflowStepPermissionIndex({
                     can_approve: !!existing.can_approve,
                     can_reject: !!existing.can_reject,
                     can_request_next: !!existing.can_request_next,
+                    can_edit: !!existing.can_edit,
+                    can_delete: !!existing.can_delete,
                 });
             });
         });
@@ -66,7 +68,7 @@ export default function WorkflowStepPermissionIndex({
 
     return (
         <div className="flex min-h-screen bg-gray-50">
-            <Sidebar />
+            <Header />
             <div className="flex-1 p-8">
                 <Head title={`Workflow Permissions - ${workflow.name}`} />
                 <Card className="p-6">
@@ -200,6 +202,40 @@ export default function WorkflowStepPermissionIndex({
                                                                             <span className="text-sm">
                                                                                 Request
                                                                                 Next
+                                                                            </span>
+                                                                        </label>
+                                                                        <label className="inline-flex items-center gap-2">
+                                                                            <Checkbox
+                                                                                checked={
+                                                                                    !!perm.can_edit
+                                                                                }
+                                                                                onCheckedChange={() =>
+                                                                                    togglePermission(
+                                                                                        step.id,
+                                                                                        sub.id,
+                                                                                        "can_edit"
+                                                                                    )
+                                                                                }
+                                                                            />
+                                                                            <span className="text-sm">
+                                                                                Edit
+                                                                            </span>
+                                                                        </label>
+                                                                        <label className="inline-flex items-center gap-2">
+                                                                            <Checkbox
+                                                                                checked={
+                                                                                    !!perm.can_delete
+                                                                                }
+                                                                                onCheckedChange={() =>
+                                                                                    togglePermission(
+                                                                                        step.id,
+                                                                                        sub.id,
+                                                                                        "can_delete"
+                                                                                    )
+                                                                                }
+                                                                            />
+                                                                            <span className="text-sm">
+                                                                                Delete
                                                                             </span>
                                                                         </label>
                                                                     </div>
