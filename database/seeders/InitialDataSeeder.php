@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use App\Models\User;
 use App\Models\Division;
+use App\Models\Subdivision;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 
@@ -24,6 +25,33 @@ class InitialDataSeeder extends Seeder
             Division::create($division);
         }
 
+        // ✅ Create subdivisions
+        $subdivisions = [
+            // HR
+            ['division' => 'HR', 'name' => 'Recruitment', 'description' => 'Handles hiring and onboarding'],
+            ['division' => 'HR', 'name' => 'Training', 'description' => 'Employee development and training'],
+
+            // IT
+            ['division' => 'IT', 'name' => 'Infrastructure', 'description' => 'Network and hardware management'],
+            ['division' => 'IT', 'name' => 'Development', 'description' => 'Software and system development'],
+
+            // Finance
+            ['division' => 'Finance', 'name' => 'Accounting', 'description' => 'Handles bookkeeping and reporting'],
+            ['division' => 'Finance', 'name' => 'Budgeting', 'description' => 'Manages budgets and expenses'],
+
+            // Operations
+            ['division' => 'Operations', 'name' => 'Logistics', 'description' => 'Oversees logistics and warehouse'],
+            ['division' => 'Operations', 'name' => 'Procurement', 'description' => 'Purchasing and vendor management'],
+        ];
+
+        foreach ($subdivisions as $sub) {
+            Subdivision::create([
+                'division_id' => Division::where('name', $sub['division'])->first()->id,
+                'name' => $sub['name'],
+                'description' => $sub['description'],
+            ]);
+        }
+
         // Create manager account
         User::create([
             'name' => 'Rudi',
@@ -33,6 +61,7 @@ class InitialDataSeeder extends Seeder
             'division_id' => Division::where('name', 'Direktur')->first()->id,
             'email_verified_at' => now(),
         ]);
+
         // Create admin account
         User::create([
             'name' => 'Budi',

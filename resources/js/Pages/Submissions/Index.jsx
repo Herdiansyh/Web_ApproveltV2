@@ -266,8 +266,13 @@ export default function Index({ auth, submissions }) {
                                                                     </Link>
 
                                                                     <>
-                                                                        {(auth?.user?.id === submission.user_id ||
-                                                                            submission?.permission_for_me?.can_edit) && (
+                                                                        {(auth
+                                                                            ?.user
+                                                                            ?.id ===
+                                                                            submission.user_id ||
+                                                                            submission
+                                                                                ?.permission_for_me
+                                                                                ?.can_edit) && (
                                                                             <TooltipProvider>
                                                                                 <Tooltip>
                                                                                     <TooltipTrigger
@@ -294,8 +299,13 @@ export default function Index({ auth, submissions }) {
                                                                                 </Tooltip>
                                                                             </TooltipProvider>
                                                                         )}
-                                                                        {(auth?.user?.id === submission.user_id ||
-                                                                            submission?.permission_for_me?.can_delete) && (
+                                                                        {(auth
+                                                                            ?.user
+                                                                            ?.id ===
+                                                                            submission.user_id ||
+                                                                            submission
+                                                                                ?.permission_for_me
+                                                                                ?.can_delete) && (
                                                                             <Button
                                                                                 size="sm"
                                                                                 variant="destructive"

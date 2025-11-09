@@ -116,6 +116,8 @@ Route::get('/dashboard', function () {
         'pendingItems' => $pendingItems,
     ]);
 })->middleware(['auth', 'verified'])->name('dashboard');
+
+
 // Authenticated routes
 Route::middleware(['auth'])->group(function () {
 
@@ -146,7 +148,29 @@ Route::middleware(['auth'])->group(function () {
 
     // Admin-only routes
     Route::middleware('role:admin')->group(function () {
+  // Admin Dashboard
+    Route::get('/admin/dashboard', function () {
+        $stats = [
+            'users' => \App\Models\User::count(),
+            'submissions' => \App\Models\Submission::count(),
+            'today_activities' => \App\Models\Submission::whereDate('created_at', today())->count(),
+            'recentActivities' => \App\Models\Submission::latest()
+                ->take(5)
+                ->get()
+                ->map(fn ($s) => [
+                    'user' => $s->user->name ?? 'Unknown',
+                    'action' => 'membuat atau mengubah pengajuan "' . $s->title . '"',
+                    'time' => $s->created_at->diffForHumans(),
+                ]),
+        ];
 
+        return Inertia::render('AdminDashboard', [
+            'auth' => [
+                'user' => Auth::user(),
+            ],
+            'stats' => $stats,
+        ]);
+    })->name('Admindashboard');
         Route::resource('subdivisions', SubdivisionController::class);
 
         // User Management

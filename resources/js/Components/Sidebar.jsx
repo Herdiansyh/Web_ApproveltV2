@@ -38,12 +38,24 @@ export default function Sidebar({ open }) {
     };
 
     const navItems = [
-        {
-            label: "Dashboard",
-            href: route("dashboard"),
-            active: route().current("dashboard"),
-            icon: <FileText className="h-5 w-5" />,
-        },
+        ...(user.role === "employee" || user.role === "direktur"
+            ? [
+                  {
+                      label: "Dashboard",
+                      href: route("dashboard"),
+                      active: route().current("dashboard"),
+                      icon: <FileText className="h-5 w-5" />,
+                  },
+              ]
+            : [
+                  {
+                      label: "Admin Dashboard",
+                      href: route("Admindashboard"),
+                      active: route().current("Admindashboard"),
+                      icon: <FileText className="h-5 w-5" />,
+                  },
+              ]),
+
         ...(user.role === "employee" || user.role === "direktur"
             ? [
                   {

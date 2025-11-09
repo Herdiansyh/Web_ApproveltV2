@@ -30,9 +30,11 @@ export default function Index({ auth, subdivisions, divisions }) {
     const [selectedDivision, setSelectedDivision] = useState("all");
 
     const filteredSubdivisions = subdivisions.filter((sub) => {
-        const matchSearch = sub.name
-            .toLowerCase()
-            .includes(search.toLowerCase());
+        const matchSearch =
+            sub.name.toLowerCase().includes(search.toLowerCase()) ||
+            (sub.description
+                ? sub.description.toLowerCase().includes(search.toLowerCase())
+                : false);
         const matchSelect =
             selectedDivision === "all" ||
             sub.division?.name?.toLowerCase() ===
@@ -68,7 +70,6 @@ export default function Index({ auth, subdivisions, divisions }) {
             }
         });
     };
-    console.log(subdivisions);
 
     return (
         <AuthenticatedLayout
@@ -104,7 +105,7 @@ export default function Index({ auth, subdivisions, divisions }) {
                                             onChange={(e) =>
                                                 setSearch(e.target.value)
                                             }
-                                        />{" "}
+                                        />
                                         <Select
                                             value={selectedDivision}
                                             onValueChange={(value) =>
@@ -121,14 +122,12 @@ export default function Index({ auth, subdivisions, divisions }) {
                                             </SelectTrigger>
                                             <SelectContent>
                                                 <SelectItem value="all">
-                                                    {" "}
-                                                    {/* ✅ UBAH DARI "" KE "all" */}{" "}
                                                     All Divisions
                                                 </SelectItem>
                                                 {divisions.map((d) => (
                                                     <SelectItem
                                                         key={d.id}
-                                                        value={d.name.toLowerCase()} // ✅ PASTIKAN VALUE TIDAK KOSONG
+                                                        value={d.name.toLowerCase()}
                                                     >
                                                         {d.name}
                                                     </SelectItem>
@@ -157,6 +156,7 @@ export default function Index({ auth, subdivisions, divisions }) {
                                     <TableRow>
                                         <TableHead>Name</TableHead>
                                         <TableHead>Division</TableHead>
+                                        <TableHead>Description</TableHead>
                                         <TableHead>Actions</TableHead>
                                     </TableRow>
                                 </TableHeader>
@@ -169,6 +169,9 @@ export default function Index({ auth, subdivisions, divisions }) {
                                                 </TableCell>
                                                 <TableCell>
                                                     {sub.division?.name || "-"}
+                                                </TableCell>
+                                                <TableCell>
+                                                    {sub.description || "-"}
                                                 </TableCell>
                                                 <TableCell>
                                                     <div className="flex space-x-2">

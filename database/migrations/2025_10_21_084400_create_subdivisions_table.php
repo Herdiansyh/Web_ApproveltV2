@@ -12,7 +12,7 @@ class CreateSubdivisionsTable extends Migration
         $table->id();
         $table->foreignId('division_id')->constrained('divisions')->cascadeOnDelete();
         $table->string('name');
-        $table->string('code')->nullable();
+        $table->string('description')->nullable();
         $table->timestamps();
     });
 }
