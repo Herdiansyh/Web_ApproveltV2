@@ -23,8 +23,9 @@ import Header from "@/Components/Header";
 import { Separator } from "@/Components/ui/separator";
 import Footer from "@/Components/Footer";
 
-export default function Index({ auth, submissions }) {
+export default function Index({ auth, submissions, templates = [] }) {
     const [Filter, setFilter] = useState("");
+    const [selectedTemplateId, setSelectedTemplateId] = useState("");
     const [confirmOpen, setConfirmOpen] = useState(false);
     const [toDeleteId, setToDeleteId] = useState(null);
     //function to handle filter
@@ -76,28 +77,6 @@ export default function Index({ auth, submissions }) {
                                                         handleFilterChange
                                                     }
                                                 />
-                                                <select
-                                                    className="border w-30 h-7  border-gray-600 rounded-lg px-3 py-2 bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                                                    style={{
-                                                        borderRadius: "10px",
-                                                        fontSize: "0.6rem",
-                                                    }}
-                                                >
-                                                    {submissions.data.map(
-                                                        (submission, index) => (
-                                                            <option key={index}>
-                                                                {
-                                                                    submission
-                                                                        .workflow
-                                                                        ?.document
-                                                                        ?.name
-                                                                }
-                                                            </option>
-                                                        )
-                                                    )}
-
-                                                    {/* Add more options as needed */}
-                                                </select>
                                             </div>
                                             <div>
                                                 <Link
@@ -115,6 +94,34 @@ export default function Index({ auth, submissions }) {
                                                         Buat Pengajuan Baru
                                                     </PrimaryButton>
                                                 </Link>
+                                                {templates?.length > 0 && (
+                                                    <span className="inline-block mt-2 md:mt-0 md:ml-2">
+                                                        <PrimaryButton
+                                                            style={{
+                                                                borderRadius:
+                                                                    "15px",
+                                                            }}
+                                                            className="bg-secondary text-secondary-foreground !text-[0.5rem] md:text-sm hover:bg-secondary/90"
+                                                            disabled={
+                                                                !selectedTemplateId
+                                                            }
+                                                            onClick={() => {
+                                                                if (
+                                                                    selectedTemplateId
+                                                                ) {
+                                                                    router.visit(
+                                                                        route(
+                                                                            "submissions.createFromTemplate",
+                                                                            selectedTemplateId
+                                                                        )
+                                                                    );
+                                                                }
+                                                            }}
+                                                        >
+                                                            Buat dari Template
+                                                        </PrimaryButton>
+                                                    </span>
+                                                )}
                                             </div>
                                         </div>
                                     </div>
@@ -248,12 +255,22 @@ export default function Index({ auth, submissions }) {
 
                                                             <td className="px-6 py-4 text-center">
                                                                 <div className="flex justify-center gap-2">
+                                                                    {/* Tombol Lihat / Review */}
                                                                     <Link
                                                                         href={route(
                                                                             "submissions.show",
                                                                             submission.id
                                                                         )}
-                                                                        className="text-primary hover:text-primary/90"
+                                                                        className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all duration-200 ${
+                                                                            submission.status ===
+                                                                                "pending" &&
+                                                                            auth
+                                                                                .user
+                                                                                .role ===
+                                                                                "manager"
+                                                                                ? "bg-yellow-100 text-yellow-700 hover:bg-yellow-200"
+                                                                                : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                                                                        }`}
                                                                     >
                                                                         {submission.status ===
                                                                             "pending" &&
@@ -265,63 +282,57 @@ export default function Index({ auth, submissions }) {
                                                                             : "Lihat"}
                                                                     </Link>
 
-                                                                    <>
-                                                                        {(auth
-                                                                            ?.user
-                                                                            ?.id ===
-                                                                            submission.user_id ||
-                                                                            submission
-                                                                                ?.permission_for_me
-                                                                                ?.can_edit) && (
-                                                                            <TooltipProvider>
-                                                                                <Tooltip>
-                                                                                    <TooltipTrigger
-                                                                                        asChild
+                                                                    {/* Tombol Edit */}
+                                                                    {(auth?.user
+                                                                        ?.id ===
+                                                                        submission.user_id ||
+                                                                        submission
+                                                                            ?.permission_for_me
+                                                                            ?.can_edit) && (
+                                                                        <TooltipProvider>
+                                                                            <Tooltip>
+                                                                                <TooltipTrigger
+                                                                                    asChild
+                                                                                >
+                                                                                    <Link
+                                                                                        href={route(
+                                                                                            "submissions.edit",
+                                                                                            submission.id
+                                                                                        )}
+                                                                                        className="inline-flex items-center px-3 py-1.5 rounded-full bg-blue-500 text-white text-sm font-medium hover:bg-blue-600 active:scale-[0.97] transition-transform"
                                                                                     >
-                                                                                        <Link
-                                                                                            href={route(
-                                                                                                "submissions.edit",
-                                                                                                submission.id
-                                                                                            )}
-                                                                                        >
-                                                                                            <Button
-                                                                                                size="sm"
-                                                                                                variant="secondary"
-                                                                                            >
-                                                                                                Edit
-                                                                                            </Button>
-                                                                                        </Link>
-                                                                                    </TooltipTrigger>
-                                                                                    <TooltipContent>
                                                                                         Edit
-                                                                                        pengajuan
-                                                                                    </TooltipContent>
-                                                                                </Tooltip>
-                                                                            </TooltipProvider>
-                                                                        )}
-                                                                        {(auth
-                                                                            ?.user
-                                                                            ?.id ===
-                                                                            submission.user_id ||
-                                                                            submission
-                                                                                ?.permission_for_me
-                                                                                ?.can_delete) && (
-                                                                            <Button
-                                                                                size="sm"
-                                                                                variant="destructive"
-                                                                                onClick={() => {
-                                                                                    setToDeleteId(
-                                                                                        submission.id
-                                                                                    );
-                                                                                    setConfirmOpen(
-                                                                                        true
-                                                                                    );
-                                                                                }}
-                                                                            >
-                                                                                Hapus
-                                                                            </Button>
-                                                                        )}
-                                                                    </>
+                                                                                    </Link>
+                                                                                </TooltipTrigger>
+                                                                                <TooltipContent>
+                                                                                    Edit
+                                                                                    pengajuan
+                                                                                </TooltipContent>
+                                                                            </Tooltip>
+                                                                        </TooltipProvider>
+                                                                    )}
+
+                                                                    {/* Tombol Hapus */}
+                                                                    {(auth?.user
+                                                                        ?.id ===
+                                                                        submission.user_id ||
+                                                                        submission
+                                                                            ?.permission_for_me
+                                                                            ?.can_delete) && (
+                                                                        <button
+                                                                            onClick={() => {
+                                                                                setToDeleteId(
+                                                                                    submission.id
+                                                                                );
+                                                                                setConfirmOpen(
+                                                                                    true
+                                                                                );
+                                                                            }}
+                                                                            className="px-3 py-1.5 rounded-full bg-red-500 text-white text-sm font-medium hover:bg-red-600 active:scale-[0.97] transition-transform"
+                                                                        >
+                                                                            Hapus
+                                                                        </button>
+                                                                    )}
                                                                 </div>
                                                             </td>
                                                         </tr>

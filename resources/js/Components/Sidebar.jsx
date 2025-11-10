@@ -99,6 +99,12 @@ export default function Sidebar({ open }) {
                       icon: <DockIcon className="h-5 w-5" />,
                   },
                   {
+                      label: "Template Management",
+                      href: route("templates.index"),
+                      active: route().current("templates.*"),
+                      icon: <FileText className="h-5 w-5" />,
+                  },
+                  {
                       label: "Workflow Management",
                       href: route("workflows.index"),
                       active: route().current("workflows.*"),

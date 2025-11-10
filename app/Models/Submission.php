@@ -4,6 +4,8 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Submission extends Model
 {
@@ -28,10 +30,16 @@ class Submission extends Model
         'watermark_y',
         'watermark_width',
         'watermark_height',
+        // templating
+        'template_id',
+        'data_json',
+        'generated_pdf_path',
+        'generated_pdf_hash',
     ];
 
     protected $casts = [
         'approved_at' => 'datetime',
+        'data_json' => 'array',
     ];
 public function document()
 {
@@ -53,6 +61,26 @@ public function document()
         return $this->belongsTo(User::class, 'approved_by');
     }
 
+    public function template(): BelongsTo
+    {
+        return $this->belongsTo(Template::class);
+    }
+
+    public function files(): HasMany
+    {
+        return $this->hasMany(SubmissionFile::class);
+    }
+
+    public function stamped(): HasOne
+    {
+        return $this->hasOne(StampedFile::class);
+    }
+
+    public function approvals(): HasMany
+    {
+        return $this->hasMany(Approval::class);
+    }
+
     // Semua langkah workflow untuk submission ini
     public function workflowSteps()
     {
@@ -68,5 +96,6 @@ public function document()
     }
     
 }
+
 
 

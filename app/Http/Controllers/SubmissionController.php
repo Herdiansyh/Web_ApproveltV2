@@ -14,6 +14,9 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Support\Facades\Log;
+use App\Jobs\StampPdfOnDecision;
+use App\Jobs\GeneratePdfFromTemplate;
+use App\Models\Template;
 
 class SubmissionController extends Controller
 {
@@ -55,9 +58,19 @@ class SubmissionController extends Controller
             }
         }
 
+        // Active templates for employees to start template-based submission
+        $templates = [];
+        if (method_exists($user, 'getAttribute') ? $user->getAttribute('role') === 'employee' : ($user->role ?? null) === 'employee') {
+            $templates = Template::query()
+                ->where('is_active', true)
+                ->orderBy('name')
+                ->get(['id', 'name', 'slug']);
+        }
+
         return Inertia::render('Submissions/Index', [
             'submissions' => $submissions,
             'userDivision' => $user->division,
+            'templates' => $templates,
         ]);
     }
 
@@ -153,9 +166,212 @@ class SubmissionController extends Controller
             ->with('document')
             ->get();
 
+        // Active templates (with fields) so user can create from template within the same page
+        $templates = \App\Models\Template::query()
+            ->where('is_active', true)
+            ->with(['fields' => function ($q) {
+                $q->orderBy('order');
+            }])
+            ->orderBy('name')
+            ->get();
+
         return Inertia::render('Submissions/Create', [
             'userDivision' => $division,
             'workflows' => $workflows,
+            'templates' => $templates,
+        ]);
+    }
+
+    /** ------------------------
+     *  FORM DARI TEMPLATE (USER PILIH TEMPLATE)
+     *  ------------------------ */
+    public function createFromTemplate(Template $template)
+    {
+        $this->authorize('create', Submission::class);
+        $template->load('fields');
+        return Inertia::render('Submissions/CreateFromTemplate', [
+            'template' => $template,
+        ]);
+    }
+
+    /** ------------------------
+     *  PREVIEW TEMPLATE (render HTML untuk print tanpa menyimpan)
+     *  ------------------------ */
+    public function previewTemplate(Request $request)
+    {
+        $this->authorize('create', Submission::class);
+
+        $validated = $request->validate([
+            'template_id' => 'required|exists:templates,id',
+            'data' => 'nullable|array',
+            'title' => 'nullable|string|max:255',
+            'description' => 'nullable|string',
+        ]);
+
+        $template = Template::findOrFail($validated['template_id']);
+        if (!$template->html_view_path) {
+            abort(404, 'Template view tidak ditemukan.');
+        }
+
+        // Bangun objek Submission semu untuk kebutuhan view
+        $fake = new Submission();
+        $fake->id = 0;
+        $fake->title = $validated['title'] ?? ($template->name . ' Preview');
+        $fake->description = $validated['description'] ?? null;
+        $fake->created_at = now();
+        $fake->setRelation('template', $template);
+        $fake->setRelation('user', Auth::user());
+
+        $html = view($template->html_view_path, [
+            'submission' => $fake,
+            'data' => $validated['data'] ?? [],
+            'preview' => true,
+        ])->render();
+
+        return response($html);
+    }
+
+    /** ------------------------
+     *  PREVIEW TEMPLATE UNTUK SUBMISSION YANG SUDAH ADA
+     *  ------------------------ */
+    public function previewTemplateSubmission(Submission $submission)
+    {
+        $this->authorize('view', $submission);
+
+        if (!$submission->template_id) {
+            abort(404, 'Submission ini tidak menggunakan template.');
+        }
+
+        $submission->load(['template', 'user', 'approvals.actor', 'workflowSteps.approver']);
+        $template = $submission->template;
+        if (!$template || !$template->html_view_path) {
+            abort(404, 'Template view tidak ditemukan.');
+        }
+
+        // Try from approvals table (if used)
+        $latestApproved = method_exists($submission, 'approvals')
+            ? $submission->approvals
+                ->where('action', 'approved')
+                ->sortByDesc('created_at')
+                ->first()
+            : null;
+
+        $approvedBy = $latestApproved?->actor?->name;
+        $approvedAt = null;
+        if ($latestApproved && $latestApproved->created_at) {
+            try {
+                $approvedAt = $latestApproved->created_at instanceof \Illuminate\Support\Carbon
+                    ? $latestApproved->created_at->format('d M Y H:i')
+                    : \Illuminate\Support\Carbon::parse($latestApproved->created_at)->format('d M Y H:i');
+            } catch (\Throwable $e) {
+                $approvedAt = (string) $latestApproved->created_at;
+            }
+        }
+
+        // Fallback: derive from workflow steps (what your app actually uses)
+        if (empty($approvedBy)) {
+            $lastApprovedStep = $submission->workflowSteps
+                ? $submission->workflowSteps
+                    ->where('status', 'approved')
+                    ->sortByDesc('approved_at')
+                    ->first()
+                : null;
+            if ($lastApprovedStep) {
+                $approvedBy = $lastApprovedStep->approver?->name;
+                try {
+                    $approvedAt = $lastApprovedStep->approved_at instanceof \Illuminate\Support\Carbon
+                        ? $lastApprovedStep->approved_at->format('d M Y H:i')
+                        : \Illuminate\Support\Carbon::parse($lastApprovedStep->approved_at)->format('d M Y H:i');
+                } catch (\Throwable $e) {
+                    $approvedAt = (string) $lastApprovedStep->approved_at;
+                }
+            }
+        }
+
+        $html = view($template->html_view_path, [
+            'submission' => $submission,
+            'data' => $submission->data_json ?? [],
+            'preview' => true,
+            'approvedBy' => $approvedBy,
+            'approvedAt' => $approvedAt,
+        ])->render();
+
+        return response($html);
+    }
+
+    /** ------------------------
+     *  SIMPAN PENGAJUAN DARI TEMPLATE
+     *  ------------------------ */
+    public function storeFromTemplate(Request $request)
+    {
+        $this->authorize('create', Submission::class);
+
+        $validated = $request->validate([
+            'template_id' => 'required|exists:templates,id',
+            'data' => 'required|array',
+            'title' => 'nullable|string|max:255',
+            'description' => 'nullable|string',
+        ]);
+
+        $user = Auth::user();
+        $template = Template::with('fields')->findOrFail($validated['template_id']);
+
+        $title = $validated['title'] ?? ($template->name . ' - ' . (data_get($validated['data'], 'project_name') ?? now()->format('Y-m-d H:i')));
+
+        $submission = Submission::create([
+            'user_id' => $user->id,
+            'division_id' => $user->division_id,
+            'workflow_id' => null,
+            'title' => $title,
+            'description' => $validated['description'] ?? null,
+            'status' => 'pending',
+            'current_step' => 0,
+            'template_id' => $template->id,
+            'data_json' => $validated['data'],
+        ]);
+
+        // Generate PDF asynchronously
+        dispatch(new GeneratePdfFromTemplate($submission->id));
+
+        return redirect()->route('submissions.show', $submission->id)->with('success', 'Pengajuan dari template berhasil dibuat. PDF sedang diproses.');
+    }
+
+    /** ------------------------
+     *  DOWNLOAD DOKUMEN (PILIH STAMPED/GENERATED/ORIGINAL)
+     *  ------------------------ */
+    public function download(Submission $submission)
+    {
+        $this->authorize('view', $submission);
+
+        $path = null;
+
+        // Prefer stamped if exists and status final (approved/rejected)
+        $status = strtolower((string) $submission->status);
+        if (str_contains($status, 'approved') || str_contains($status, 'rejected') || $status === 'rejected') {
+            $stamped = $submission->stamped; // relation
+            if ($stamped && $stamped->stamped_pdf_path && Storage::disk('private')->exists($stamped->stamped_pdf_path)) {
+                $path = $stamped->stamped_pdf_path;
+            }
+        }
+
+        // Fallback to generated
+        if (!$path && $submission->generated_pdf_path && Storage::disk('private')->exists($submission->generated_pdf_path)) {
+            $path = $submission->generated_pdf_path;
+        }
+
+        // Fallback to original uploaded file
+        if (!$path && $submission->file_path && Storage::disk('private')->exists($submission->file_path)) {
+            $path = $submission->file_path;
+        }
+
+        if (!$path) {
+            abort(404, 'File tidak ditemukan.');
+        }
+
+        $abs = Storage::disk('private')->path($path);
+        $type = mime_content_type($abs);
+        return response()->download($abs, basename($path), [
+            'Content-Type' => $type,
         ]);
     }
 
@@ -169,6 +385,9 @@ class SubmissionController extends Controller
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
             'file' => 'required|file|max:10240',
+            // Template (opsional, jika user memilih template)
+            'template_id' => 'nullable|exists:templates,id',
+            'data' => 'nullable|array',
         ]);
 
         $user = Auth::user();
@@ -191,6 +410,9 @@ class SubmissionController extends Controller
             'file_path' => $filePath,
             'status' => 'pending',
             'current_step' => 1,
+            // Template data jika ada
+            'template_id' => $validated['template_id'] ?? null,
+            'data_json' => $validated['data'] ?? null,
         ]);
 
         foreach ($steps as $step) {
@@ -200,6 +422,11 @@ class SubmissionController extends Controller
                 'step_order' => $step->step_order,
                 'status' => 'pending',
             ]);
+        }
+
+        // Jika user memilih template, jalankan pembuatan PDF async
+        if (!empty($validated['template_id'])) {
+            dispatch(new GeneratePdfFromTemplate($submission->id));
         }
 
         return redirect()->route('submissions.index')->with('success', 'Pengajuan berhasil dibuat.');
@@ -217,25 +444,29 @@ class SubmissionController extends Controller
             'workflow.document',
             'workflowSteps.division',
             'workflow.steps.division',
-            'workflow.steps.permissions.subdivision', // 🔥 Load permissions juga
+            'workflow.steps.permissions.subdivision',
         ]);
 
-        // Guard: workflow sudah dihapus
-        if (!$submission->workflow) {
+        // Jika bukan submission berbasis template dan workflow hilang → error
+        if (!$submission->template_id && !$submission->workflow) {
             abort(404, 'Workflow untuk pengajuan ini sudah tidak tersedia.');
         }
 
         $user = Auth::user();
 
-        // 🔥 PERBAIKAN: Ambil WorkflowStep asli (bukan SubmissionWorkflowStep)
-        $currentWorkflowStep = $submission->workflow->steps
-            ->where('step_order', $submission->current_step)
-            ->first();
+        // Ambil WorkflowStep saat ini jika ada workflow; untuk template-only bisa null
+        $currentWorkflowStep = $submission->workflow
+            ? $submission->workflow->steps
+                ->where('step_order', $submission->current_step)
+                ->first()
+            : null;
 
         // Ambil submission workflow step untuk tracking status
-        $currentSubmissionStep = $submission->workflowSteps
-            ->where('step_order', $submission->current_step)
-            ->first();
+        $currentSubmissionStep = $submission->workflow
+            ? $submission->workflowSteps
+                ->where('step_order', $submission->current_step)
+                ->first()
+            : null;
 
         $canApprove = false;
         $filteredActions = [];
@@ -291,7 +522,7 @@ class SubmissionController extends Controller
         }
 
         $fileUrl = route('submissions.file', $submission->id);
-        $fileExists = Storage::disk('private')->exists($submission->file_path);
+        $fileExists = $submission->file_path && Storage::disk('private')->exists($submission->file_path);
 
         // 🔥 Debug log
         Log::info('Show Submission Debug:', [
@@ -408,6 +639,16 @@ class SubmissionController extends Controller
 
         $submission->save();
 
+        // If this approval finalizes the submission or you want to stamp on every approve, dispatch stamping
+        if ($isFinal) {
+            dispatch(new StampPdfOnDecision(
+                $submission->id,
+                'approved',
+                $user->name,
+                now()->toDateTimeString()
+            ));
+        }
+
         return back()->with('success', 'Dokumen berhasil disetujui.');
     }
 
@@ -461,6 +702,14 @@ class SubmissionController extends Controller
 
         $submission->status = 'rejected';
         $submission->save();
+
+        // Dispatch stamping for rejected status
+        dispatch(new StampPdfOnDecision(
+            $submission->id,
+            'rejected',
+            $user->name,
+            now()->toDateTimeString()
+        ));
 
         return back()->with('success', 'Dokumen telah ditolak.');
     }

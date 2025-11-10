@@ -8,6 +8,7 @@ use App\Http\Controllers\SubmissionController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\WorkflowController;
 use App\Http\Controllers\WorkflowStepPermissionController;
+use App\Http\Controllers\Admin\TemplateController as AdminTemplateController;
 use App\Models\Document;
 use App\Models\Submission;
 use App\Models\SubmissionWorkflowStep;
@@ -130,12 +131,20 @@ Route::middleware(['auth'])->group(function () {
     Route::middleware('role:employee')->group(function () {
         Route::get('submissions/create', [SubmissionController::class, 'create'])->name('submissions.create');
         Route::post('submissions', [SubmissionController::class, 'store'])->name('submissions.store');
+
+        // Template-based submissions
+        Route::get('submissions/templates/{template}/create', [SubmissionController::class, 'createFromTemplate'])->name('submissions.createFromTemplate');
+        Route::post('submissions/from-template', [SubmissionController::class, 'storeFromTemplate'])->name('submissions.storeFromTemplate');
+        // Template preview (render Blade as HTML for printing)
+        Route::post('submissions/templates/preview', [SubmissionController::class, 'previewTemplate'])->name('submissions.previewTemplate');
     });
 
     // Submission routes (common)
     Route::get('/submissions/division', [SubmissionController::class, 'forDivision'])->name('submissions.forDivision');
     Route::resource('submissions', SubmissionController::class)->only(['index', 'show', 'edit', 'update', 'destroy']);
     Route::get('submissions/{submission}/file', [SubmissionController::class, 'file'])->name('submissions.file');
+    Route::get('submissions/{submission}/download', [SubmissionController::class, 'download'])->name('submissions.download');
+    Route::get('submissions/{submission}/preview-template', [SubmissionController::class, 'previewTemplateSubmission'])->name('submissions.previewTemplateSubmission');
     Route::post('submissions/{submission}/request', [SubmissionController::class, 'request'])->name('submissions.request');
     Route::post('submissions/{submission}/request-next', [SubmissionController::class, 'requestNext'])
     ->name('submissions.requestNext');
@@ -188,6 +197,8 @@ Route::middleware(['auth'])->group(function () {
         // Document Management
         Route::resource('documents', DocumentController::class);
 
+        // Template Management (Admin)
+        Route::resource('templates', AdminTemplateController::class);
 
 
        // Workflow Step Permission Routes

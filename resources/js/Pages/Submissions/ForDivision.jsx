@@ -143,65 +143,66 @@ export default function ForDivision({ auth, submissions }) {
                                                 </TableCell>
                                                 <TableCell className="text-center">
                                                     <div className="flex justify-center gap-2">
+                                                        {/* Tombol Review / Lihat */}
                                                         <Link
                                                             href={route(
                                                                 "submissions.show",
                                                                 submission.id
                                                             )}
-                                                            className="text-primary hover:underline"
+                                                            className="px-3 py-1.5 rounded-full bg-yellow-100 text-yellow-700 text-sm font-medium hover:bg-yellow-200 transition-all duration-200 active:scale-[0.97]"
                                                         >
                                                             Review
                                                         </Link>
 
-                                                        <>
-                                                            {(auth?.user?.id === submission.user_id ||
-                                                                submission?.permission_for_me?.can_edit) && (
-                                                                <TooltipProvider>
-                                                                    <Tooltip>
-                                                                        <TooltipTrigger
-                                                                            asChild
-                                                                        >
-                                                                            <Link
-                                                                                href={route(
-                                                                                    "submissions.edit",
-                                                                                    submission.id
-                                                                                )}
-                                                                            >
-                                                                                <Button
-                                                                                    size="sm"
-                                                                                    variant="secondary"
-                                                                                >
-                                                                                    Edit
-                                                                                </Button>
-                                                                            </Link>
-                                                                        </TooltipTrigger>
-                                                                        <TooltipContent>
-                                                                            Edit
-                                                                            pengajuan
-                                                                        </TooltipContent>
-                                                                    </Tooltip>
-                                                                </TooltipProvider>
-                                                            )}
-                                                            {(auth?.user?.id === submission.user_id ||
-                                                                submission?.permission_for_me?.can_delete) && (
-                                                                <>
-                                                                    <Button
-                                                                        size="sm"
-                                                                        variant="destructive"
-                                                                        onClick={() => {
-                                                                            setToDeleteId(
-                                                                                submission.id
-                                                                            );
-                                                                            setConfirmOpen(
-                                                                                true
-                                                                            );
-                                                                        }}
+                                                        {/* Tombol Edit */}
+                                                        {(auth?.user?.id ===
+                                                            submission.user_id ||
+                                                            submission
+                                                                ?.permission_for_me
+                                                                ?.can_edit) && (
+                                                            <TooltipProvider>
+                                                                <Tooltip>
+                                                                    <TooltipTrigger
+                                                                        asChild
                                                                     >
-                                                                        Hapus
-                                                                    </Button>
-                                                                </>
-                                                            )}
-                                                        </>
+                                                                        <Link
+                                                                            href={route(
+                                                                                "submissions.edit",
+                                                                                submission.id
+                                                                            )}
+                                                                            className="inline-flex items-center px-3 py-1.5 rounded-full bg-blue-500 text-white text-sm font-medium hover:bg-blue-600 active:scale-[0.97] transition-transform shadow-sm hover:shadow-md"
+                                                                        >
+                                                                            Edit
+                                                                        </Link>
+                                                                    </TooltipTrigger>
+                                                                    <TooltipContent>
+                                                                        Edit
+                                                                        pengajuan
+                                                                    </TooltipContent>
+                                                                </Tooltip>
+                                                            </TooltipProvider>
+                                                        )}
+
+                                                        {/* Tombol Hapus */}
+                                                        {(auth?.user?.id ===
+                                                            submission.user_id ||
+                                                            submission
+                                                                ?.permission_for_me
+                                                                ?.can_delete) && (
+                                                            <button
+                                                                onClick={() => {
+                                                                    setToDeleteId(
+                                                                        submission.id
+                                                                    );
+                                                                    setConfirmOpen(
+                                                                        true
+                                                                    );
+                                                                }}
+                                                                className="px-3 py-1.5 rounded-full bg-red-500 text-white text-sm font-medium hover:bg-red-600 active:scale-[0.97] transition-transform shadow-sm hover:shadow-md"
+                                                            >
+                                                                Hapus
+                                                            </button>
+                                                        )}
                                                     </div>
                                                 </TableCell>
                                             </TableRow>

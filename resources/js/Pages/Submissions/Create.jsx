@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
 import { Head, useForm } from "@inertiajs/react";
 import { Card } from "@/Components/ui/card";
@@ -16,13 +16,71 @@ import {
 } from "@/Components/ui/select";
 import Header from "@/Components/Header";
 
-export default function Create({ auth, userDivision, workflows }) {
+export default function Create({
+    auth,
+    userDivision,
+    workflows,
+    templates = [],
+}) {
     const { data, setData, post, processing, errors, reset } = useForm({
         workflow_id: "",
         title: "",
         description: "",
         file: null,
+        // optional template payload
+        template_id: "",
+        data: {},
     });
+
+    const selectedTemplate = useMemo(
+        () => templates.find((t) => String(t.id) === String(data.template_id)),
+        [templates, data.template_id]
+    );
+
+    const handlePreviewTemplate = (e) => {
+        e.preventDefault();
+        if (!data.template_id) return;
+        const form = document.createElement("form");
+        form.method = "POST";
+        form.action = route("submissions.previewTemplate");
+        form.target = "_blank";
+        const csrf = document.head.querySelector(
+            'meta[name="csrf-token"]'
+        )?.content;
+        if (csrf) {
+            const t = document.createElement("input");
+            t.type = "hidden";
+            t.name = "_token";
+            t.value = csrf;
+            form.appendChild(t);
+        }
+        const fields = {
+            template_id: data.template_id,
+            title: data.title || "",
+            description: data.description || "",
+        };
+        Object.entries(fields).forEach(([k, v]) => {
+            const inp = document.createElement("input");
+            inp.type = "hidden";
+            inp.name = k;
+            inp.value = v;
+            form.appendChild(inp);
+        });
+        // Append data[field] values
+        if (selectedTemplate && selectedTemplate.fields?.length) {
+            selectedTemplate.fields.forEach((f) => {
+                const name = `data[${f.name}]`;
+                const inp = document.createElement("input");
+                inp.type = "hidden";
+                inp.name = name;
+                inp.value = data.data?.[f.name] ?? "";
+                form.appendChild(inp);
+            });
+        }
+        document.body.appendChild(form);
+        form.submit();
+        document.body.removeChild(form);
+    };
 
     const handleFileChange = (e) => {
         const file = e.target.files[0];
@@ -84,9 +142,12 @@ export default function Create({ auth, userDivision, workflows }) {
                         Swal.fire({
                             icon: "error",
                             title: "Gagal",
-                            text: err?.workflow
-                                ? err.workflow
-                                : "Terjadi kesalahan saat mengirim pengajuan.",
+                            text:
+                                err?.workflow || err?.template_id || err?.data
+                                    ? err.workflow ||
+                                      err.template_id ||
+                                      "Periksa field template yang wajib diisi"
+                                    : "Terjadi kesalahan saat mengirim pengajuan.",
                         });
                     },
                 });
@@ -114,6 +175,139 @@ export default function Create({ auth, userDivision, workflows }) {
                                 encType="multipart/form-data"
                             >
                                 <div className="space-y-6">
+                                    {/* Buat dari Template Dokumen (opsional) */}
+                                    <div>
+                                        <Label>
+                                            Template Dokumen (Opsional)
+                                        </Label>
+                                        <Select
+                                            value={data.template_id}
+                                            onValueChange={(value) => {
+                                                setData("template_id", value);
+                                                const tpl = templates.find(
+                                                    (t) =>
+                                                        String(t.id) ===
+                                                        String(value)
+                                                );
+                                                const initial =
+                                                    Object.fromEntries(
+                                                        (tpl?.fields || []).map(
+                                                            (f) => [f.name, ""]
+                                                        )
+                                                    );
+                                                setData("data", initial);
+                                                if (!data.title && tpl?.name)
+                                                    setData("title", tpl.name);
+                                            }}
+                                        >
+                                            <SelectTrigger className="w-full mt-1">
+                                                <SelectValue placeholder="-- Pilih Template --" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {templates?.length > 0 ? (
+                                                    templates.map((tpl) => (
+                                                        <SelectItem
+                                                            key={tpl.id}
+                                                            value={String(
+                                                                tpl.id
+                                                            )}
+                                                        >
+                                                            {tpl.name}
+                                                        </SelectItem>
+                                                    ))
+                                                ) : (
+                                                    <SelectItem
+                                                        disabled
+                                                        value="nt"
+                                                    >
+                                                        Belum ada template aktif
+                                                    </SelectItem>
+                                                )}
+                                            </SelectContent>
+                                        </Select>
+                                        {errors.template_id && (
+                                            <p className="text-red-600 text-sm mt-1">
+                                                {errors.template_id}
+                                            </p>
+                                        )}
+                                    </div>
+
+                                    {/* Dynamic Fields dari Template */}
+                                    {selectedTemplate && (
+                                        <div className="space-y-4">
+                                            {selectedTemplate.fields?.map(
+                                                (f) => (
+                                                    <div key={f.id || f.name}>
+                                                        <Label>
+                                                            {f.label} ({f.type}){" "}
+                                                            {f.required
+                                                                ? "*"
+                                                                : ""}
+                                                        </Label>
+                                                        {String(
+                                                            f.type
+                                                        ).toLowerCase() ===
+                                                        "textarea" ? (
+                                                            <Textarea
+                                                                value={
+                                                                    data.data?.[
+                                                                        f.name
+                                                                    ] ?? ""
+                                                                }
+                                                                onChange={(e) =>
+                                                                    setData(
+                                                                        "data",
+                                                                        {
+                                                                            ...(data.data ||
+                                                                                {}),
+                                                                            [f.name]:
+                                                                                e
+                                                                                    .target
+                                                                                    .value,
+                                                                        }
+                                                                    )
+                                                                }
+                                                                rows={3}
+                                                            />
+                                                        ) : (
+                                                            <Input
+                                                                value={
+                                                                    data.data?.[
+                                                                        f.name
+                                                                    ] ?? ""
+                                                                }
+                                                                onChange={(e) =>
+                                                                    setData(
+                                                                        "data",
+                                                                        {
+                                                                            ...(data.data ||
+                                                                                {}),
+                                                                            [f.name]:
+                                                                                e
+                                                                                    .target
+                                                                                    .value,
+                                                                        }
+                                                                    )
+                                                                }
+                                                            />
+                                                        )}
+                                                        {errors?.[
+                                                            `data.${f.name}`
+                                                        ] && (
+                                                            <p className="text-red-600 text-sm mt-1">
+                                                                {
+                                                                    errors[
+                                                                        `data.${f.name}`
+                                                                    ]
+                                                                }
+                                                            </p>
+                                                        )}
+                                                    </div>
+                                                )
+                                            )}
+                                        </div>
+                                    )}
+
                                     {/* Pilih Workflow */}
                                     <div>
                                         <Label>Document Type</Label>
