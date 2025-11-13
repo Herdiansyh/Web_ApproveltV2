@@ -27,6 +27,10 @@ import Header from "@/Components/Header.jsx";
 export default function Index({ auth, documents, divisions }) {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingDocument, setEditingDocument] = useState(null);
+    const [isFieldsOpen, setIsFieldsOpen] = useState(false);
+    const [fieldDoc, setFieldDoc] = useState(null);
+    const emptyField = { id: null, name: "", label: "", type: "text", required: false, order: 0, optionsText: "" };
+    const [fieldForm, setFieldForm] = useState(emptyField);
     const [search, setSearch] = useState("");
     const [filterDocument, setFilterDocument] = useState("all");
     const handleSearch = (e) => setSearch(e.target.value);
@@ -34,6 +38,81 @@ export default function Index({ auth, documents, divisions }) {
     const handleEdit = (doc) => {
         setEditingDocument(doc);
         setIsModalOpen(true);
+    };
+
+    const openFields = (doc) => {
+        setFieldDoc(doc);
+        setFieldForm(emptyField);
+        setIsFieldsOpen(true);
+    };
+
+    const closeFields = () => {
+        setIsFieldsOpen(false);
+        setFieldDoc(null);
+        setFieldForm(emptyField);
+    };
+
+    const parseOptions = (text) => {
+        if (!text) return [];
+        const raw = text.split(/\r?\n|,/).map((s) => s.trim()).filter(Boolean);
+        // de-dup
+        return Array.from(new Set(raw));
+    };
+
+    const startCreateField = () => setFieldForm(emptyField);
+    const startEditField = (f) => {
+        setFieldForm({
+            id: f.id,
+            name: f.name,
+            label: f.label || "",
+            type: f.type || "text",
+            required: !!f.required,
+            order: Number(f.order || 0),
+            optionsText: (f.options || []).join("\n"),
+        });
+    };
+
+    const saveField = () => {
+        if (!fieldDoc) return;
+        const docId = fieldDoc.id;
+        const payload = {
+            name: fieldForm.name,
+            label: fieldForm.label,
+            type: fieldForm.type,
+            required: !!fieldForm.required,
+            order: Number(fieldForm.order || 0),
+            options: fieldForm.type === "select" ? parseOptions(fieldForm.optionsText) : [],
+        };
+
+        if (!fieldForm.id) {
+            // create
+            router.post(route("documents.fields.store", docId), payload, {
+                onSuccess: () => Swal.fire("Success", "Field created", "success"),
+            });
+        } else {
+            const url = route("documents.fields.update", { document: docId, field: fieldForm.id });
+            const update = { ...payload };
+            delete update.name; // name immutable on update
+            router.put(url, update, {
+                onSuccess: () => Swal.fire("Success", "Field updated", "success"),
+            });
+        }
+    };
+
+    const deleteField = (f) => {
+        if (!fieldDoc) return;
+        Swal.fire({
+            title: "Delete field?",
+            icon: "warning",
+            showCancelButton: true,
+            confirmButtonText: "Delete",
+        }).then((res) => {
+            if (res.isConfirmed) {
+                router.delete(route("documents.fields.destroy", { document: fieldDoc.id, field: f.id }), {
+                    onSuccess: () => Swal.fire("Deleted", "Field deleted", "success"),
+                });
+            }
+        });
     };
 
     const filteredDocuments = documents.filter((doc) => {
@@ -83,11 +162,9 @@ export default function Index({ auth, documents, divisions }) {
 
             <div className="flex min-h-screen bg-background">
                 <Header />
-                <div className="py-12 w-full overflow-auto relative">
+                <div className="py-12 w-full overflow-auto ">
                     <div className="mx-auto p-6 lg:px-8">
-                        <h1 className="text-2xl font-bold absolute top-5">
-                            Documents Type
-                        </h1>
+                        <h1 className="text-2xl font-bold  ">Documents Type</h1>
 
                         <Card className="p-6">
                             {/* Filter & Add Button */}
@@ -166,6 +243,14 @@ export default function Index({ auth, documents, divisions }) {
                                                         <Button
                                                             variant="outline"
                                                             size="sm"
+                                                            onClick={() => openFields(doc)}
+                                                            style={{ borderRadius: "15px" }}
+                                                        >
+                                                            Manage Fields
+                                                        </Button>
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
                                                             onClick={() =>
                                                                 handleEdit(doc)
                                                             }
@@ -222,6 +307,92 @@ export default function Index({ auth, documents, divisions }) {
                 document={editingDocument}
                 divisions={divisions}
             />
+
+            {/* Fields Modal */}
+            {isFieldsOpen && (
+                <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50">
+                    <Card className="w-full max-w-3xl p-4">
+                        <div className="flex items-center justify-between mb-3">
+                            <h3 className="text-lg font-semibold">Manage Fields — {fieldDoc?.name}</h3>
+                            <Button variant="outline" size="sm" onClick={closeFields}>Close</Button>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <h4 className="font-medium mb-2">Existing Fields</h4>
+                                <div className="space-y-2 max-h-80 overflow-auto pr-2">
+                                    {(fieldDoc?.fields || []).sort((a,b)=> (a.order??0)-(b.order??0)).map((f) => (
+                                        <div key={f.id} className="border rounded-md p-2 flex items-start justify-between gap-2">
+                                            <div>
+                                                <div className="font-medium">{f.label} <span className="text-xs text-muted-foreground">({f.name})</span></div>
+                                                <div className="text-xs text-muted-foreground">{f.type}{f.required ? " • required" : ""} • order {f.order ?? 0}</div>
+                                                {Array.isArray(f.options) && f.options.length > 0 && (
+                                                    <div className="text-xs mt-1">Options: {f.options.join(", ")}</div>
+                                                )}
+                                            </div>
+                                            <div className="flex gap-2">
+                                                <Button size="sm" variant="outline" onClick={() => startEditField(f)}>Edit</Button>
+                                                <Button size="sm" variant="destructive" onClick={() => deleteField(f)}>Delete</Button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                    {(fieldDoc?.fields || []).length === 0 && (
+                                        <div className="text-sm text-muted-foreground">No fields yet.</div>
+                                    )}
+                                </div>
+                            </div>
+
+                            <div>
+                                <h4 className="font-medium mb-2">{fieldForm.id ? "Edit Field" : "Add Field"}</h4>
+                                <div className="space-y-2">
+                                    {!fieldForm.id && (
+                                        <div>
+                                            <label className="text-sm">Name</label>
+                                            <Input value={fieldForm.name} onChange={(e)=> setFieldForm({ ...fieldForm, name: e.target.value })} placeholder="e.g. tanggal_mulai" />
+                                        </div>
+                                    )}
+                                    <div>
+                                        <label className="text-sm">Label</label>
+                                        <Input value={fieldForm.label} onChange={(e)=> setFieldForm({ ...fieldForm, label: e.target.value })} placeholder="Tanggal Mulai" />
+                                    </div>
+                                    <div>
+                                        <label className="text-sm">Type</label>
+                                        <select className="w-full border rounded-md p-2" value={fieldForm.type} onChange={(e)=> setFieldForm({ ...fieldForm, type: e.target.value })}>
+                                            <option value="text">text</option>
+                                            <option value="textarea">textarea</option>
+                                            <option value="number">number</option>
+                                            <option value="date">date</option>
+                                            <option value="select">select</option>
+                                            <option value="file">file</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="text-sm">Order</label>
+                                        <Input type="number" value={fieldForm.order} onChange={(e)=> setFieldForm({ ...fieldForm, order: e.target.value })} />
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <input id="req" type="checkbox" checked={!!fieldForm.required} onChange={(e)=> setFieldForm({ ...fieldForm, required: e.target.checked })} />
+                                        <label htmlFor="req" className="text-sm">Required</label>
+                                    </div>
+                                    {fieldForm.type === "select" && (
+                                        <div>
+                                            <label className="text-sm">Options (comma or newline separated)</label>
+                                            <Textarea rows={4} value={fieldForm.optionsText} onChange={(e)=> setFieldForm({ ...fieldForm, optionsText: e.target.value })} />
+                                        </div>
+                                    )}
+
+                                    <div className="flex gap-2">
+                                        <Button onClick={saveField}>{fieldForm.id ? "Update Field" : "Create Field"}</Button>
+                                        {!fieldForm.id && (
+                                            <Button type="button" variant="outline" onClick={startCreateField}>Reset</Button>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </Card>
+                </div>
+            )}
         </AuthenticatedLayout>
     );
 }

@@ -215,9 +215,9 @@ export default function Index({ auth, users, divisions, subdivisions, roles }) {
             <Head title="User Management" />
             <div className="flex min-h-screen bg-background">
                 <Header />
-                <div className="py-12 w-full overflow-auto relative">
+                <div className="py-12 w-full overflow-auto ">
                     <div className="mx-auto p-6 lg:px-8 ">
-                        <h1 className="absolute top-5 text-2xl font-bold">
+                        <h1 className=" top-5 text-2xl font-bold">
                             User Management
                         </h1>
                         <Card className="p-6">

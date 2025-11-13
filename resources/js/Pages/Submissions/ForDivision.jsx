@@ -1,22 +1,8 @@
 import React, { useState } from "react";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
 import { Head, Link, router } from "@inertiajs/react";
-import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
-} from "@/Components/ui/table";
 import { Input } from "@/Components/ui/input";
 import { Button } from "@/Components/ui/button";
-import {
-    Tooltip,
-    TooltipContent,
-    TooltipProvider,
-    TooltipTrigger,
-} from "@/Components/ui/tooltip";
 import {
     Dialog,
     DialogContent,
@@ -26,143 +12,165 @@ import {
     DialogTitle,
 } from "@/Components/ui/dialog";
 import Header from "@/Components/Header";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from "@/Components/ui/dropdown-menu";
+import { Eye, MoreVertical, Pencil, Trash2, Search } from "lucide-react";
 
 export default function ForDivision({ auth, submissions }) {
     const [filter, setFilter] = useState("");
     const [confirmOpen, setConfirmOpen] = useState(false);
     const [toDeleteId, setToDeleteId] = useState(null);
-    //function to handle filter
-    const handleFilterChange = (e) => {
-        setFilter(e.target.value);
-        console.log(e.target.value);
-    };
 
-    // filtered submissions
-    const SubmissionFilter = submissions.data.filter((submission) =>
-        submission.title.toLowerCase().includes(filter.toLowerCase())
+    const handleFilterChange = (e) => setFilter(e.target.value);
+
+    const filteredSubmissions = submissions.data.filter((s) =>
+        s.title.toLowerCase().includes(filter.toLowerCase())
     );
 
     return (
         <AuthenticatedLayout
             user={auth.user}
             header={
-                <h2 className="font-semibold text-xl text-foreground leading-tight">
-                    Pengajuan Masuk ke Divisi Saya
+                <h2 className="font-semibold text-xl text-foreground">
+                    📁 Pengajuan Masuk ke Divisi Saya
                 </h2>
             }
         >
             <Head title="Pengajuan Masuk" />
-            <div className="flex min-h-screen bg-background">
+            <div className="flex min-h-screen bg-gradient-to-b from-background to-muted/30 text-foreground">
                 <Header />
-                <div className="py-12 w-full overflow-auto px-5">
-                    <div className="mx-auto sm:px-6 lg:px-8">
-                        <div className="bg-card shadow-sm sm:rounded-lg ">
-                            <div className="p-6 text-card-foreground">
-                                <span className="block   text-lg font-bold tracking-wider">
-                                    Lihat list pengajuan
-                                </span>{" "}
-                                <div>
-                                    <Input
-                                        type="text"
-                                        className="border w-50 h-7 mt-3  border-gray-500 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                                        style={{ borderRadius: "10px" }}
-                                        placeholder="Search Dokumen..."
-                                        value={filter}
-                                        onChange={handleFilterChange}
-                                    />
-                                </div>
-                                {/* dropdown untuk filer */}
-                                <Table className="mt-6">
-                                    <TableHeader>
-                                        <TableRow>
-                                            <TableHead>Judul</TableHead>
-                                            <TableHead>Pengirim</TableHead>
-                                            <TableHead>Status</TableHead>
-                                            <TableHead>Tanggal</TableHead>
-                                            <TableHead className="text-center">
-                                                Aksi
-                                            </TableHead>
-                                        </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {SubmissionFilter.map((submission) => (
-                                            <TableRow key={submission.id}>
-                                                <TableCell>
-                                                    {submission.title}
-                                                </TableCell>
-                                                <TableCell>
-                                                    {submission.user.name}
-                                                </TableCell>
-                                                <TableCell>
-                                                    <span
-                                                        className={`inline-flex min-w-[150px] items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-                                                            submission.status
-                                                                ?.toLowerCase()
-                                                                .includes(
-                                                                    "approved"
-                                                                ) ||
-                                                            submission.status ===
-                                                                "approved"
-                                                                ? "bg-green-100 text-green-800"
-                                                                : submission.status?.toLowerCase() ===
-                                                                      "rejected" ||
-                                                                  submission.status ===
-                                                                      "rejected"
-                                                                ? "bg-destructive text-destructive-foreground"
-                                                                : "bg-yellow-100 text-yellow-800"
-                                                        }`}
-                                                    >
-                                                        {submission.status ===
-                                                        "pending"
-                                                            ? "Menunggu Persetujuan"
-                                                            : submission.status
-                                                                  ?.toLowerCase()
-                                                                  .includes(
-                                                                      "approved"
-                                                                  )
-                                                            ? submission.status
-                                                            : submission.status
-                                                                  ?.toLowerCase()
-                                                                  .includes(
-                                                                      "waiting"
-                                                                  )
-                                                            ? submission.status
-                                                            : submission.status?.toLowerCase() ===
-                                                              "rejected"
-                                                            ? "Ditolak"
-                                                            : submission.status ||
-                                                              "Menunggu"}
-                                                    </span>
-                                                </TableCell>
-                                                <TableCell>
-                                                    {new Date(
-                                                        submission.created_at
-                                                    ).toLocaleDateString(
-                                                        "id-ID"
-                                                    )}
-                                                </TableCell>
-                                                <TableCell className="text-center">
-                                                    <div className="flex justify-center gap-2">
-                                                        {/* Tombol Review / Lihat */}
-                                                        <Link
-                                                            href={route(
-                                                                "submissions.show",
-                                                                submission.id
-                                                            )}
-                                                            className="px-3 py-1.5 rounded-full bg-yellow-100 text-yellow-700 text-sm font-medium hover:bg-yellow-200 transition-all duration-200 active:scale-[0.97]"
-                                                        >
-                                                            Review
-                                                        </Link>
+                <div className="w-full p-8">
+                    <div className="max-w-6xl mx-auto bg-card shadow-sm rounded-2xl p-8 border border-border/50 backdrop-blur-sm">
+                        <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-3">
+                            <div className="text-lg font-medium">
+                                Lihat Daftar Pengajuan
+                            </div>
+                            <div className="relative w-full md:w-1/3">
+                                <Search className="absolute left-3 top-2.5 w-4 h-4 text-muted-foreground" />
+                                <Input
+                                    type="text"
+                                    style={{ borderRadius: "15px" }}
+                                    placeholder="Cari dokumen..."
+                                    value={filter}
+                                    onChange={handleFilterChange}
+                                    className="pl-9 focus:ring-primary/60 focus:border-primary"
+                                />
+                            </div>
+                        </div>
 
-                                                        {/* Tombol Edit */}
-                                                        {(auth?.user?.id ===
-                                                            submission.user_id ||
-                                                            submission
-                                                                ?.permission_for_me
-                                                                ?.can_edit) && (
-                                                            <TooltipProvider>
-                                                                <Tooltip>
-                                                                    <TooltipTrigger
+                        <div
+                            style={{ borderRadius: "15px" }}
+                            className="overflow-x-auto border border-border/30"
+                        >
+                            <table className="min-w-full text-xs sm:text-sm">
+                                <thead>
+                                    <tr className="bg-muted/40 text-muted-foreground uppercase text-xs tracking-wider">
+                                        <th className="py-3 px-6 text-left">
+                                            Judul
+                                        </th>
+                                        <th className="py-3 px-6 text-left">
+                                            Pengirim
+                                        </th>
+                                        <th className="py-3 px-6 text-left">
+                                            Status
+                                        </th>
+                                        <th className="py-3 px-6 text-left">
+                                            Tanggal
+                                        </th>
+                                        <th className="py-3 px-6 text-center">
+                                            Aksi
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-border/40">
+                                    {filteredSubmissions.length > 0 ? (
+                                        filteredSubmissions.map(
+                                            (submission) => (
+                                                <tr
+                                                    key={submission.id}
+                                                    className="hover:bg-muted/20 transition-all duration-150"
+                                                >
+                                                    <td className="py-3 px-6 font-medium">
+                                                        {submission.title}
+                                                    </td>
+                                                    <td className="py-3 px-6">
+                                                        {submission.user.name}
+                                                    </td>
+                                                    <td className="py-3 px-6 flex">
+                                                        <span
+                                                            className={`px-3 py-1 rounded-full text-xs font-medium ${
+                                                                submission.status ===
+                                                                "approved"
+                                                                    ? "bg-emerald-100 text-emerald-700"
+                                                                    : submission.status ===
+                                                                      "rejected"
+                                                                    ? "bg-rose-100 text-rose-700"
+                                                                    : "bg-amber-100 text-amber-700"
+                                                            }`}
+                                                        >
+                                                            {submission.status ===
+                                                            "pending"
+                                                                ? "Waiting confirmation"
+                                                                : submission.status ===
+                                                                  "approved"
+                                                                ? "Disetujui"
+                                                                : submission.status ===
+                                                                  "rejected"
+                                                                ? "Ditolak"
+                                                                : submission.status ||
+                                                                  "Pending"}
+                                                        </span>
+                                                    </td>
+                                                    <td className="py-3 px-6 text-muted-foreground">
+                                                        {new Date(
+                                                            submission.created_at
+                                                        ).toLocaleDateString(
+                                                            "id-ID"
+                                                        )}
+                                                    </td>
+                                                    <td className="py-3 px-6 text-center">
+                                                        <DropdownMenu>
+                                                            <DropdownMenuTrigger
+                                                                asChild
+                                                            >
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="icon"
+                                                                    className="rounded-full hover:bg-muted/60"
+                                                                >
+                                                                    <MoreVertical className="w-4 h-4 text-muted-foreground" />
+                                                                </Button>
+                                                            </DropdownMenuTrigger>
+                                                            <DropdownMenuContent
+                                                                align="end"
+                                                                className="w-36 shadow-lg border border-border/40"
+                                                            >
+                                                                <DropdownMenuItem
+                                                                    asChild
+                                                                >
+                                                                    <Link
+                                                                        href={route(
+                                                                            "submissions.show",
+                                                                            submission.id
+                                                                        )}
+                                                                        className="flex items-center gap-2"
+                                                                    >
+                                                                        <Eye className="w-4 h-4" />{" "}
+                                                                        View
+                                                                    </Link>
+                                                                </DropdownMenuItem>
+
+                                                                {(auth.user
+                                                                    .id ===
+                                                                    submission.user_id ||
+                                                                    submission
+                                                                        .permission_for_me
+                                                                        ?.can_edit) && (
+                                                                    <DropdownMenuItem
                                                                         asChild
                                                                     >
                                                                         <Link
@@ -170,119 +178,117 @@ export default function ForDivision({ auth, submissions }) {
                                                                                 "submissions.edit",
                                                                                 submission.id
                                                                             )}
-                                                                            className="inline-flex items-center px-3 py-1.5 rounded-full bg-blue-500 text-white text-sm font-medium hover:bg-blue-600 active:scale-[0.97] transition-transform shadow-sm hover:shadow-md"
+                                                                            className="flex items-center gap-2"
                                                                         >
+                                                                            <Pencil className="w-4 h-4" />{" "}
                                                                             Edit
                                                                         </Link>
-                                                                    </TooltipTrigger>
-                                                                    <TooltipContent>
-                                                                        Edit
-                                                                        pengajuan
-                                                                    </TooltipContent>
-                                                                </Tooltip>
-                                                            </TooltipProvider>
-                                                        )}
+                                                                    </DropdownMenuItem>
+                                                                )}
 
-                                                        {/* Tombol Hapus */}
-                                                        {(auth?.user?.id ===
-                                                            submission.user_id ||
-                                                            submission
-                                                                ?.permission_for_me
-                                                                ?.can_delete) && (
-                                                            <button
-                                                                onClick={() => {
-                                                                    setToDeleteId(
-                                                                        submission.id
-                                                                    );
-                                                                    setConfirmOpen(
-                                                                        true
-                                                                    );
-                                                                }}
-                                                                className="px-3 py-1.5 rounded-full bg-red-500 text-white text-sm font-medium hover:bg-red-600 active:scale-[0.97] transition-transform shadow-sm hover:shadow-md"
-                                                            >
-                                                                Hapus
-                                                            </button>
-                                                        )}
-                                                    </div>
-                                                </TableCell>
-                                            </TableRow>
-                                        ))}
-                                    </TableBody>
-                                </Table>
-                                <Dialog
-                                    open={confirmOpen}
-                                    onOpenChange={setConfirmOpen}
-                                >
-                                    <DialogContent>
-                                        <DialogHeader>
-                                            <DialogTitle>
-                                                Hapus Pengajuan?
-                                            </DialogTitle>
-                                            <DialogDescription>
-                                                Tindakan ini tidak dapat
-                                                dibatalkan.
-                                            </DialogDescription>
-                                        </DialogHeader>
-                                        <DialogFooter>
-                                            <Button
-                                                variant="secondary"
-                                                onClick={() =>
-                                                    setConfirmOpen(false)
-                                                }
+                                                                {(auth.user
+                                                                    .id ===
+                                                                    submission.user_id ||
+                                                                    submission
+                                                                        .permission_for_me
+                                                                        ?.can_delete) && (
+                                                                    <DropdownMenuItem
+                                                                        onClick={() => {
+                                                                            setToDeleteId(
+                                                                                submission.id
+                                                                            );
+                                                                            setConfirmOpen(
+                                                                                true
+                                                                            );
+                                                                        }}
+                                                                        className="flex items-center gap-2 text-red-600"
+                                                                    >
+                                                                        <Trash2 className="w-4 h-4" />{" "}
+                                                                        Hapus
+                                                                    </DropdownMenuItem>
+                                                                )}
+                                                            </DropdownMenuContent>
+                                                        </DropdownMenu>
+                                                    </td>
+                                                </tr>
+                                            )
+                                        )
+                                    ) : (
+                                        <tr>
+                                            <td
+                                                colSpan="5"
+                                                className="text-center py-8 text-muted-foreground"
                                             >
-                                                Batal
-                                            </Button>
-                                            <Button
-                                                variant="destructive"
-                                                onClick={() => {
-                                                    if (toDeleteId) {
-                                                        router.delete(
-                                                            route(
-                                                                "submissions.destroy",
-                                                                toDeleteId
-                                                            ),
-                                                            {
-                                                                onFinish:
-                                                                    () => {
-                                                                        setConfirmOpen(
-                                                                            false
-                                                                        );
-                                                                        setToDeleteId(
-                                                                            null
-                                                                        );
-                                                                    },
-                                                            }
-                                                        );
-                                                    }
-                                                }}
-                                            >
-                                                Hapus
-                                            </Button>
-                                        </DialogFooter>
-                                    </DialogContent>
-                                </Dialog>
-                                {/* Pagination */}
-                                <div className="mt-6 flex flex-wrap justify-start gap-1">
-                                    {submissions.links?.map((link, index) => (
-                                        <Link
-                                            key={index}
-                                            href={link.url || "#"}
-                                            className={`px-3 py-1 rounded text-[0.6rem] sm:text-base transition-colors duration-150 ${
-                                                link.active
-                                                    ? "bg-primary text-primary-foreground"
-                                                    : "text-muted-foreground hover:text-primary hover:bg-muted"
-                                            }`}
-                                            dangerouslySetInnerHTML={{
-                                                __html: link.label,
-                                            }}
-                                        />
-                                    ))}
-                                </div>
-                            </div>
+                                                Tidak ada pengajuan ditemukan 😕
+                                            </td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div className="mt-6 flex flex-wrap justify-start gap-1 text-sm">
+                            {submissions.links?.map((link, index) => (
+                                <Link
+                                    key={index}
+                                    href={link.url || "#"}
+                                    style={{ borderRadius: "10px" }}
+                                    className={`px-3 py-1 transition-colors ${
+                                        link.active
+                                            ? "bg-primary text-primary-foreground"
+                                            : "text-muted-foreground hover:text-primary hover:bg-muted"
+                                    }`}
+                                    dangerouslySetInnerHTML={{
+                                        __html: link.label,
+                                    }}
+                                />
+                            ))}
                         </div>
                     </div>
-                </div>{" "}
+                </div>
             </div>
+
+            <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+                <DialogContent className="rounded-xl">
+                    <DialogHeader>
+                        <DialogTitle>Hapus Pengajuan?</DialogTitle>
+                        <DialogDescription>
+                            Tindakan ini tidak dapat dibatalkan.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                        <Button
+                            variant="secondary"
+                            onClick={() => setConfirmOpen(false)}
+                            className="rounded-md"
+                        >
+                            Batal
+                        </Button>
+                        <Button
+                            variant="destructive"
+                            className="rounded-md"
+                            onClick={() => {
+                                if (toDeleteId) {
+                                    router.delete(
+                                        route(
+                                            "submissions.destroy",
+                                            toDeleteId
+                                        ),
+                                        {
+                                            onFinish: () => {
+                                                setConfirmOpen(false);
+                                                setToDeleteId(null);
+                                            },
+                                        }
+                                    );
+                                }
+                            }}
+                        >
+                            Hapus
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </AuthenticatedLayout>
     );
 }

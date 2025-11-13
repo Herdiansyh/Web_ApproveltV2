@@ -1,14 +1,6 @@
 import React, { useState } from "react";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
 import { Head, Link, router } from "@inertiajs/react";
-import PrimaryButton from "@/Components/PrimaryButton";
-import Sidebar from "@/Components/Sidebar";
-import {
-    Tooltip,
-    TooltipContent,
-    TooltipProvider,
-    TooltipTrigger,
-} from "@/Components/ui/tooltip";
 import { Input } from "@/Components/ui/input";
 import { Button } from "@/Components/ui/button";
 import {
@@ -20,404 +12,290 @@ import {
     DialogTitle,
 } from "@/Components/ui/dialog";
 import Header from "@/Components/Header";
-import { Separator } from "@/Components/ui/separator";
-import Footer from "@/Components/Footer";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from "@/Components/ui/dropdown-menu";
+import { Eye, MoreVertical, Pencil, Trash2, Search } from "lucide-react";
+import PrimaryButton from "@/Components/PrimaryButton";
 
-export default function Index({ auth, submissions, templates = [] }) {
-    const [Filter, setFilter] = useState("");
-    const [selectedTemplateId, setSelectedTemplateId] = useState("");
+export default function Index({ auth, submissions }) {
+    const [filter, setFilter] = useState("");
     const [confirmOpen, setConfirmOpen] = useState(false);
     const [toDeleteId, setToDeleteId] = useState(null);
-    //function to handle filter
-    const handleFilterChange = (e) => {
-        setFilter(e.target.value);
-        console.log(e.target.value);
-    };
 
-    // filtered submissions
-    const SubmissionFilter = submissions.data.filter((submission) =>
-        submission.title.toLowerCase().includes(Filter.toLowerCase())
+    const handleFilterChange = (e) => setFilter(e.target.value);
+
+    const filteredSubmissions = submissions.data.filter((s) =>
+        s.title.toLowerCase().includes(filter.toLowerCase())
     );
     console.log(submissions);
+
     return (
         <AuthenticatedLayout
             user={auth.user}
             header={
-                <h2 className="font-semibold text-xl text-foreground leading-tight">
-                    Submissions
+                <h2 className="font-semibold text-xl text-foreground">
+                    Daftar Pengajuan
                 </h2>
             }
         >
             <Head title="Submissions" />
-            <div className="flex min-h-screen bg-background text-foreground">
-                <TooltipProvider>
-                    <Header />
-                </TooltipProvider>
-                <div className="py-12 w-full overflow-auto">
-                    <div className="mx-auto sm:px-6 px-8 lg:px-8 overflow-x-auto">
-                        <div className="bg-card text-card-foreground overflow-hidden shadow-md sm:rounded-lg">
-                            <div className="p-6">
-                                <span className="text-lg font-bold tracking-wider">
-                                    Buat pengajuan baru
-                                </span>
-
+            <div className="flex min-h-screen bg-gradient-to-b from-background to-muted/30 text-foreground">
+                <Header />
+                <div className="w-full p-8">
+                    <div className="max-w-6xl mx-auto bg-card shadow-sm rounded-2xl p-8 border border-border/50 backdrop-blur-sm">
+                        <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-3">
+                            <div className="relative w-full md:w-1/3">
+                                <Search className="absolute left-3 top-2.5 w-4 h-4 text-muted-foreground" />
+                                <Input
+                                    type="text"
+                                    style={{ borderRadius: "15px" }}
+                                    placeholder="Cari dokumen..."
+                                    value={filter}
+                                    onChange={handleFilterChange}
+                                    className="pl-9 focus:ring-primary/60 focus:border-primary text-xs sm:text-sm"
+                                />
+                            </div>
+                            <div className="w-full md:w-1/6">
                                 {auth.user.role === "employee" && (
-                                    <div className="mb-6 flex  justify-between gap-2 mt-5 ">
-                                        {" "}
-                                        <div className="sm:flex-row w-full md:justify-between  flex gap-2 flex-col">
-                                            <div className="flex gap-2 flex-col md:flex-row">
-                                                <Input
-                                                    style={{
-                                                        borderRadius: "10px",
-                                                    }}
-                                                    className="border w-50 h-7 border-gray-600"
-                                                    placeholder="Search Document..."
-                                                    value={Filter}
-                                                    onChange={
-                                                        handleFilterChange
-                                                    }
-                                                />
-                                            </div>
-                                            <div>
-                                                <Link
-                                                    href={route(
-                                                        "submissions.create"
-                                                    )}
-                                                >
-                                                    <PrimaryButton
-                                                        style={{
-                                                            borderRadius:
-                                                                "15px",
-                                                        }}
-                                                        className="bg-primary !text-[0.5rem] md:text-sm text-primary-foreground hover:bg-primary/90"
-                                                    >
-                                                        Buat Pengajuan Baru
-                                                    </PrimaryButton>
-                                                </Link>
-                                                {templates?.length > 0 && (
-                                                    <span className="inline-block mt-2 md:mt-0 md:ml-2">
-                                                        <PrimaryButton
-                                                            style={{
-                                                                borderRadius:
-                                                                    "15px",
-                                                            }}
-                                                            className="bg-secondary text-secondary-foreground !text-[0.5rem] md:text-sm hover:bg-secondary/90"
-                                                            disabled={
-                                                                !selectedTemplateId
-                                                            }
-                                                            onClick={() => {
-                                                                if (
-                                                                    selectedTemplateId
-                                                                ) {
-                                                                    router.visit(
-                                                                        route(
-                                                                            "submissions.createFromTemplate",
-                                                                            selectedTemplateId
-                                                                        )
-                                                                    );
-                                                                }
-                                                            }}
-                                                        >
-                                                            Buat dari Template
-                                                        </PrimaryButton>
-                                                    </span>
-                                                )}
-                                            </div>
-                                        </div>
-                                    </div>
-                                )}
-
-                                <div className="overflow-x-auto">
-                                    <table className="w-full text-sm">
-                                        <thead>
-                                            <tr className="bg-muted text-muted-foreground">
-                                                <th className="px-6 py-3 text-left">
-                                                    Judul
-                                                </th>
-                                                <th className="px-6 py-3 text-left">
-                                                    Jenis Dokumen
-                                                </th>
-                                                {auth.user.role ===
-                                                    "manager" && (
-                                                    <th className="px-6 py-3 text-left">
-                                                        Diajukan Oleh
-                                                    </th>
-                                                )}
-                                                <th className="px-6 py-3 text-left">
-                                                    Status
-                                                </th>
-                                                <th className="px-6 py-3 text-left">
-                                                    Tanggal
-                                                </th>
-                                                <th className="px-6 py-3 text-center">
-                                                    Aksi
-                                                </th>
-                                            </tr>
-                                        </thead>
-
-                                        <tbody className="divide-y divide-border">
-                                            {SubmissionFilter.map(
-                                                (submission) => {
-                                                    const currentStep =
-                                                        submission.workflowSteps?.find(
-                                                            (s) =>
-                                                                s.step_order ===
-                                                                submission.current_step
-                                                        );
-
-                                                    return (
-                                                        <tr
-                                                            key={submission.id}
-                                                            className={
-                                                                submission.status ===
-                                                                    "pending" &&
-                                                                auth.user
-                                                                    .role ===
-                                                                    "manager"
-                                                                    ? "bg-accent/20"
-                                                                    : ""
-                                                            }
-                                                        >
-                                                            <td className="px-6 py-4">
-                                                                {
-                                                                    submission.title
-                                                                }
-                                                            </td>
-
-                                                            <td className="px-6 py-4">
-                                                                {submission
-                                                                    .workflow
-                                                                    ?.document
-                                                                    ?.name ||
-                                                                    "-"}
-                                                            </td>
-
-                                                            {auth.user.role ===
-                                                                "manager" && (
-                                                                <td className="px-6 py-4">
-                                                                    {
-                                                                        submission
-                                                                            .user
-                                                                            .name
-                                                                    }
-                                                                </td>
-                                                            )}
-
-                                                            <td className="px-6 py-4">
-                                                                <span
-                                                                    className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                                                        submission.status
-                                                                            ?.toLowerCase()
-                                                                            .includes(
-                                                                                "approved"
-                                                                            ) ||
-                                                                        submission.status ===
-                                                                            "approved"
-                                                                            ? "bg-green-100 text-green-800"
-                                                                            : submission.status?.toLowerCase() ===
-                                                                                  "rejected" ||
-                                                                              submission.status ===
-                                                                                  "rejected"
-                                                                            ? "bg-destructive text-destructive-foreground"
-                                                                            : "bg-yellow-100 text-yellow-800"
-                                                                    }`}
-                                                                >
-                                                                    {submission.status ===
-                                                                    "pending"
-                                                                        ? "Menunggu Persetujuan"
-                                                                        : submission.status
-                                                                              ?.toLowerCase()
-                                                                              .includes(
-                                                                                  "approved"
-                                                                              )
-                                                                        ? submission.status
-                                                                        : submission.status
-                                                                              ?.toLowerCase()
-                                                                              .includes(
-                                                                                  "waiting"
-                                                                              )
-                                                                        ? submission.status
-                                                                        : submission.status?.toLowerCase() ===
-                                                                          "rejected"
-                                                                        ? "Ditolak"
-                                                                        : submission.status ||
-                                                                          "Menunggu"}
-                                                                </span>
-                                                            </td>
-
-                                                            <td className="px-6 py-4">
-                                                                {new Date(
-                                                                    submission.created_at
-                                                                ).toLocaleDateString(
-                                                                    "id-ID"
-                                                                )}
-                                                            </td>
-
-                                                            <td className="px-6 py-4 text-center">
-                                                                <div className="flex justify-center gap-2">
-                                                                    {/* Tombol Lihat / Review */}
-                                                                    <Link
-                                                                        href={route(
-                                                                            "submissions.show",
-                                                                            submission.id
-                                                                        )}
-                                                                        className={`px-3 py-1.5 rounded-full text-sm font-medium transition-all duration-200 ${
-                                                                            submission.status ===
-                                                                                "pending" &&
-                                                                            auth
-                                                                                .user
-                                                                                .role ===
-                                                                                "manager"
-                                                                                ? "bg-yellow-100 text-yellow-700 hover:bg-yellow-200"
-                                                                                : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                                                                        }`}
-                                                                    >
-                                                                        {submission.status ===
-                                                                            "pending" &&
-                                                                        auth
-                                                                            .user
-                                                                            .role ===
-                                                                            "manager"
-                                                                            ? "Review"
-                                                                            : "Lihat"}
-                                                                    </Link>
-
-                                                                    {/* Tombol Edit */}
-                                                                    {(auth?.user
-                                                                        ?.id ===
-                                                                        submission.user_id ||
-                                                                        submission
-                                                                            ?.permission_for_me
-                                                                            ?.can_edit) && (
-                                                                        <TooltipProvider>
-                                                                            <Tooltip>
-                                                                                <TooltipTrigger
-                                                                                    asChild
-                                                                                >
-                                                                                    <Link
-                                                                                        href={route(
-                                                                                            "submissions.edit",
-                                                                                            submission.id
-                                                                                        )}
-                                                                                        className="inline-flex items-center px-3 py-1.5 rounded-full bg-blue-500 text-white text-sm font-medium hover:bg-blue-600 active:scale-[0.97] transition-transform"
-                                                                                    >
-                                                                                        Edit
-                                                                                    </Link>
-                                                                                </TooltipTrigger>
-                                                                                <TooltipContent>
-                                                                                    Edit
-                                                                                    pengajuan
-                                                                                </TooltipContent>
-                                                                            </Tooltip>
-                                                                        </TooltipProvider>
-                                                                    )}
-
-                                                                    {/* Tombol Hapus */}
-                                                                    {(auth?.user
-                                                                        ?.id ===
-                                                                        submission.user_id ||
-                                                                        submission
-                                                                            ?.permission_for_me
-                                                                            ?.can_delete) && (
-                                                                        <button
-                                                                            onClick={() => {
-                                                                                setToDeleteId(
-                                                                                    submission.id
-                                                                                );
-                                                                                setConfirmOpen(
-                                                                                    true
-                                                                                );
-                                                                            }}
-                                                                            className="px-3 py-1.5 rounded-full bg-red-500 text-white text-sm font-medium hover:bg-red-600 active:scale-[0.97] transition-transform"
-                                                                        >
-                                                                            Hapus
-                                                                        </button>
-                                                                    )}
-                                                                </div>
-                                                            </td>
-                                                        </tr>
-                                                    );
-                                                }
-                                            )}
-                                        </tbody>
-                                    </table>
-                                </div>
-
-                                <Dialog
-                                    open={confirmOpen}
-                                    onOpenChange={setConfirmOpen}
-                                >
-                                    <DialogContent>
-                                        <DialogHeader>
-                                            <DialogTitle>
-                                                Hapus Pengajuan?
-                                            </DialogTitle>
-                                            <DialogDescription>
-                                                Tindakan ini tidak dapat
-                                                dibatalkan.
-                                            </DialogDescription>
-                                        </DialogHeader>
-                                        <DialogFooter>
-                                            <Button
-                                                variant="secondary"
-                                                onClick={() =>
-                                                    setConfirmOpen(false)
-                                                }
-                                            >
-                                                Batal
-                                            </Button>
-                                            <Button
-                                                variant="destructive"
-                                                onClick={() => {
-                                                    if (toDeleteId) {
-                                                        router.delete(
-                                                            route(
-                                                                "submissions.destroy",
-                                                                toDeleteId
-                                                            ),
-                                                            {
-                                                                onFinish:
-                                                                    () => {
-                                                                        setConfirmOpen(
-                                                                            false
-                                                                        );
-                                                                        setToDeleteId(
-                                                                            null
-                                                                        );
-                                                                    },
-                                                            }
-                                                        );
-                                                    }
-                                                }}
-                                            >
-                                                Hapus
-                                            </Button>
-                                        </DialogFooter>
-                                    </DialogContent>
-                                </Dialog>
-
-                                {/* Pagination */}
-                                <div className="mt-6 flex flex-wrap justify-start gap-1">
-                                    {submissions.links?.map((link, index) => (
-                                        <Link
-                                            key={index}
-                                            href={link.url || "#"}
-                                            className={`px-3 py-1 rounded text-[0.6rem] sm:text-base transition-colors duration-150 ${
-                                                link.active
-                                                    ? "bg-primary text-primary-foreground"
-                                                    : "text-muted-foreground hover:text-primary hover:bg-muted"
-                                            }`}
-                                            dangerouslySetInnerHTML={{
-                                                __html: link.label,
+                                    <Link href={route("submissions.create")}>
+                                        <Button
+                                            style={{
+                                                borderRadius: "15px",
                                             }}
-                                        />
-                                    ))}
-                                </div>
+                                            className="w-full bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm sm:text-xs text-xs font-semibold transition-all"
+                                        >
+                                            + Buat Pengajuan
+                                        </Button>
+                                    </Link>
+                                )}
                             </div>
                         </div>
+
+                        <div
+                            style={{ borderRadius: "15px" }}
+                            className="overflow-x-auto  border border-border/30"
+                        >
+                            <table className="min-w-full md:text-sm text-xs">
+                                <thead>
+                                    <tr className="bg-muted/40 text-muted-foreground uppercase text-xs tracking-wider">
+                                        <th className="py-3 px-6 text-left">
+                                            Judul
+                                        </th>
+                                        <th className="py-3 px-6 text-left">
+                                            Jenis Dokumen
+                                        </th>
+                                        {auth.user.role === "manager" && (
+                                            <th className="py-3 px-6 text-left">
+                                                Diajukan Oleh
+                                            </th>
+                                        )}
+                                        <th className="py-3 px-6 text-left">
+                                            Status
+                                        </th>
+                                        <th className="py-3 px-6 text-left">
+                                            Tanggal
+                                        </th>
+                                        <th className="py-3 px-6 text-center">
+                                            Aksi
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-border/40">
+                                    {filteredSubmissions.map((submission) => (
+                                        <tr
+                                            key={submission.id}
+                                            className="hover:bg-muted/20 transition-all duration-150"
+                                        >
+                                            <td className="py-3 px-6 font-medium">
+                                                {submission.title}
+                                            </td>
+                                            <td className="py-3 px-6">
+                                                {submission.workflow?.document
+                                                    ?.name || "-"}
+                                            </td>
+                                            {auth.user.role === "manager" && (
+                                                <td className="py-3 px-6">
+                                                    {submission.user.name}
+                                                </td>
+                                            )}
+                                            <td className="py-3 px-6 flex">
+                                                <span
+                                                    className={`px-3 py-1 rounded-full text-[0.8em] sm:text-xs font-medium ${
+                                                        submission.status ===
+                                                        "Approved by Direktur"
+                                                            ? "bg-emerald-100 text-emerald-700"
+                                                            : submission.status ===
+                                                              "rejected"
+                                                            ? "bg-rose-100 text-rose-700"
+                                                            : "bg-amber-100 text-amber-700"
+                                                    }`}
+                                                >
+                                                    {submission.status ===
+                                                    "pending"
+                                                        ? "Pending"
+                                                        : submission.status ===
+                                                          "Approved by Direktur"
+                                                        ? "Approved"
+                                                        : submission.status ===
+                                                          "rejected"
+                                                        ? "rejected"
+                                                        : submission.status ||
+                                                          "Waiting"}
+                                                </span>
+                                            </td>
+                                            <td className="py-3 px-6 text-muted-foreground">
+                                                {new Date(
+                                                    submission.created_at
+                                                ).toLocaleDateString("id-ID")}
+                                            </td>
+                                            <td className="py-3 px-6 text-center">
+                                                <DropdownMenu>
+                                                    <DropdownMenuTrigger
+                                                        asChild
+                                                    >
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            className="rounded-full hover:bg-muted/60"
+                                                        >
+                                                            <MoreVertical className="w-4 h-4 text-muted-foreground" />
+                                                        </Button>
+                                                    </DropdownMenuTrigger>
+                                                    <DropdownMenuContent
+                                                        align="end"
+                                                        className="w-36 shadow-lg border border-border/40"
+                                                    >
+                                                        <DropdownMenuItem
+                                                            asChild
+                                                        >
+                                                            <Link
+                                                                href={route(
+                                                                    "submissions.show",
+                                                                    submission.id
+                                                                )}
+                                                                className="flex items-center gap-2"
+                                                            >
+                                                                <Eye className="w-4 h-4" />{" "}
+                                                                View
+                                                            </Link>
+                                                        </DropdownMenuItem>
+
+                                                        {(auth.user.id ===
+                                                            submission.user_id ||
+                                                            submission
+                                                                .permission_for_me
+                                                                ?.can_edit) && (
+                                                            <DropdownMenuItem
+                                                                asChild
+                                                            >
+                                                                <Link
+                                                                    href={route(
+                                                                        "submissions.edit",
+                                                                        submission.id
+                                                                    )}
+                                                                    className="flex items-center gap-2"
+                                                                >
+                                                                    <Pencil className="w-4 h-4" />{" "}
+                                                                    Edit
+                                                                </Link>
+                                                            </DropdownMenuItem>
+                                                        )}
+
+                                                        {(auth.user.id ===
+                                                            submission.user_id ||
+                                                            submission
+                                                                .permission_for_me
+                                                                ?.can_delete) && (
+                                                            <DropdownMenuItem
+                                                                onClick={() => {
+                                                                    setToDeleteId(
+                                                                        submission.id
+                                                                    );
+                                                                    setConfirmOpen(
+                                                                        true
+                                                                    );
+                                                                }}
+                                                                className="flex items-center gap-2 text-red-600"
+                                                            >
+                                                                <Trash2 className="w-4 h-4" />{" "}
+                                                                Hapus
+                                                            </DropdownMenuItem>
+                                                        )}
+                                                    </DropdownMenuContent>
+                                                </DropdownMenu>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div className="mt-6 flex flex-wrap justify-start gap-1 text-sm">
+                            {submissions.links?.map((link, index) => (
+                                <Link
+                                    key={index}
+                                    href={link.url || "#"}
+                                    style={{ borderRadius: "10px" }}
+                                    className={`px-3 py-1 transition-colors ${
+                                        link.active
+                                            ? "bg-primary text-primary-foreground"
+                                            : "text-muted-foreground hover:text-primary hover:bg-muted"
+                                    }`}
+                                    dangerouslySetInnerHTML={{
+                                        __html: link.label,
+                                    }}
+                                />
+                            ))}
+                        </div>
                     </div>
-                </div>{" "}
+                </div>
             </div>
+
+            <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+                <DialogContent className="rounded-xl">
+                    <DialogHeader>
+                        <DialogTitle>Hapus Pengajuan?</DialogTitle>
+                        <DialogDescription>
+                            Tindakan ini tidak dapat dibatalkan.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                        <Button
+                            variant="secondary"
+                            onClick={() => setConfirmOpen(false)}
+                            className="rounded-md"
+                        >
+                            Batal
+                        </Button>
+                        <Button
+                            variant="destructive"
+                            className="rounded-md"
+                            onClick={() => {
+                                if (toDeleteId) {
+                                    router.delete(
+                                        route(
+                                            "submissions.destroy",
+                                            toDeleteId
+                                        ),
+                                        {
+                                            onFinish: () => {
+                                                setConfirmOpen(false);
+                                                setToDeleteId(null);
+                                            },
+                                        }
+                                    );
+                                }
+                            }}
+                        >
+                            Hapus
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </AuthenticatedLayout>
     );
 }

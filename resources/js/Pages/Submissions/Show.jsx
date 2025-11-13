@@ -1,10 +1,10 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
 import { Head, useForm } from "@inertiajs/react";
 import { Card } from "@/Components/ui/card";
 import { Button } from "@/Components/ui/button";
 import { Textarea } from "@/Components/ui/textarea";
-import Sidebar from "@/Components/Sidebar";
+import Header from "@/Components/Header";
 import Swal from "sweetalert2";
 import {
     DropdownMenu,
@@ -12,8 +12,6 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from "@/Components/ui/dropdown-menu";
-import PrimaryButton from "@/Components/PrimaryButton";
-import Header from "@/Components/Header";
 
 export default function Show({
     auth,
@@ -22,6 +20,7 @@ export default function Show({
     canApprove = false,
     currentStep = null,
     currentSubmissionStep = null,
+    documentFields = [],
 }) {
     const [showApproveModal, setShowApproveModal] = useState(false);
     const [showRejectModal, setShowRejectModal] = useState(false);
@@ -33,16 +32,11 @@ export default function Show({
         Swal.fire({
             icon: "error",
             title: "Akses Ditolak",
-            text: "Anda tidak memiliki hak akses untuk melakukan tindakan ini.",
+            text: "Anda tidak memiliki hak untuk tindakan ini.",
             confirmButtonText: "OK",
         });
     };
-    console.log("=== DEBUG ACTIONS ===");
-    console.log("currentStep:", currentStep);
-    console.log("actions:", currentStep?.actions);
-    console.log("actions type:", typeof currentStep?.actions);
-    console.log("actions length:", currentStep?.actions?.length);
-    console.log("====================");
+
     const handleApprove = () => {
         if (!canApprove) return handleNoAccess();
         post(route("submissions.approve", submission.id), {
@@ -52,8 +46,8 @@ export default function Show({
                 reset();
                 Swal.fire({
                     icon: "success",
-                    title: "Berhasil",
-                    text: "Pengajuan telah disetujui.",
+                    title: "Disetujui!",
+                    text: "Pengajuan berhasil disetujui.",
                     confirmButtonText: "OK",
                 }).then(() => window.location.reload());
             },
@@ -66,16 +60,16 @@ export default function Show({
         if (!data.approval_note.trim()) {
             Swal.fire({
                 icon: "warning",
-                title: "Perhatian",
-                text: "Mohon berikan alasan penolakan",
+                title: "Catatan wajib diisi",
+                text: "Tuliskan alasan penolakan.",
                 confirmButtonText: "OK",
             });
             return;
         }
 
         Swal.fire({
-            title: "Apakah Anda yakin?",
-            text: "Dokumen akan ditolak!",
+            title: "Yakin ingin menolak?",
+            text: "Tindakan ini tidak dapat dibatalkan.",
             icon: "warning",
             showCancelButton: true,
             confirmButtonText: "Ya, tolak",
@@ -89,8 +83,8 @@ export default function Show({
                         reset();
                         Swal.fire({
                             icon: "success",
-                            title: "Berhasil",
-                            text: "Dokumen telah ditolak",
+                            title: "Ditolak",
+                            text: "Pengajuan telah ditolak.",
                             confirmButtonText: "OK",
                         }).then(() => window.location.reload());
                     },
@@ -101,13 +95,11 @@ export default function Show({
 
     const handleRequestNext = () => {
         if (!canApprove) return handleNoAccess();
-
         Swal.fire({
-            title: "Konfirmasi",
-            text: "Teruskan pengajuan ke langkah berikutnya?",
+            title: "Teruskan ke langkah berikutnya?",
             icon: "question",
             showCancelButton: true,
-            confirmButtonText: "Ya, teruskan",
+            confirmButtonText: "Ya, lanjutkan",
             cancelButtonText: "Batal",
         }).then((result) => {
             if (result.isConfirmed) {
@@ -120,112 +112,80 @@ export default function Show({
                             confirmButtonText: "OK",
                         }).then(() => window.location.reload());
                     },
-                    onError: (errors) => {
-                        Swal.fire({
-                            icon: "error",
-                            title: "Gagal",
-                            text:
-                                errors?.message ||
-                                "Terjadi kesalahan saat meneruskan pengajuan.",
-                            confirmButtonText: "OK",
-                        });
-                    },
                 });
             }
         });
     };
 
+    const statusColor =
+        submission.status === "approved"
+            ? "bg-green-100 text-green-700"
+            : submission.status === "rejected"
+            ? "bg-rose-100 text-rose-700"
+            : "bg-amber-100 text-amber-700";
+
+    const dataMap = useMemo(() => submission?.data_json || {}, [submission]);
+
     return (
         <AuthenticatedLayout
             user={auth.user}
             header={
-                <h2 className="font-semibold text-xl text-gray-800 leading-tight">
+                <h2 className="font-semibold text-xl text-foreground tracking-tight">
                     Detail Pengajuan
                 </h2>
             }
         >
             <Head title="Detail Pengajuan" />
-            <div className="flex min-h-screen bg-background">
+            <div className="flex min-h-screen bg-gradient-to-b from-background to-muted/20 text-foreground">
                 <Header />
-                <div className="py-12 w-full">
-                    <div className="max-w-7xl mx-auto sm:px-6 lg:px-8">
-                        <Card className="p-6">
-                            <div className="mb-6 flex justify-between items-start">
-                                <div>
-                                    <h3 className="text-2xl font-bold mb-2">
+                <div className="py-10 px-6 w-full">
+                    <div className=" mx-auto">
+                        <Card className="p-8 rounded-2xl border border-border/50 shadow-sm backdrop-blur-md bg-card/80">
+                            <div className="flex justify-between items-start flex-wrap gap-4">
+                                <div className="space-y-2">
+                                    <h3 className="text-2xl font-bold text-foreground/90">
                                         {submission.title}
                                     </h3>
-                                    <p className="text-gray-600">
-                                        <span className="font-bold">
+                                    <p className="text-sm text-muted-foreground">
+                                        <span className="font-semibold">
                                             Diajukan oleh:
                                         </span>{" "}
                                         {submission.user.name} (
                                         {submission.user.division?.name ?? "-"})
                                     </p>
-                                    <p className="text-gray-600">
-                                        <span className="font-bold">
+                                    <div className="flex items-center gap-2">
+                                        <span className="font-semibold text-muted-foreground">
                                             Status:
-                                        </span>{" "}
+                                        </span>
                                         <span
-                                            className={`font-semibold ${
-                                                submission.status
-                                                    ?.toLowerCase()
-                                                    .includes("approved") ||
-                                                submission.status === "approved"
-                                                    ? "text-green-600"
-                                                    : submission.status?.toLowerCase() ===
-                                                          "rejected" ||
-                                                      submission.status ===
-                                                          "rejected"
-                                                    ? "text-red-600"
-                                                    : "text-yellow-600"
-                                            }`}
+                                            className={`px-3 py-1 rounded-full text-xs font-medium ${statusColor}`}
                                         >
-                                            {submission.status === "pending"
-                                                ? "Menunggu Persetujuan"
-                                                : submission.status
-                                                      ?.toLowerCase()
-                                                      .includes("approved")
-                                                ? submission.status
-                                                : submission.status
-                                                      ?.toLowerCase()
-                                                      .includes("waiting")
-                                                ? submission.status
-                                                : submission.status?.toLowerCase() ===
+                                            {submission.status === "approved"
+                                                ? "Disetujui"
+                                                : submission.status ===
                                                   "rejected"
                                                 ? "Ditolak"
-                                                : submission.status ||
-                                                  "Menunggu"}
+                                                : "Menunggu Persetujuan"}
                                         </span>
-                                    </p>
+                                    </div>
                                     {submission.approval_note && (
-                                        <p className="text-gray-600 mt-2">
-                                            Catatan: {submission.approval_note}
-                                        </p>
-                                    )}
-                                    {submission.description && (
-                                        <p className="mt-4">
-                                            <span className="font-bold text-gray-600">
-                                                Deskripsi:{" "}
-                                            </span>
-                                            {submission.description}
+                                        <p className="text-sm text-muted-foreground mt-1">
+                                            📝 {submission.approval_note}
                                         </p>
                                     )}
                                 </div>
 
-                                <div className="flex flex-col gap-2 items-end">
-                                    {/* Tombol Unduh Dokumen */}
+                                <div className="flex flex-col gap-2">
                                     <a
                                         href={route(
                                             "submissions.download",
                                             submission.id
                                         )}
-                                        className="inline-flex items-center justify-center px-4 py-1.5 text-sm font-medium rounded-full bg-blue-600 text-white hover:bg-blue-700 active:scale-[0.97] transition-all shadow-sm hover:shadow-md"
+                                        className="inline-flex items-center justify-center px-4 py-1.5 text-sm font-medium rounded-full bg-blue-600 text-white hover:bg-blue-700 active:scale-[0.97] transition-all shadow-sm"
                                     >
                                         📄 Unduh Dokumen
                                     </a>
 
-                                    {/* Tombol Preview Template */}
                                     {submission.template_id &&
                                         (auth?.user?.id ===
                                             submission.user_id ||
@@ -243,13 +203,23 @@ export default function Show({
                                                 )}
                                                 target="_blank"
                                                 rel="noopener noreferrer"
-                                                className="inline-flex items-center justify-center px-4 py-1.5 text-sm font-medium rounded-full bg-gray-100 text-gray-700 hover:bg-gray-200 active:scale-[0.97] transition-all shadow-sm hover:shadow-md"
+                                                className="inline-flex items-center justify-center px-4 py-1.5 text-sm font-medium rounded-full bg-muted text-foreground hover:bg-muted/70 active:scale-[0.97] transition-all shadow-sm"
                                             >
                                                 👁️ Preview Template
                                             </a>
                                         )}
 
-                                    {/* Tombol Action */}
+                                    {Array.isArray(documentFields) && documentFields.length > 0 && (
+                                        <a
+                                            href={route("submissions.printDocument", submission.id)}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="inline-flex items-center justify-center px-4 py-1.5 text-sm font-medium rounded-full bg-muted text-foreground hover:bg-muted/70 active:scale-[0.97] transition-all shadow-sm"
+                                        >
+                                            🖨️ Print Dokumen
+                                        </a>
+                                    )}
+
                                     {(submission.status === "pending" ||
                                         submission.status
                                             ?.toLowerCase()
@@ -261,26 +231,13 @@ export default function Show({
                                         currentStep.actions.length > 0 && (
                                             <DropdownMenu>
                                                 <DropdownMenuTrigger asChild>
-                                                    <Button className="inline-flex items-center justify-center gap-1 px-4 py-1.5 text-sm font-medium rounded-full bg-indigo-500 text-white hover:bg-indigo-600 active:scale-[0.97] transition-all shadow-sm hover:shadow-md">
+                                                    <Button className="rounded-full bg-indigo-500 text-white hover:bg-indigo-600 shadow-sm text-sm px-4 py-1.5">
                                                         ⚙️ Action
-                                                        <svg
-                                                            xmlns="http://www.w3.org/2000/svg"
-                                                            viewBox="0 0 20 20"
-                                                            fill="currentColor"
-                                                            className="w-4 h-4 ml-1"
-                                                        >
-                                                            <path
-                                                                fillRule="evenodd"
-                                                                d="M5.23 7.21a.75.75 0 011.06.02L10 11.184l3.71-3.954a.75.75 0 111.08 1.04l-4.25 4.53a.75.75 0 01-1.08 0l-4.25-4.53a.75.75 0 01.02-1.06z"
-                                                                clipRule="evenodd"
-                                                            />
-                                                        </svg>
                                                     </Button>
                                                 </DropdownMenuTrigger>
-
                                                 <DropdownMenuContent
                                                     align="end"
-                                                    className="w-56"
+                                                    className="w-44 border border-border/30 shadow-md rounded-xl text-sm"
                                                 >
                                                     {currentStep.actions.map(
                                                         (action, index) => {
@@ -292,7 +249,7 @@ export default function Show({
                                                                 a.includes(
                                                                     "approve"
                                                                 )
-                                                            ) {
+                                                            )
                                                                 return (
                                                                     <DropdownMenuItem
                                                                         key={
@@ -303,18 +260,17 @@ export default function Show({
                                                                                 true
                                                                             )
                                                                         }
-                                                                        className="cursor-pointer hover:text-green-700 border-b border-gray-200"
+                                                                        className="hover:text-green-600 cursor-pointer"
                                                                     >
                                                                         ✅
                                                                         Approve
                                                                     </DropdownMenuItem>
                                                                 );
-                                                            }
                                                             if (
                                                                 a.includes(
                                                                     "reject"
                                                                 )
-                                                            ) {
+                                                            )
                                                                 return (
                                                                     <DropdownMenuItem
                                                                         key={
@@ -325,21 +281,17 @@ export default function Show({
                                                                                 true
                                                                             )
                                                                         }
-                                                                        className="cursor-pointer hover:text-red-700 border-b border-gray-200"
+                                                                        className="hover:text-rose-600 cursor-pointer"
                                                                     >
                                                                         ❌
-                                                                        Rejected
+                                                                        Reject
                                                                     </DropdownMenuItem>
                                                                 );
-                                                            }
                                                             if (
-                                                                a.includes(
-                                                                    "request"
-                                                                ) ||
                                                                 a.includes(
                                                                     "next"
                                                                 )
-                                                            ) {
+                                                            )
                                                                 return (
                                                                     <DropdownMenuItem
                                                                         key={
@@ -348,14 +300,12 @@ export default function Show({
                                                                         onClick={
                                                                             handleRequestNext
                                                                         }
-                                                                        className="cursor-pointer hover:text-blue-700 border-b border-gray-200"
+                                                                        className="hover:text-blue-600 cursor-pointer"
                                                                     >
-                                                                        🔁
-                                                                        Request
-                                                                        to next
+                                                                        🔁 Next
+                                                                        Step
                                                                     </DropdownMenuItem>
                                                                 );
-                                                            }
                                                             return null;
                                                         }
                                                     )}
@@ -365,119 +315,117 @@ export default function Show({
                                 </div>
                             </div>
 
-                            {/* MODAL APPROVE */}
-                            {showApproveModal && (
-                                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
-                                    <Card className="w-full max-w-md p-6">
-                                        <h3 className="text-lg font-semibold mb-4">
-                                            Setujui Pengajuan
-                                        </h3>
-                                        <div className="mb-4">
-                                            <label className="block text-sm font-medium mb-1">
-                                                Catatan (Opsional)
-                                            </label>
-                                            <Textarea
-                                                value={data.approval_note}
-                                                onChange={(e) =>
-                                                    setData(
-                                                        "approval_note",
-                                                        e.target.value
-                                                    )
-                                                }
-                                                rows={3}
-                                            />
-                                        </div>
-                                        <div className="flex justify-end space-x-2">
-                                            <Button
-                                                variant="outline"
-                                                onClick={() =>
-                                                    setShowApproveModal(false)
-                                                }
-                                            >
-                                                Batal
-                                            </Button>
-                                            <Button
-                                                onClick={handleApprove}
-                                                disabled={processing}
-                                            >
-                                                Setujui
-                                            </Button>
-                                        </div>
-                                    </Card>
-                                </div>
+                            {/* Read-only dynamic fields when available */}
+                            {Array.isArray(documentFields) && documentFields.length > 0 && (
+                                <Card className="p-4 mb-6">
+                                    <h4 className="font-semibold mb-3">Data Dokumen</h4>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                        {documentFields.map((f) => (
+                                            <div key={f.id || f.name} className="flex flex-col">
+                                                <span className="text-sm text-muted-foreground">{f.label}</span>
+                                                <span className="font-medium break-words">{String(dataMap?.[f.name] ?? "-")}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </Card>
                             )}
 
-                            {/* MODAL REJECT */}
-                            {showRejectModal && (
-                                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
-                                    <Card className="w-full max-w-md p-6">
-                                        <h3 className="text-lg font-semibold mb-4">
-                                            Tolak Pengajuan
-                                        </h3>
-                                        <div className="mb-4">
-                                            <label className="block text-sm font-medium mb-1">
-                                                Alasan Penolakan
-                                            </label>
-                                            <Textarea
-                                                value={data.approval_note}
-                                                onChange={(e) =>
-                                                    setData(
-                                                        "approval_note",
-                                                        e.target.value
-                                                    )
-                                                }
-                                                rows={3}
-                                                required
-                                            />
-                                        </div>
-                                        <div className="flex justify-end space-x-2">
-                                            <Button
-                                                variant="outline"
-                                                onClick={() =>
-                                                    setShowRejectModal(false)
-                                                }
-                                            >
-                                                Batal
-                                            </Button>
-                                            <Button
-                                                variant="destructive"
-                                                onClick={handleReject}
-                                                disabled={processing}
-                                            >
-                                                Tolak
-                                            </Button>
-                                        </div>
-                                    </Card>
-                                </div>
-                            )}
-
-                            {/* PDF VIEWER */}
-                            <div className="mb-6">
+                            <div className="mt-2 border border-border/40 rounded-xl overflow-hidden shadow-inner bg-muted/10">
                                 <object
                                     data={fileUrl}
                                     type="application/pdf"
                                     className="w-full h-[600px]"
                                 >
-                                    <div className="text-center p-4">
-                                        <p>
-                                            Tidak dapat menampilkan dokumen
-                                            secara langsung.
+                                    <div className="text-center p-6">
+                                        <p className="text-muted-foreground">
+                                            Dokumen tidak dapat ditampilkan di
+                                            browser ini.
                                         </p>
                                         <a
                                             href={fileUrl}
                                             target="_blank"
                                             rel="noopener noreferrer"
-                                            className="text-blue-600 hover:text-blue-800"
+                                            className="text-primary hover:underline"
                                         >
-                                            Buka Dokumen
+                                            Buka di tab baru
                                         </a>
                                     </div>
                                 </object>
                             </div>
                         </Card>
                     </div>
-                </div>{" "}
+                </div>
             </div>
+
+            {/* Modal Approve */}
+            {showApproveModal && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4">
+                    <Card className="w-full max-w-md p-6 rounded-2xl shadow-lg">
+                        <h3 className="text-lg font-semibold mb-3">
+                            Setujui Pengajuan
+                        </h3>
+                        <Textarea
+                            placeholder="Catatan (opsional)"
+                            value={data.approval_note}
+                            onChange={(e) =>
+                                setData("approval_note", e.target.value)
+                            }
+                            rows={3}
+                            className="mb-4"
+                        />
+                        <div className="flex justify-end gap-2">
+                            <Button
+                                variant="outline"
+                                onClick={() => setShowApproveModal(false)}
+                            >
+                                Batal
+                            </Button>
+                            <Button
+                                onClick={handleApprove}
+                                disabled={processing}
+                            >
+                                Setujui
+                            </Button>
+                        </div>
+                    </Card>
+                </div>
+            )}
+
+            {/* Modal Reject */}
+            {showRejectModal && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4">
+                    <Card className="w-full max-w-md p-6 rounded-2xl shadow-lg">
+                        <h3 className="text-lg font-semibold mb-3">
+                            Tolak Pengajuan
+                        </h3>
+                        <Textarea
+                            placeholder="Tuliskan alasan penolakan..."
+                            value={data.approval_note}
+                            onChange={(e) =>
+                                setData("approval_note", e.target.value)
+                            }
+                            rows={3}
+                            required
+                            className="mb-4"
+                        />
+                        <div className="flex justify-end gap-2">
+                            <Button
+                                variant="outline"
+                                onClick={() => setShowRejectModal(false)}
+                            >
+                                Batal
+                            </Button>
+                            <Button
+                                variant="destructive"
+                                onClick={handleReject}
+                                disabled={processing}
+                            >
+                                Tolak
+                            </Button>
+                        </div>
+                    </Card>
+                </div>
+            )}
         </AuthenticatedLayout>
     );
 }

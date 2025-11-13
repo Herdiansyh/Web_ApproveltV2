@@ -29,13 +29,19 @@ class SubmissionController extends Controller
     {
         $user = Auth::user();
 
+        // Lihat Pengajuan: tampilkan semua pengajuan yang sudah selesai (approved atau rejected)
         $submissionsQuery = Submission::with([
+                'user.division',
                 'workflow.document',
                 'workflow.steps.division',
                 'workflowSteps.division'
             ])
-            ->whereNotNull('workflow_id')
-            ->where('user_id', $user->id)
+            ->where(function ($q) {
+                $q->whereRaw('LOWER(status) = ?', ['approved'])
+                  ->orWhereRaw('LOWER(status) = ?', ['rejected'])
+                  ->orWhereRaw('LOWER(status) LIKE ?', ['%approved%'])
+                  ->orWhereRaw('LOWER(status) LIKE ?', ['%rejected%']);
+            })
             ->latest();
 
         $submissions = $submissionsQuery->paginate(10);
@@ -84,38 +90,35 @@ class SubmissionController extends Controller
         $subdivisionId = $user->subdivision_id;
         $statusFilter = $request->get('status', 'all');
 
+        // Lihat List Persetujuan: tampilkan pengajuan milik user ATAU yang diajukan kepada user (current step di divisi user dgn permission)
         $submissionsQuery = Submission::with([
                 'user.division',
                 'workflow.document',
                 'workflow.steps.division',
                 'workflowSteps'
             ])
-            ->whereNotNull('workflow_id')
-            // Kriteria akses:
-            // (A) Step saat ini dimiliki divisi user & subdivision punya can_view pada step tersebut
-            // (B) ATAU pengajuan dibuat oleh divisi user & subdivision punya can_view pada salah satu step di workflow
-            ->where(function ($outer) use ($divisionId, $subdivisionId) {
-                // (A)
-                $outer->whereHas('workflow.steps', function ($q) use ($divisionId, $subdivisionId) {
-                    $q->whereColumn('workflow_steps.step_order', 'submissions.current_step')
-                      ->where('workflow_steps.division_id', $divisionId)
-                      ->when($subdivisionId, function ($qp) use ($subdivisionId) {
-                          $qp->whereHas('permissions', function ($qq) use ($subdivisionId) {
-                              $qq->where('subdivision_id', $subdivisionId)
-                                 ->where('can_view', true);
-                          });
-                      });
-                })
-                // (B)
-                ->orWhere(function ($or) use ($divisionId, $subdivisionId) {
-                    $or->where('division_id', $divisionId)
-                       ->when($subdivisionId, function ($qp) use ($subdivisionId) {
-                           $qp->whereHas('workflow.steps.permissions', function ($qq) use ($subdivisionId) {
-                               $qq->where('subdivision_id', $subdivisionId)
-                                  ->where('can_view', true);
-                           });
-                       });
-                });
+            ->where(function ($outer) use ($user, $divisionId, $subdivisionId) {
+                // (1) Pengajuan yang dibuat oleh user saat ini (termasuk template-only)
+                $outer->where('user_id', $user->id)
+                // (2) ATAU pengajuan yang ditujukan ke user (step saat ini milik divisi user & subdivision punya can_view)
+                  ->orWhere(function ($or) use ($divisionId, $subdivisionId) {
+                      $or->whereNotNull('workflow_id')
+                         ->whereHas('workflow.steps', function ($q) use ($divisionId, $subdivisionId) {
+                             $q->whereColumn('workflow_steps.step_order', 'submissions.current_step')
+                               ->where('workflow_steps.division_id', $divisionId)
+                               ->when($subdivisionId, function ($qp) use ($subdivisionId) {
+                                   $qp->whereHas('permissions', function ($qq) use ($subdivisionId) {
+                                       $qq->where('subdivision_id', $subdivisionId)
+                                          ->where('can_view', true);
+                                   });
+                               });
+                         });
+                  });
+            })
+            // Kecualikan yang sudah selesai (approved*/rejected*) dari daftar persetujuan
+            ->where(function ($q) {
+                $q->whereRaw('LOWER(status) NOT LIKE ?', ['%approved%'])
+                  ->whereRaw('LOWER(status) NOT LIKE ?', ['%rejected%']);
             })
             ->when($statusFilter === 'pending', function ($query) {
                 $query->where('status', 'pending');
@@ -163,17 +166,73 @@ class SubmissionController extends Controller
         $division = $user->division;
 
         $workflows = Workflow::where('is_active', true)
-            ->with('document')
+            ->with(['document.fields'])
             ->get();
 
-        // Active templates (with fields) so user can create from template within the same page
+        // Active templates so user can create from template within the same page
         $templates = \App\Models\Template::query()
             ->where('is_active', true)
-            ->with(['fields' => function ($q) {
-                $q->orderBy('order');
-            }])
+            ->with(['fields' => function ($q) { $q->orderBy('order'); }])
             ->orderBy('name')
-            ->get();
+            ->get()
+            ->map(function ($tpl) {
+                // If DB fields exist, keep them
+                if ($tpl->relationLoaded('fields') && $tpl->fields && $tpl->fields->count() > 0) {
+                    return $tpl;
+                }
+
+                // 1) Try from config_json.fields
+                $derived = [];
+                $cfgFields = is_array($tpl->config_json)
+                    ? (data_get($tpl->config_json, 'fields') ?: [])
+                    : [];
+                if (!empty($cfgFields) && is_array($cfgFields)) {
+                    foreach ($cfgFields as $name => $meta) {
+                        $derived[] = [
+                            'name' => $name,
+                            'label' => data_get($meta, 'label', ucfirst(str_replace('_', ' ', $name))),
+                            'type' => strtolower((string) data_get($meta, 'type', 'text')),
+                            'required' => (bool) data_get($meta, 'required', false),
+                            'options' => data_get($meta, 'options', []),
+                        ];
+                    }
+                }
+
+                // 2) If still empty, try to extract from Blade template schema comment
+                if (empty($derived) && $tpl->html_view_path) {
+                    try {
+                        $viewPath = str_replace('.', DIRECTORY_SEPARATOR, $tpl->html_view_path) . '.blade.php';
+                        $abs = base_path('resources' . DIRECTORY_SEPARATOR . 'views' . DIRECTORY_SEPARATOR . $viewPath);
+                        if (is_file($abs)) {
+                            $content = @file_get_contents($abs);
+                            if ($content !== false) {
+                                if (preg_match('/<!--\s*TEMPLATE_SCHEMA\s*(\{[\s\S]*?\})\s*-->/', $content, $m)) {
+                                    $json = json_decode($m[1], true);
+                                    $fields = data_get($json, 'fields', []);
+                                    if (is_array($fields)) {
+                                        foreach ($fields as $f) {
+                                            if (!isset($f['name'])) continue;
+                                            $derived[] = [
+                                                'name' => (string) $f['name'],
+                                                'label' => (string) (data_get($f, 'label', ucfirst(str_replace('_', ' ', $f['name'])))),
+                                                'type' => strtolower((string) data_get($f, 'type', 'text')),
+                                                'required' => (bool) data_get($f, 'required', false),
+                                                'options' => data_get($f, 'options', []),
+                                            ];
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    } catch (\Throwable $e) {
+                        // ignore schema extraction errors silently
+                    }
+                }
+
+                // Attach derived fields for frontend consumption
+                $tpl->setRelation('fields', collect($derived));
+                return $tpl;
+            });
 
         return Inertia::render('Submissions/Create', [
             'userDivision' => $division,
@@ -392,12 +451,21 @@ class SubmissionController extends Controller
 
         $user = Auth::user();
 
-        $workflow = Workflow::with('steps', 'document')
+        $workflow = Workflow::with('steps', 'document.fields')
             ->where('id', $validated['workflow_id'])
             ->where('is_active', true)
             ->firstOrFail();
 
         $steps = $workflow->steps->sortBy('step_order')->values();
+
+        // Validate required dynamic fields from Document Type
+        $docFields = $workflow->document?->fields ?? collect();
+        $dataPayload = $validated['data'] ?? [];
+        foreach ($docFields as $df) {
+            if ($df->required && (!array_key_exists($df->name, $dataPayload) || $dataPayload[$df->name] === null || $dataPayload[$df->name] === '')) {
+                return back()->withErrors(["data.{$df->name}" => $df->label . ' wajib diisi'])->withInput();
+            }
+        }
 
         $filePath = $request->file('file')->store('submissions', 'private');
 
@@ -412,7 +480,7 @@ class SubmissionController extends Controller
             'current_step' => 1,
             // Template data jika ada
             'template_id' => $validated['template_id'] ?? null,
-            'data_json' => $validated['data'] ?? null,
+            'data_json' => $dataPayload ?: null,
         ]);
 
         foreach ($steps as $step) {
@@ -543,7 +611,35 @@ class SubmissionController extends Controller
             'canApprove' => $canApprove,
             'fileUrl' => $fileUrl,
             'fileExists' => $fileExists,
+            'documentFields' => $submission->workflow?->document?->fields ?? [],
         ]);
+    }
+
+    /** ------------------------
+     *  PRINT PREVIEW (Generic by Document Fields)
+     *  ------------------------ */
+    public function printDocument(Submission $submission)
+    {
+        $this->authorize('view', $submission);
+        $submission->load(['user', 'workflow.document.fields', 'workflowSteps.approver']);
+        $fields = $submission->workflow?->document?->fields ?? collect();
+
+        // Derive approval info (same as template preview)
+        $lastApproved = $submission->workflowSteps
+            ? $submission->workflowSteps->where('status', 'approved')->sortByDesc('approved_at')->first()
+            : null;
+        $approvedBy = $lastApproved?->approver?->name;
+        $approvedAt = $lastApproved?->approved_at ? (string) $lastApproved->approved_at : null;
+
+        $html = view('documents.print-generic', [
+            'submission' => $submission,
+            'fields' => $fields,
+            'data' => $submission->data_json ?? [],
+            'approvedBy' => $approvedBy,
+            'approvedAt' => $approvedAt,
+        ])->render();
+
+        return response($html);
     }
 
     /** ------------------------

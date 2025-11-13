@@ -333,6 +333,9 @@ export default function Index({
                 <Header />
                 <div className="py-12 w-full overflow-auto">
                     <div className="mx-auto p-6 lg:px-8">
+                        <h1 className=" top-5 text-2xl font-bold mb-3">
+                            Workflow Management
+                        </h1>
                         <Card className="p-6 shadow-sm">
                             {/* Filters & Create Button */}
                             <div className="flex flex-col md:flex-row justify-between mb-6 gap-4">

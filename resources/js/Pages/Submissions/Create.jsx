@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useEffect } from "react";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
 import { Head, useForm } from "@inertiajs/react";
 import { Card } from "@/Components/ui/card";
@@ -36,6 +36,59 @@ export default function Create({
         () => templates.find((t) => String(t.id) === String(data.template_id)),
         [templates, data.template_id]
     );
+
+    const selectedWorkflow = useMemo(
+        () => workflows.find((w) => String(w.id) === String(data.workflow_id)) || null,
+        [workflows, data.workflow_id]
+    );
+
+    const documentFields = useMemo(() => {
+        const f = selectedWorkflow?.document?.fields || [];
+        return Array.isArray(f) ? f : [];
+    }, [selectedWorkflow]);
+
+    const activeFields = useMemo(() => {
+        if (documentFields.length > 0) return documentFields;
+        const f = selectedTemplate?.fields || [];
+        return Array.isArray(f) ? f : [];
+    }, [documentFields, selectedTemplate]);
+
+    // Init data when workflow changes (Document Fields)
+    useEffect(() => {
+        if (documentFields.length > 0) {
+            const initial = Object.fromEntries(documentFields.map((f) => [f.name, ""]));
+            setData("data", initial);
+            if (!data.title && selectedWorkflow?.document?.name) setData("title", selectedWorkflow.document.name);
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [selectedWorkflow]);
+
+    // Auto-calc lama_cuti jika field tersedia dan tanggal valid (berlaku untuk activeFields)
+    useEffect(() => {
+        if (!activeFields || activeFields.length === 0) return;
+        const fieldNames = activeFields.map((f) => String(f.name));
+        if (fieldNames.includes("tanggal_mulai") && fieldNames.includes("tanggal_selesai")) {
+            const start = data?.data?.tanggal_mulai;
+            const end = data?.data?.tanggal_selesai;
+            if (start && end) {
+                try {
+                    const d1 = new Date(start);
+                    const d2 = new Date(end);
+                    if (!isNaN(d1.getTime()) && !isNaN(d2.getTime())) {
+                        const diffMs = d2.setHours(12,0,0,0) - d1.setHours(12,0,0,0);
+                        const days = Math.floor(diffMs / (1000 * 60 * 60 * 24)) + 1; // inklusif
+                        if (days > 0) {
+                            setData("data", {
+                                ...(data.data || {}),
+                                lama_cuti: String(days),
+                            });
+                        }
+                    }
+                } catch (_) {}
+            }
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [data?.data?.tanggal_mulai, data?.data?.tanggal_selesai, activeFields]);
 
     const handlePreviewTemplate = (e) => {
         e.preventDefault();
@@ -175,136 +228,95 @@ export default function Create({
                                 encType="multipart/form-data"
                             >
                                 <div className="space-y-6">
-                                    {/* Buat dari Template Dokumen (opsional) */}
-                                    <div>
-                                        <Label>
-                                            Template Dokumen (Opsional)
-                                        </Label>
-                                        <Select
-                                            value={data.template_id}
-                                            onValueChange={(value) => {
-                                                setData("template_id", value);
-                                                const tpl = templates.find(
-                                                    (t) =>
-                                                        String(t.id) ===
-                                                        String(value)
-                                                );
-                                                const initial =
-                                                    Object.fromEntries(
-                                                        (tpl?.fields || []).map(
-                                                            (f) => [f.name, ""]
-                                                        )
-                                                    );
-                                                setData("data", initial);
-                                                if (!data.title && tpl?.name)
-                                                    setData("title", tpl.name);
-                                            }}
-                                        >
-                                            <SelectTrigger className="w-full mt-1">
-                                                <SelectValue placeholder="-- Pilih Template --" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {templates?.length > 0 ? (
-                                                    templates.map((tpl) => (
-                                                        <SelectItem
-                                                            key={tpl.id}
-                                                            value={String(
-                                                                tpl.id
-                                                            )}
-                                                        >
-                                                            {tpl.name}
+                                    {/* Buat dari Template Dokumen (opsional). Disembunyikan jika Document Fields tersedia */}
+                                    {documentFields.length === 0 && (
+                                        <div>
+                                            <Label>
+                                                Template Dokumen (Opsional)
+                                            </Label>
+                                            <Select
+                                                value={data.template_id}
+                                                onValueChange={(value) => {
+                                                    setData("template_id", value);
+                                                    const tpl = templates.find((t) => String(t.id) === String(value));
+                                                    const initial = Object.fromEntries((tpl?.fields || []).map((f) => [f.name, ""]));
+                                                    setData("data", initial);
+                                                    if (!data.title && tpl?.name) setData("title", tpl.name);
+                                                }}
+                                            >
+                                                <SelectTrigger className="w-full mt-1">
+                                                    <SelectValue placeholder="-- Pilih Template --" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {templates?.length > 0 ? (
+                                                        templates.map((tpl) => (
+                                                            <SelectItem key={tpl.id} value={String(tpl.id)}>
+                                                                {tpl.name}
+                                                            </SelectItem>
+                                                        ))
+                                                    ) : (
+                                                        <SelectItem disabled value="nt">
+                                                            Belum ada template aktif
                                                         </SelectItem>
-                                                    ))
-                                                ) : (
-                                                    <SelectItem
-                                                        disabled
-                                                        value="nt"
-                                                    >
-                                                        Belum ada template aktif
-                                                    </SelectItem>
-                                                )}
-                                            </SelectContent>
-                                        </Select>
-                                        {errors.template_id && (
-                                            <p className="text-red-600 text-sm mt-1">
-                                                {errors.template_id}
-                                            </p>
-                                        )}
-                                    </div>
+                                                    )}
+                                                </SelectContent>
+                                            </Select>
+                                            {errors.template_id && (
+                                                <p className="text-red-600 text-sm mt-1">{errors.template_id}</p>
+                                            )}
+                                        </div>
+                                    )}
 
-                                    {/* Dynamic Fields dari Template */}
-                                    {selectedTemplate && (
+                                    {/* Dynamic Fields dari Document Type jika ada, jika tidak fallback ke Template */}
+                                    {activeFields?.length > 0 && (
                                         <div className="space-y-4">
-                                            {selectedTemplate.fields?.map(
-                                                (f) => (
+                                            {activeFields.map((f) => {
+                                                const type = String(f.type || "text").toLowerCase();
+                                                const value = data.data?.[f.name] ?? "";
+                                                const setVal = (v) =>
+                                                    setData("data", {
+                                                        ...(data.data || {}),
+                                                        [f.name]: v,
+                                                    });
+                                                // Get options for select: prefer field.options
+                                                const options = f.options || selectedTemplate?.config_json?.fields?.[f.name]?.options || [];
+                                                return (
                                                     <div key={f.id || f.name}>
                                                         <Label>
-                                                            {f.label} ({f.type}){" "}
-                                                            {f.required
-                                                                ? "*"
-                                                                : ""}
+                                                            {f.label} ({f.type}) {f.required ? "*" : ""}
                                                         </Label>
-                                                        {String(
-                                                            f.type
-                                                        ).toLowerCase() ===
-                                                        "textarea" ? (
-                                                            <Textarea
-                                                                value={
-                                                                    data.data?.[
-                                                                        f.name
-                                                                    ] ?? ""
-                                                                }
-                                                                onChange={(e) =>
-                                                                    setData(
-                                                                        "data",
-                                                                        {
-                                                                            ...(data.data ||
-                                                                                {}),
-                                                                            [f.name]:
-                                                                                e
-                                                                                    .target
-                                                                                    .value,
-                                                                        }
-                                                                    )
-                                                                }
-                                                                rows={3}
-                                                            />
-                                                        ) : (
-                                                            <Input
-                                                                value={
-                                                                    data.data?.[
-                                                                        f.name
-                                                                    ] ?? ""
-                                                                }
-                                                                onChange={(e) =>
-                                                                    setData(
-                                                                        "data",
-                                                                        {
-                                                                            ...(data.data ||
-                                                                                {}),
-                                                                            [f.name]:
-                                                                                e
-                                                                                    .target
-                                                                                    .value,
-                                                                        }
-                                                                    )
-                                                                }
-                                                            />
+                                                        {type === "textarea" && (
+                                                            <Textarea value={value} onChange={(e) => setVal(e.target.value)} rows={3} />
                                                         )}
-                                                        {errors?.[
-                                                            `data.${f.name}`
-                                                        ] && (
-                                                            <p className="text-red-600 text-sm mt-1">
-                                                                {
-                                                                    errors[
-                                                                        `data.${f.name}`
-                                                                    ]
-                                                                }
-                                                            </p>
+                                                        {type === "select" && (
+                                                            <Select value={String(value)} onValueChange={(v) => setVal(v)}>
+                                                                <SelectTrigger className="w-full mt-1">
+                                                                    <SelectValue placeholder="-- Pilih --" />
+                                                                </SelectTrigger>
+                                                                <SelectContent>
+                                                                    {(options || []).map((opt) => (
+                                                                        <SelectItem key={String(opt)} value={String(opt)}>
+                                                                            {String(opt)}
+                                                                        </SelectItem>
+                                                                    ))}
+                                                                </SelectContent>
+                                                            </Select>
+                                                        )}
+                                                        {type === "date" && (
+                                                            <Input type="date" value={value} onChange={(e) => setVal(e.target.value)} />
+                                                        )}
+                                                        {type === "number" && (
+                                                            <Input type="number" value={value} onChange={(e) => setVal(e.target.value)} />
+                                                        )}
+                                                        {!(type === "textarea" || type === "select" || type === "date" || type === "number") && (
+                                                            <Input value={value} onChange={(e) => setVal(e.target.value)} />
+                                                        )}
+                                                        {errors?.[`data.${f.name}`] && (
+                                                            <p className="text-red-600 text-sm mt-1">{errors[`data.${f.name}`]}</p>
                                                         )}
                                                     </div>
-                                                )
-                                            )}
+                                                );
+                                            })}
                                         </div>
                                     )}
 

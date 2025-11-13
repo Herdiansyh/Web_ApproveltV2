@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Document;
 use App\Models\Division;
+use App\Models\DocumentField;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
@@ -14,16 +15,15 @@ class DocumentController extends Controller
 
     public function index()
     {
-  
         return Inertia::render('Admin/Documents/Index', [
-            'documents' => Document::with(['division'])->get(),
+            'documents' => Document::with(['division', 'fields'])->get(),
             'divisions' => Division::all(),
         ]);
     }
 
     public function store(Request $request)
     {
-     
+        $this->authorize('create', Document::class);
         $request->validate([
             'division_id' => 'required|exists:divisions,id',
             'name' => 'required|string|max:255',
@@ -37,7 +37,7 @@ class DocumentController extends Controller
 
     public function update(Request $request, Document $document)
     {
- 
+        $this->authorize('update', $document);
         $request->validate([
             'division_id' => 'required|exists:divisions,id',
             'name' => 'required|string|max:255',
@@ -51,9 +51,72 @@ class DocumentController extends Controller
 
     public function destroy(Document $document)
     {
-  
+        $this->authorize('delete', $document);
         $document->delete();
-
         return back()->with('success', 'Dokumen berhasil dihapus.');
     }
+
+    // ------------------------------
+    // Document Type Fields Endpoints
+    // ------------------------------
+
+    public function addField(Request $request, Document $document)
+    {
+        $this->authorize('update', $document);
+        $data = $request->validate([
+            'name' => 'required|string|max:100',
+            'label' => 'required|string|max:255',
+            'type' => 'required|string|in:text,textarea,number,date,select,file',
+            'required' => 'boolean',
+            'order' => 'nullable|integer|min:0',
+            'options' => 'nullable|array', // for select
+            'options.*' => 'nullable|string',
+        ]);
+
+        $field = new DocumentField([
+            'name' => $data['name'],
+            'label' => $data['label'],
+            'type' => $data['type'],
+            'required' => (bool)($data['required'] ?? false),
+            'order' => $data['order'] ?? 0,
+            'options_json' => isset($data['options']) ? json_encode(array_values($data['options'])) : null,
+        ]);
+        $document->fields()->save($field);
+
+        return back()->with('success', 'Field ditambahkan.');
+    }
+
+    public function updateField(Request $request, Document $document, DocumentField $field)
+    {
+        $this->authorize('update', $document);
+        abort_unless($field->document_id === $document->id, 404);
+
+        $data = $request->validate([
+            'label' => 'sometimes|string|max:255',
+            'type' => 'sometimes|string|in:text,textarea,number,date,select,file',
+            'required' => 'sometimes|boolean',
+            'order' => 'sometimes|integer|min:0',
+            'options' => 'nullable|array',
+            'options.*' => 'nullable|string',
+        ]);
+
+        $field->fill([
+            'label' => $data['label'] ?? $field->label,
+            'type' => $data['type'] ?? $field->type,
+            'required' => array_key_exists('required', $data) ? (bool)$data['required'] : $field->required,
+            'order' => $data['order'] ?? $field->order,
+            'options_json' => array_key_exists('options', $data) ? json_encode(array_values($data['options'] ?? [])) : $field->options_json,
+        ])->save();
+
+        return back()->with('success', 'Field diperbarui.');
+    }
+
+    public function deleteField(Document $document, DocumentField $field)
+    {
+        $this->authorize('update', $document);
+        abort_unless($field->document_id === $document->id, 404);
+        $field->delete();
+        return back()->with('success', 'Field dihapus.');
+    }
 }
+

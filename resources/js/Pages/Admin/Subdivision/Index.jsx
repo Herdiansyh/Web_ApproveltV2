@@ -84,11 +84,9 @@ export default function Index({ auth, subdivisions, divisions }) {
 
             <div className="flex min-h-screen bg-background">
                 <Header />
-                <div className="py-12 w-full overflow-auto relative">
+                <div className="py-12 w-full overflow-auto ">
                     <div className="mx-auto p-6 lg:px-8">
-                        <h1 className="text-2xl font-bold absolute top-5">
-                            Subdivisions
-                        </h1>
+                        <h1 className="text-2xl font-bold ">Subdivisions</h1>
 
                         <Card className="p-6">
                             {/* Filter dan tombol tambah */}

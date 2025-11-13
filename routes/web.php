@@ -12,6 +12,7 @@ use App\Http\Controllers\Admin\TemplateController as AdminTemplateController;
 use App\Models\Document;
 use App\Models\Submission;
 use App\Models\SubmissionWorkflowStep;
+use App\Models\User;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
@@ -144,6 +145,7 @@ Route::middleware(['auth'])->group(function () {
     Route::resource('submissions', SubmissionController::class)->only(['index', 'show', 'edit', 'update', 'destroy']);
     Route::get('submissions/{submission}/file', [SubmissionController::class, 'file'])->name('submissions.file');
     Route::get('submissions/{submission}/download', [SubmissionController::class, 'download'])->name('submissions.download');
+    Route::get('submissions/{submission}/print', [SubmissionController::class, 'printDocument'])->name('submissions.printDocument');
     Route::get('submissions/{submission}/preview-template', [SubmissionController::class, 'previewTemplateSubmission'])->name('submissions.previewTemplateSubmission');
     Route::post('submissions/{submission}/request', [SubmissionController::class, 'request'])->name('submissions.request');
     Route::post('submissions/{submission}/request-next', [SubmissionController::class, 'requestNext'])
@@ -160,10 +162,10 @@ Route::middleware(['auth'])->group(function () {
   // Admin Dashboard
     Route::get('/admin/dashboard', function () {
         $stats = [
-            'users' => \App\Models\User::count(),
-            'submissions' => \App\Models\Submission::count(),
-            'today_activities' => \App\Models\Submission::whereDate('created_at', today())->count(),
-            'recentActivities' => \App\Models\Submission::latest()
+            'users' => User::count(),
+            'submissions' => Submission::count(),
+            'today_activities' => Submission::whereDate('created_at', today())->count(),
+            'recentActivities' => Submission::latest()
                 ->take(5)
                 ->get()
                 ->map(fn ($s) => [
@@ -196,8 +198,12 @@ Route::middleware(['auth'])->group(function () {
 
         // Document Management
         Route::resource('documents', DocumentController::class);
+        // Document Type Fields management
+        Route::post('documents/{document}/fields', [DocumentController::class, 'addField'])->name('documents.fields.store');
+        Route::put('documents/{document}/fields/{field}', [DocumentController::class, 'updateField'])->name('documents.fields.update');
+        Route::delete('documents/{document}/fields/{field}', [DocumentController::class, 'deleteField'])->name('documents.fields.destroy');
 
-        // Template Management (Admin)
+        // Template Management (Admin) — to be retired soon
         Route::resource('templates', AdminTemplateController::class);
 
 

@@ -4,25 +4,27 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Document extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['division_id', 'name', 'description'];
+    protected $fillable = [
+        'division_id',
+        'name',
+        'description',
+    ];
 
-    // Relasi ke Division
-    public function division()
+    public function division(): BelongsTo
     {
         return $this->belongsTo(Division::class);
     }
 
-    // Relasi ke Workflow
-    public function workflows()
+    public function fields(): HasMany
     {
-        return $this->hasMany(Workflow::class, 'document_id');
+        return $this->hasMany(DocumentField::class)->orderBy('order');
     }
-
-    // Relasi ke Permission
-   
 }
+

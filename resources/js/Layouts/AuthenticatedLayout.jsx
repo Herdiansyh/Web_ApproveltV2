@@ -29,8 +29,12 @@ export default function AuthenticatedLayout({ header, children }) {
                     <div className="mx-auto py-4 flex justify-between px-4 sm:px-6 lg:px-8">
                         <div className="flex items-center gap-2">
                             {" "}
-                            <img src="/icon.png" className="w-10" alt="" />
-                            <h2 className="text-xl font-semibold leading-tight">
+                            <img
+                                src="/icon.png"
+                                className="sm:w-10 w-8"
+                                alt=""
+                            />
+                            <h2 className="sm:text-xl text-sm font-semibold leading-tight">
                                 E-Approval
                             </h2>
                         </div>
@@ -38,13 +42,13 @@ export default function AuthenticatedLayout({ header, children }) {
                             {/* Toggle Dark/Light */}
                             <button
                                 onClick={toggleDarkMode}
-                                className={`w-12 h-5 flex items-center rounded-full p-1 duration-300 ease-in-out border border-border ${
+                                className={`sm:w-12 sm:h-5 w-9 h-4 flex items-center rounded-full p-1 duration-300 ease-in-out border border-border ${
                                     darkMode
                                         ? "bg-gray-700 justify-end"
                                         : "bg-yellow-50 justify-start"
                                 }`}
                             >
-                                <span className="w-4 h-4 rounded-full bg-white flex items-center justify-center text-xs">
+                                <span className="sm:w-4 sm:h-4 w-2 h-2 rounded-full bg-white flex items-center justify-center text-xs">
                                     {darkMode ? "🌙" : "🌞"}
                                 </span>
                             </button>

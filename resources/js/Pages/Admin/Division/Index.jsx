@@ -95,12 +95,10 @@ export default function Index({ auth, divisions }) {
             <Head title="Division Management" />
 
             <div className="flex min-h-screen bg-background">
-                <Header className="z-50" />
-                <div className="pl-2 py-12 w-full overflow-auto relative">
+                <Header className="z-50 relative" />
+                <div className="pl-2 py-12 w-full overflow-auto">
                     <div className="mx-auto p-6 lg:px-8">
-                        <h1 className="text-2xl font-bold absolute top-5">
-                            Divisions
-                        </h1>
+                        <h1 className="text-2xl font-bold  mb-3">Divisions</h1>
 
                         <Card className="p-6">
                             {/* Filter & Add Button */}

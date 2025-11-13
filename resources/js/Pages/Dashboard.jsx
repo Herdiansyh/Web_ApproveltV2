@@ -32,12 +32,12 @@ export default function Dashboard({ auth, stats }) {
 
                 <div className="flex-1 p-8 md:p-12 space-y-8">
                     {/* Welcome Section */}
-                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center">
+                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center p-2">
                         <div>
-                            <h1 className="text-3xl font-bold text-foreground">
+                            <h1 className="sm:text-3xl text-xl font-bold text-foreground">
                                 Hai, Pak {auth.user.name}! 👋
                             </h1>
-                            <p className="text-muted-foreground mt-1">
+                            <p className="text-muted-foreground text-sm  mt-1">
                                 Selamat datang kembali di sistem e-Approval.
                             </p>
                         </div>

@@ -99,12 +99,6 @@ export default function Sidebar({ open }) {
                       icon: <DockIcon className="h-5 w-5" />,
                   },
                   {
-                      label: "Template Management",
-                      href: route("templates.index"),
-                      active: route().current("templates.*"),
-                      icon: <FileText className="h-5 w-5" />,
-                  },
-                  {
                       label: "Workflow Management",
                       href: route("workflows.index"),
                       active: route().current("workflows.*"),
@@ -153,7 +147,8 @@ export default function Sidebar({ open }) {
 
                     <Button
                         variant="ghost"
-                        className="justify-start gap-3 text-muted-foreground hover:bg-destructive hover:text-destructive-foreground transition-all"
+                        style={{ borderRadius: "15px" }}
+                        className="justify-start gap-3 text-muted-foreground hover:bg-blue-400 hover:text-destructive-foreground transition-all"
                         onClick={() => setLogoutDialog(true)}
                     >
                         <LogOut className="h-5 w-5" />
@@ -163,23 +158,50 @@ export default function Sidebar({ open }) {
             </aside>
 
             <Dialog open={logoutDialog} onOpenChange={setLogoutDialog}>
-                <DialogContent>
+                <DialogContent
+                    style={{ borderRadius: "15px" }}
+                    className=" border border-blue-100 bg-gradient-to-br from-blue-50 via-white to-blue-100/65 backdrop-blur-md shadow-xl transition-all duration-300"
+                >
                     <DialogHeader>
-                        <DialogTitle>Konfirmasi Logout</DialogTitle>
+                        <DialogTitle className="text-lg font-semibold text-blue-700 flex items-center gap-2">
+                            <span
+                                style={{ borderRadius: "15px" }}
+                                className="p-2 bg-blue-100 text-blue-600"
+                            >
+                                <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    className="h-5 w-5"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                    strokeWidth={2}
+                                >
+                                    <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1m0-10V5m-3 6h-3"
+                                    />
+                                </svg>
+                            </span>
+                            Konfirmasi Logout
+                        </DialogTitle>
                     </DialogHeader>
-                    <p className="text-sm text-muted-foreground">
+
+                    <p className="text-sm text-slate-600 mt-2 leading-relaxed">
                         Apakah Anda yakin ingin keluar dari aplikasi?
                     </p>
-                    <DialogFooter className="mt-4 flex gap-2">
+
+                    <DialogFooter className="mt-5 flex gap-2 justify-end">
                         <Button
-                            variant="outline"
+                            style={{ borderRadius: "15px" }}
+                            className=" border border-blue-200 text-blue-600 bg-blue-50 hover:bg-blue-100 hover:text-blue-700 transition-all duration-200"
                             onClick={() => setLogoutDialog(false)}
                         >
                             Batal
                         </Button>
                         <Button
-                            variant="destructive"
-                            className="hover:bg-orange-700"
+                            style={{ borderRadius: "15px" }}
+                            className=" bg-blue-600 text-white hover:bg-blue-700 hover:shadow-[0_0_12px_rgba(37,99,235,0.4)] transition-all duration-200"
                             onClick={confirmLogout}
                         >
                             Ya, Logout
