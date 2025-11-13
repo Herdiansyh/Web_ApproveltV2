@@ -90,7 +90,10 @@ class SubmissionController extends Controller
         $subdivisionId = $user->subdivision_id;
         $statusFilter = $request->get('status', 'all');
 
-        // Lihat List Persetujuan: tampilkan pengajuan milik user ATAU yang diajukan kepada user (current step di divisi user dgn permission)
+        // Lihat List Persetujuan:
+        // - Pengajuan milik user
+        // - Pengajuan yang diajukan kepada user (current step ada di divisi user + subdivision punya can_view)
+        // - Pengajuan yang dibuat oleh siapa pun di divisi yang sama dengan user, jika subdivision user memiliki can_view pada workflow (visibility lintas pemilik dokumen)
         $submissionsQuery = Submission::with([
                 'user.division',
                 'workflow.document',
@@ -113,7 +116,18 @@ class SubmissionController extends Controller
                                    });
                                });
                          });
-                  });
+                  })
+                // (3) ATAU pengajuan milik divisi yang sama dgn user, jika subdivision user memiliki can_view di salah satu step workflow
+                ->orWhere(function ($or) use ($divisionId, $subdivisionId) {
+                    $or->where('division_id', $divisionId)
+                       ->whereNotNull('workflow_id')
+                       ->when($subdivisionId, function ($qp) use ($subdivisionId) {
+                           $qp->whereHas('workflow.steps.permissions', function ($qq) use ($subdivisionId) {
+                               $qq->where('subdivision_id', $subdivisionId)
+                                  ->where('can_view', true);
+                           });
+                       });
+                });
             })
             // Kecualikan yang sudah selesai (approved*/rejected*) dari daftar persetujuan
             ->where(function ($q) {
@@ -129,7 +143,7 @@ class SubmissionController extends Controller
 
         $submissions = $submissionsQuery->paginate(10);
 
-        // Attach permission info per submission for current user's subdivision
+        // Attach permission info per submission for current user's subdivision (berdasarkan step saat ini)
         if ($subdivisionId) {
             foreach ($submissions as $s) {
                 $wfStep = $s->workflow
@@ -138,8 +152,8 @@ class SubmissionController extends Controller
                         ->first()
                     : null;
 
-                // Only expose permission when same division as the submission owner
-                $perm = ($wfStep && $user->division_id === $s->division_id)
+                // Expose permission for the current step regardless of submission owner's division
+                $perm = $wfStep
                     ? WorkflowStepPermission::where('workflow_step_id', $wfStep->id)
                         ->where('subdivision_id', $subdivisionId)
                         ->first()

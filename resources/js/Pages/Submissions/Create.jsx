@@ -1,4 +1,4 @@
-import React, { useMemo, useEffect } from "react";
+import React, { useMemo, useEffect, useState } from "react";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
 import { Head, useForm } from "@inertiajs/react";
 import { Card } from "@/Components/ui/card";
@@ -27,10 +27,11 @@ export default function Create({
         title: "",
         description: "",
         file: null,
-        // optional template payload
         template_id: "",
         data: {},
     });
+
+    const [isSaved, setIsSaved] = useState(false);
 
     const selectedTemplate = useMemo(
         () => templates.find((t) => String(t.id) === String(data.template_id)),
@@ -38,7 +39,9 @@ export default function Create({
     );
 
     const selectedWorkflow = useMemo(
-        () => workflows.find((w) => String(w.id) === String(data.workflow_id)) || null,
+        () =>
+            workflows.find((w) => String(w.id) === String(data.workflow_id)) ||
+            null,
         [workflows, data.workflow_id]
     );
 
@@ -53,21 +56,49 @@ export default function Create({
         return Array.isArray(f) ? f : [];
     }, [documentFields, selectedTemplate]);
 
-    // Init data when workflow changes (Document Fields)
+    // 🔹 Load data dari localStorage ketika halaman dibuka
     useEffect(() => {
-        if (documentFields.length > 0) {
-            const initial = Object.fromEntries(documentFields.map((f) => [f.name, ""]));
-            setData("data", initial);
-            if (!data.title && selectedWorkflow?.document?.name) setData("title", selectedWorkflow.document.name);
+        const savedData = localStorage.getItem("createFormData");
+        if (savedData) {
+            try {
+                const parsed = JSON.parse(savedData);
+                setData(parsed);
+                setIsSaved(true);
+            } catch (e) {
+                console.error("Gagal memuat data dari localStorage:", e);
+            }
         }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [selectedWorkflow]);
+    }, []);
 
-    // Auto-calc lama_cuti jika field tersedia dan tanggal valid (berlaku untuk activeFields)
+    // 🔹 Simpan ke localStorage
+    const handleSaveLocal = () => {
+        try {
+            localStorage.setItem("createFormData", JSON.stringify(data));
+            setIsSaved(true);
+            Swal.fire({
+                icon: "success",
+                title: "Tersimpan!",
+                text: "Data berhasil disimpan secara lokal.",
+                timer: 1500,
+                showConfirmButton: false,
+            });
+        } catch (err) {
+            Swal.fire({
+                icon: "error",
+                title: "Gagal Menyimpan",
+                text: "Terjadi kesalahan saat menyimpan data lokal.",
+            });
+        }
+    };
+
+    // 🔹 Auto-calc lama_cuti
     useEffect(() => {
         if (!activeFields || activeFields.length === 0) return;
         const fieldNames = activeFields.map((f) => String(f.name));
-        if (fieldNames.includes("tanggal_mulai") && fieldNames.includes("tanggal_selesai")) {
+        if (
+            fieldNames.includes("tanggal_mulai") &&
+            fieldNames.includes("tanggal_selesai")
+        ) {
             const start = data?.data?.tanggal_mulai;
             const end = data?.data?.tanggal_selesai;
             if (start && end) {
@@ -75,8 +106,10 @@ export default function Create({
                     const d1 = new Date(start);
                     const d2 = new Date(end);
                     if (!isNaN(d1.getTime()) && !isNaN(d2.getTime())) {
-                        const diffMs = d2.setHours(12,0,0,0) - d1.setHours(12,0,0,0);
-                        const days = Math.floor(diffMs / (1000 * 60 * 60 * 24)) + 1; // inklusif
+                        const diffMs =
+                            d2.setHours(12, 0, 0, 0) - d1.setHours(12, 0, 0, 0);
+                        const days =
+                            Math.floor(diffMs / (1000 * 60 * 60 * 24)) + 1;
                         if (days > 0) {
                             setData("data", {
                                 ...(data.data || {}),
@@ -87,58 +120,11 @@ export default function Create({
                 } catch (_) {}
             }
         }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [data?.data?.tanggal_mulai, data?.data?.tanggal_selesai, activeFields]);
-
-    const handlePreviewTemplate = (e) => {
-        e.preventDefault();
-        if (!data.template_id) return;
-        const form = document.createElement("form");
-        form.method = "POST";
-        form.action = route("submissions.previewTemplate");
-        form.target = "_blank";
-        const csrf = document.head.querySelector(
-            'meta[name="csrf-token"]'
-        )?.content;
-        if (csrf) {
-            const t = document.createElement("input");
-            t.type = "hidden";
-            t.name = "_token";
-            t.value = csrf;
-            form.appendChild(t);
-        }
-        const fields = {
-            template_id: data.template_id,
-            title: data.title || "",
-            description: data.description || "",
-        };
-        Object.entries(fields).forEach(([k, v]) => {
-            const inp = document.createElement("input");
-            inp.type = "hidden";
-            inp.name = k;
-            inp.value = v;
-            form.appendChild(inp);
-        });
-        // Append data[field] values
-        if (selectedTemplate && selectedTemplate.fields?.length) {
-            selectedTemplate.fields.forEach((f) => {
-                const name = `data[${f.name}]`;
-                const inp = document.createElement("input");
-                inp.type = "hidden";
-                inp.name = name;
-                inp.value = data.data?.[f.name] ?? "";
-                form.appendChild(inp);
-            });
-        }
-        document.body.appendChild(form);
-        form.submit();
-        document.body.removeChild(form);
-    };
 
     const handleFileChange = (e) => {
         const file = e.target.files[0];
         if (!file) return;
-
         if (file.size > 10 * 1024 * 1024) {
             Swal.fire({
                 icon: "warning",
@@ -147,12 +133,12 @@ export default function Create({
             });
             return;
         }
-
         setData("file", file);
+        setIsSaved(false);
     };
 
     const submit = (e) => {
-        e.preventDefault();
+        if (e) e.preventDefault();
 
         if (!data.workflow_id) {
             Swal.fire({
@@ -183,6 +169,8 @@ export default function Create({
                     forceFormData: true,
                     onSuccess: () => {
                         reset();
+                        localStorage.removeItem("createFormData");
+                        setIsSaved(false);
                         Swal.fire({
                             icon: "success",
                             title: "Berhasil!",
@@ -191,248 +179,338 @@ export default function Create({
                             showConfirmButton: false,
                         });
                     },
-                    onError: (err) => {
-                        Swal.fire({
-                            icon: "error",
-                            title: "Gagal",
-                            text:
-                                err?.workflow || err?.template_id || err?.data
-                                    ? err.workflow ||
-                                      err.template_id ||
-                                      "Periksa field template yang wajib diisi"
-                                    : "Terjadi kesalahan saat mengirim pengajuan.",
-                        });
-                    },
                 });
             }
         });
     };
 
     return (
-        <AuthenticatedLayout
-            user={auth.user}
-            header={
-                <h2 className="font-semibold text-xl text-gray-800">
-                    Buat Pengajuan Baru
-                </h2>
-            }
-        >
+        <AuthenticatedLayout user={auth.user}>
             <Head title="Buat Pengajuan" />
-            <div className="flex min-h-screen bg-background ">
+            <div className="flex min-h-screen bg-background">
                 <Header />
                 <div className="p-5 w-full">
                     <div className="mx-auto sm:px-6 lg:px-8">
-                        <Card className="p-6 shadow-md">
+                        {/* Header */}
+                        <div className="flex items-center justify-between mb-6">
+                            <h1 className="text-2xl font-semibold text-gray-800">
+                                New Pengajuan
+                            </h1>
+                            <div className="flex items-center gap-4">
+                                <span
+                                    className={`text-sm font-medium ${
+                                        isSaved
+                                            ? "text-green-600"
+                                            : "text-orange-600"
+                                    }`}
+                                >
+                                    • {isSaved ? "Saved" : "Not Saved"}
+                                </span>
+                                <Button
+                                    onClick={handleSaveLocal}
+                                    disabled={processing}
+                                    className="bg-blue-600 hover:bg-blue-700 text-white px-6"
+                                >
+                                    Save
+                                </Button>
+                            </div>
+                        </div>
+
+                        <Card className="p-8 shadow-sm">
                             <form
                                 onSubmit={submit}
                                 encType="multipart/form-data"
                             >
                                 <div className="space-y-6">
-                                    {/* Buat dari Template Dokumen (opsional). Disembunyikan jika Document Fields tersedia */}
-                                    {documentFields.length === 0 && (
-                                        <div>
-                                            <Label>
-                                                Template Dokumen (Opsional)
-                                            </Label>
-                                            <Select
-                                                value={data.template_id}
-                                                onValueChange={(value) => {
-                                                    setData("template_id", value);
-                                                    const tpl = templates.find((t) => String(t.id) === String(value));
-                                                    const initial = Object.fromEntries((tpl?.fields || []).map((f) => [f.name, ""]));
-                                                    setData("data", initial);
-                                                    if (!data.title && tpl?.name) setData("title", tpl.name);
-                                                }}
-                                            >
-                                                <SelectTrigger className="w-full mt-1">
-                                                    <SelectValue placeholder="-- Pilih Template --" />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    {templates?.length > 0 ? (
-                                                        templates.map((tpl) => (
-                                                            <SelectItem key={tpl.id} value={String(tpl.id)}>
-                                                                {tpl.name}
-                                                            </SelectItem>
-                                                        ))
-                                                    ) : (
-                                                        <SelectItem disabled value="nt">
-                                                            Belum ada template aktif
-                                                        </SelectItem>
-                                                    )}
-                                                </SelectContent>
-                                            </Select>
-                                            {errors.template_id && (
-                                                <p className="text-red-600 text-sm mt-1">{errors.template_id}</p>
-                                            )}
-                                        </div>
-                                    )}
+                                    {/* Grid 2 kolom utama */}
+                                    <div className="grid grid-cols-2 gap-6">
+                                        {/* Kiri */}
+                                        <div className="space-y-6">
+                                            <div>
+                                                <Label>Series</Label>
+                                                <Input
+                                                    value="SUB-.YYYY.-.MM.-."
+                                                    disabled
+                                                    className="mt-1 bg-gray-50"
+                                                />
+                                            </div>
 
-                                    {/* Dynamic Fields dari Document Type jika ada, jika tidak fallback ke Template */}
-                                    {activeFields?.length > 0 && (
-                                        <div className="space-y-4">
-                                            {activeFields.map((f) => {
-                                                const type = String(f.type || "text").toLowerCase();
-                                                const value = data.data?.[f.name] ?? "";
-                                                const setVal = (v) =>
-                                                    setData("data", {
-                                                        ...(data.data || {}),
-                                                        [f.name]: v,
-                                                    });
-                                                // Get options for select: prefer field.options
-                                                const options = f.options || selectedTemplate?.config_json?.fields?.[f.name]?.options || [];
-                                                return (
-                                                    <div key={f.id || f.name}>
-                                                        <Label>
-                                                            {f.label} ({f.type}) {f.required ? "*" : ""}
-                                                        </Label>
-                                                        {type === "textarea" && (
-                                                            <Textarea value={value} onChange={(e) => setVal(e.target.value)} rows={3} />
-                                                        )}
-                                                        {type === "select" && (
-                                                            <Select value={String(value)} onValueChange={(v) => setVal(v)}>
-                                                                <SelectTrigger className="w-full mt-1">
-                                                                    <SelectValue placeholder="-- Pilih --" />
-                                                                </SelectTrigger>
-                                                                <SelectContent>
-                                                                    {(options || []).map((opt) => (
-                                                                        <SelectItem key={String(opt)} value={String(opt)}>
-                                                                            {String(opt)}
+                                            <div>
+                                                <Label>PIC *</Label>
+                                                <Input
+                                                    value={
+                                                        auth.user?.name || ""
+                                                    }
+                                                    disabled
+                                                    className="mt-1 bg-white border-red-300"
+                                                />
+                                            </div>
+
+                                            <div>
+                                                <Label>Employee Name</Label>
+                                                <Input
+                                                    value={
+                                                        auth.user?.name || ""
+                                                    }
+                                                    disabled
+                                                    className="mt-1 bg-gray-50"
+                                                />
+                                            </div>
+
+                                            <div>
+                                                <Label>Department</Label>
+                                                <Input
+                                                    value={
+                                                        userDivision?.name ||
+                                                        "-"
+                                                    }
+                                                    disabled
+                                                    className="mt-1 bg-gray-50"
+                                                />
+                                            </div>
+
+                                            <div>
+                                                <Label>Nama User Cabang</Label>
+                                                <Textarea
+                                                    value={data.description}
+                                                    onChange={(e) => {
+                                                        setData(
+                                                            "description",
+                                                            e.target.value
+                                                        );
+                                                        setIsSaved(false);
+                                                    }}
+                                                    rows={4}
+                                                    className="mt-1 bg-gray-50"
+                                                />
+                                            </div>
+                                        </div>
+
+                                        {/* Kanan */}
+                                        <div className="space-y-6">
+                                            <div>
+                                                <Label>Posting Date *</Label>
+                                                <Input
+                                                    type="date"
+                                                    value={
+                                                        new Date()
+                                                            .toISOString()
+                                                            .split("T")[0]
+                                                    }
+                                                    disabled
+                                                    className="mt-1 bg-gray-50"
+                                                />
+                                            </div>
+
+                                            <div>
+                                                <Label>
+                                                    Jenis Permintaan *
+                                                </Label>
+                                                <Select
+                                                    value={data.workflow_id}
+                                                    onValueChange={(value) => {
+                                                        setData(
+                                                            "workflow_id",
+                                                            value
+                                                        );
+                                                        setIsSaved(false);
+                                                    }}
+                                                >
+                                                    <SelectTrigger className="w-full mt-1">
+                                                        <SelectValue placeholder="-- Pilih Jenis --" />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        {workflows?.length >
+                                                        0 ? (
+                                                            workflows.map(
+                                                                (wf) =>
+                                                                    wf.id && (
+                                                                        <SelectItem
+                                                                            key={
+                                                                                wf.id
+                                                                            }
+                                                                            value={String(
+                                                                                wf.id
+                                                                            )}
+                                                                        >
+                                                                            {
+                                                                                wf
+                                                                                    .document
+                                                                                    ?.name
+                                                                            }
                                                                         </SelectItem>
-                                                                    ))}
-                                                                </SelectContent>
-                                                            </Select>
+                                                                    )
+                                                            )
+                                                        ) : (
+                                                            <SelectItem
+                                                                disabled
+                                                                value="wd"
+                                                            >
+                                                                Tidak ada
+                                                                dokumen
+                                                            </SelectItem>
                                                         )}
-                                                        {type === "date" && (
-                                                            <Input type="date" value={value} onChange={(e) => setVal(e.target.value)} />
-                                                        )}
-                                                        {type === "number" && (
-                                                            <Input type="number" value={value} onChange={(e) => setVal(e.target.value)} />
-                                                        )}
-                                                        {!(type === "textarea" || type === "select" || type === "date" || type === "number") && (
-                                                            <Input value={value} onChange={(e) => setVal(e.target.value)} />
-                                                        )}
-                                                        {errors?.[`data.${f.name}`] && (
-                                                            <p className="text-red-600 text-sm mt-1">{errors[`data.${f.name}`]}</p>
-                                                        )}
-                                                    </div>
-                                                );
-                                            })}
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+
+                                            <div>
+                                                <Label>Branch *</Label>
+                                                <Select
+                                                    value={
+                                                        data.branch || "bogor"
+                                                    }
+                                                    onValueChange={(v) => {
+                                                        setData("branch", v);
+                                                        setIsSaved(false);
+                                                    }}
+                                                >
+                                                    <SelectTrigger className="w-full mt-1">
+                                                        <SelectValue />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="bogor">
+                                                            Bogor
+                                                        </SelectItem>
+                                                        <SelectItem value="jakarta">
+                                                            Jakarta
+                                                        </SelectItem>
+                                                        <SelectItem value="bandung">
+                                                            Bandung
+                                                        </SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+
+                                            <div>
+                                                <Label>Kendala *</Label>
+                                                <Textarea
+                                                    value={data.title}
+                                                    onChange={(e) => {
+                                                        setData(
+                                                            "title",
+                                                            e.target.value
+                                                        );
+                                                        setIsSaved(false);
+                                                    }}
+                                                    rows={4}
+                                                    className="mt-1"
+                                                    placeholder="Jelaskan kendala..."
+                                                />
+                                            </div>
+
+                                            <div>
+                                                <Label>Dokumen Pendukung</Label>
+                                                <Input
+                                                    type="file"
+                                                    onChange={handleFileChange}
+                                                    accept=".pdf,.jpg,.jpeg,.png"
+                                                    className="mt-1"
+                                                />
+                                                <p className="text-xs text-gray-500 mt-1">
+                                                    Format: PDF, JPG, PNG (maks.
+                                                    10MB)
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Dynamic Fields */}
+                                    {activeFields?.length > 0 && (
+                                        <div className="border-t pt-6 mt-6">
+                                            <h3 className="text-lg font-semibold mb-4">
+                                                Informasi Tambahan
+                                            </h3>
+                                            <div className="grid grid-cols-2 gap-6">
+                                                {activeFields.map((f) => {
+                                                    const type = String(
+                                                        f.type || "text"
+                                                    ).toLowerCase();
+                                                    const value =
+                                                        data.data?.[f.name] ??
+                                                        "";
+                                                    const setVal = (v) => {
+                                                        setData("data", {
+                                                            ...(data.data ||
+                                                                {}),
+                                                            [f.name]: v,
+                                                        });
+                                                        setIsSaved(false);
+                                                    };
+
+                                                    return (
+                                                        <div
+                                                            key={f.id || f.name}
+                                                        >
+                                                            <Label>
+                                                                {f.label}
+                                                            </Label>
+                                                            {type ===
+                                                            "textarea" ? (
+                                                                <Textarea
+                                                                    value={
+                                                                        value
+                                                                    }
+                                                                    onChange={(
+                                                                        e
+                                                                    ) =>
+                                                                        setVal(
+                                                                            e
+                                                                                .target
+                                                                                .value
+                                                                        )
+                                                                    }
+                                                                    rows={3}
+                                                                    className="mt-1"
+                                                                />
+                                                            ) : type ===
+                                                              "date" ? (
+                                                                <Input
+                                                                    type="date"
+                                                                    value={
+                                                                        value
+                                                                    }
+                                                                    onChange={(
+                                                                        e
+                                                                    ) =>
+                                                                        setVal(
+                                                                            e
+                                                                                .target
+                                                                                .value
+                                                                        )
+                                                                    }
+                                                                    className="mt-1"
+                                                                />
+                                                            ) : (
+                                                                <Input
+                                                                    value={
+                                                                        value
+                                                                    }
+                                                                    onChange={(
+                                                                        e
+                                                                    ) =>
+                                                                        setVal(
+                                                                            e
+                                                                                .target
+                                                                                .value
+                                                                        )
+                                                                    }
+                                                                    className="mt-1"
+                                                                />
+                                                            )}
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
                                         </div>
                                     )}
 
-                                    {/* Pilih Workflow */}
-                                    <div>
-                                        <Label>Document Type</Label>
-                                        <Select
-                                            value={data.workflow_id}
-                                            onValueChange={(value) =>
-                                                setData("workflow_id", value)
-                                            }
-                                        >
-                                            <SelectTrigger className="w-full mt-1">
-                                                <SelectValue placeholder="-- Choose DocType --" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {workflows?.length > 0 ? (
-                                                    workflows.map((wf) =>
-                                                        wf.id ? (
-                                                            <SelectItem
-                                                                key={wf.id}
-                                                                value={String(
-                                                                    wf.id
-                                                                )}
-                                                            >
-                                                                {
-                                                                    wf.document
-                                                                        ?.name
-                                                                }
-                                                            </SelectItem>
-                                                        ) : null
-                                                    )
-                                                ) : (
-                                                    <SelectItem
-                                                        disabled
-                                                        value="wd"
-                                                    >
-                                                        No documents available
-                                                    </SelectItem>
-                                                )}
-                                            </SelectContent>
-                                        </Select>
-                                        {errors.workflow_id && (
-                                            <p className="text-red-600 text-sm mt-1">
-                                                {errors.workflow_id}
-                                            </p>
-                                        )}
-                                    </div>
-
-                                    {/* Judul Pengajuan */}
-                                    <div>
-                                        <Label>Judul Pengajuan</Label>
-                                        <Input
-                                            value={data.title}
-                                            onChange={(e) =>
-                                                setData("title", e.target.value)
-                                            }
-                                            required
-                                        />
-                                        {errors.title && (
-                                            <p className="text-red-600 text-sm">
-                                                {errors.title}
-                                            </p>
-                                        )}
-                                    </div>
-
-                                    {/* Deskripsi */}
-                                    <div>
-                                        <Label>Deskripsi (Opsional)</Label>
-                                        <Textarea
-                                            value={data.description}
-                                            onChange={(e) =>
-                                                setData(
-                                                    "description",
-                                                    e.target.value
-                                                )
-                                            }
-                                            rows={4}
-                                        />
-                                    </div>
-
-                                    {/* Divisi Asal */}
-                                    <div>
-                                        <Label>Dari Divisi</Label>
-                                        <Input
-                                            value={userDivision?.name || "-"}
-                                            disabled
-                                        />
-                                    </div>
-
-                                    {/* Upload File */}
-                                    <div>
-                                        <Label>Dokumen</Label>
-                                        <Input
-                                            type="file"
-                                            onChange={handleFileChange}
-                                            required
-                                            accept=".pdf,.jpg,.jpeg,.png"
-                                        />
-                                        <p className="text-sm text-gray-500 mt-1">
-                                            Format: PDF, JPG, PNG (maks. 10MB)
-                                        </p>
-                                        {errors.file && (
-                                            <p className="text-red-600 text-sm mt-1">
-                                                {errors.file}
-                                            </p>
-                                        )}
-                                    </div>
-
-                                    {/* Tombol Kirim */}
-                                    <div className="flex justify-end">
+                                    {/* Submit */}
+                                    <div className="flex items-center justify-end gap-4 mt-4">
                                         <Button
                                             type="submit"
                                             disabled={processing}
-                                            style={{ borderRadius: "15px" }}
-                                            className="hover:bg-gray-700"
+                                            className="bg-blue-600 hover:bg-blue-700 text-white px-6"
                                         >
                                             {processing
                                                 ? "Mengirim..."
@@ -443,7 +521,7 @@ export default function Create({
                             </form>
                         </Card>
                     </div>
-                </div>{" "}
+                </div>
             </div>
         </AuthenticatedLayout>
     );
