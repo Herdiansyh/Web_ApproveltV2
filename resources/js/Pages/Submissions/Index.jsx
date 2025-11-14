@@ -107,22 +107,30 @@ export default function Index({ auth, submissions }) {
                                 <tbody className="divide-y divide-border/40">
                                     {filteredSubmissions.map((submission) => (
                                         <tr
+                                            onClick={() =>
+                                                router.visit(
+                                                    route(
+                                                        "submissions.show",
+                                                        submission.id
+                                                    )
+                                                )
+                                            }
+                                            className="hover:bg-gray-100 cursor-pointer hover:bg-muted/30 transition"
                                             key={submission.id}
-                                            className="hover:bg-muted/20 transition-all duration-150"
                                         >
-                                            <td className="py-3 px-6 font-medium">
+                                            <td className="hover:underline py-2 px-6 font-medium">
                                                 {submission.title}
                                             </td>
-                                            <td className="py-3 px-6">
+                                            <td className="py-2 px-6 hover:underline">
                                                 {submission.workflow?.document
                                                     ?.name || "-"}
                                             </td>
                                             {auth.user.role === "manager" && (
-                                                <td className="py-3 px-6">
+                                                <td className="py-2 px-6 hover:underline">
                                                     {submission.user.name}
                                                 </td>
                                             )}
-                                            <td className="py-3 px-6 flex">
+                                            <td className="py-2 px-6 flex ">
                                                 <span
                                                     className={`px-3 py-1 rounded-full text-[0.8em] sm:text-xs font-medium ${
                                                         submission.status ===
@@ -147,12 +155,12 @@ export default function Index({ auth, submissions }) {
                                                           "Waiting"}
                                                 </span>
                                             </td>
-                                            <td className="py-3 px-6 text-muted-foreground">
+                                            <td className="py-2 px-6 text-muted-foreground">
                                                 {new Date(
                                                     submission.created_at
                                                 ).toLocaleDateString("id-ID")}
                                             </td>
-                                            <td className="py-3 px-6 text-center">
+                                            <td className="py-2 px-6 text-center">
                                                 <DropdownMenu>
                                                     <DropdownMenuTrigger
                                                         asChild
@@ -169,21 +177,6 @@ export default function Index({ auth, submissions }) {
                                                         align="end"
                                                         className="w-36 shadow-lg border border-border/40"
                                                     >
-                                                        <DropdownMenuItem
-                                                            asChild
-                                                        >
-                                                            <Link
-                                                                href={route(
-                                                                    "submissions.show",
-                                                                    submission.id
-                                                                )}
-                                                                className="flex items-center gap-2"
-                                                            >
-                                                                <Eye className="w-4 h-4" />{" "}
-                                                                View
-                                                            </Link>
-                                                        </DropdownMenuItem>
-
                                                         {(auth.user.id ===
                                                             submission.user_id ||
                                                             submission

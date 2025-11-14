@@ -91,13 +91,21 @@ export default function ForDivision({ auth, submissions }) {
                                         filteredSubmissions.map(
                                             (submission) => (
                                                 <tr
+                                                    onClick={() =>
+                                                        router.visit(
+                                                            route(
+                                                                "submissions.show",
+                                                                submission.id
+                                                            )
+                                                        )
+                                                    }
+                                                    className=" cursor-pointer hover:bg-gray-100 transition"
                                                     key={submission.id}
-                                                    className="hover:bg-muted/20 transition-all duration-150"
                                                 >
-                                                    <td className="py-3 px-6 font-medium">
+                                                    <td className="py-3 hover:underline px-6 font-medium">
                                                         {submission.title}
                                                     </td>
-                                                    <td className="py-3 px-6">
+                                                    <td className="py-3 px-6 hover:underline">
                                                         {submission.user.name}
                                                     </td>
                                                     <td className="py-3 px-6 flex">
@@ -149,21 +157,6 @@ export default function ForDivision({ auth, submissions }) {
                                                                 align="end"
                                                                 className="w-36 shadow-lg border border-border/40"
                                                             >
-                                                                <DropdownMenuItem
-                                                                    asChild
-                                                                >
-                                                                    <Link
-                                                                        href={route(
-                                                                            "submissions.show",
-                                                                            submission.id
-                                                                        )}
-                                                                        className="flex items-center gap-2"
-                                                                    >
-                                                                        <Eye className="w-4 h-4" />{" "}
-                                                                        View
-                                                                    </Link>
-                                                                </DropdownMenuItem>
-
                                                                 {(auth.user
                                                                     .id ===
                                                                     submission.user_id ||
