@@ -184,7 +184,7 @@ class SubmissionController extends Controller
             ->get();
 
         // Active templates so user can create from template within the same page
-        $templates = \App\Models\Template::query()
+        $templates = Template::query()
             ->where('is_active', true)
             ->with(['fields' => function ($q) { $q->orderBy('order'); }])
             ->orderBy('name')

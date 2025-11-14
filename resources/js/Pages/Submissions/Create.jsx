@@ -209,14 +209,18 @@ export default function Create({
                                 <Button
                                     onClick={handleSaveLocal}
                                     disabled={processing}
-                                    className="bg-blue-600 hover:bg-blue-700 text-white px-6"
+                                    style={{ borderRadius: "10px" }}
+                                    className="bg-blue-600 hover:bg-blue-700 text-xs text-white p-2"
                                 >
                                     Save
                                 </Button>
                             </div>
                         </div>
 
-                        <Card className="p-8 shadow-sm">
+                        <Card
+                            className="p-8 shadow-sm "
+                            style={{ borderRadius: "15px" }}
+                        >
                             <form
                                 onSubmit={submit}
                                 encType="multipart/form-data"
@@ -226,9 +230,14 @@ export default function Create({
                                     <div className="grid grid-cols-2 gap-6">
                                         {/* Kiri */}
                                         <div className="space-y-6">
-                                            <div>
+                                            <div
+                                                style={{ borderRadius: "15px" }}
+                                            >
                                                 <Label>Series</Label>
                                                 <Input
+                                                    style={{
+                                                        borderRadius: "10px",
+                                                    }}
                                                     value="SUB-.YYYY.-.MM.-."
                                                     disabled
                                                     className="mt-1 bg-gray-50"
@@ -236,19 +245,11 @@ export default function Create({
                                             </div>
 
                                             <div>
-                                                <Label>PIC *</Label>
-                                                <Input
-                                                    value={
-                                                        auth.user?.name || ""
-                                                    }
-                                                    disabled
-                                                    className="mt-1 bg-white border-red-300"
-                                                />
-                                            </div>
-
-                                            <div>
                                                 <Label>Employee Name</Label>
                                                 <Input
+                                                    style={{
+                                                        borderRadius: "10px",
+                                                    }}
                                                     value={
                                                         auth.user?.name || ""
                                                     }
@@ -260,6 +261,9 @@ export default function Create({
                                             <div>
                                                 <Label>Department</Label>
                                                 <Input
+                                                    style={{
+                                                        borderRadius: "10px",
+                                                    }}
                                                     value={
                                                         userDivision?.name ||
                                                         "-"
@@ -268,29 +272,16 @@ export default function Create({
                                                     className="mt-1 bg-gray-50"
                                                 />
                                             </div>
-
-                                            <div>
-                                                <Label>Nama User Cabang</Label>
-                                                <Textarea
-                                                    value={data.description}
-                                                    onChange={(e) => {
-                                                        setData(
-                                                            "description",
-                                                            e.target.value
-                                                        );
-                                                        setIsSaved(false);
-                                                    }}
-                                                    rows={4}
-                                                    className="mt-1 bg-gray-50"
-                                                />
-                                            </div>
                                         </div>
 
                                         {/* Kanan */}
                                         <div className="space-y-6">
                                             <div>
-                                                <Label>Posting Date *</Label>
+                                                <Label>Posting Date</Label>
                                                 <Input
+                                                    style={{
+                                                        borderRadius: "10px",
+                                                    }}
                                                     type="date"
                                                     value={
                                                         new Date()
@@ -303,9 +294,7 @@ export default function Create({
                                             </div>
 
                                             <div>
-                                                <Label>
-                                                    Jenis Permintaan *
-                                                </Label>
+                                                <Label>Document Type *</Label>
                                                 <Select
                                                     value={data.workflow_id}
                                                     onValueChange={(value) => {
@@ -316,10 +305,21 @@ export default function Create({
                                                         setIsSaved(false);
                                                     }}
                                                 >
-                                                    <SelectTrigger className="w-full mt-1">
+                                                    <SelectTrigger
+                                                        style={{
+                                                            borderRadius:
+                                                                "10px",
+                                                        }}
+                                                        className="w-full mt-1"
+                                                    >
                                                         <SelectValue placeholder="-- Pilih Jenis --" />
                                                     </SelectTrigger>
-                                                    <SelectContent>
+                                                    <SelectContent
+                                                        style={{
+                                                            borderRadius:
+                                                                "10px",
+                                                        }}
+                                                    >
                                                         {workflows?.length >
                                                         0 ? (
                                                             workflows.map(
@@ -355,36 +355,11 @@ export default function Create({
                                             </div>
 
                                             <div>
-                                                <Label>Branch *</Label>
-                                                <Select
-                                                    value={
-                                                        data.branch || "bogor"
-                                                    }
-                                                    onValueChange={(v) => {
-                                                        setData("branch", v);
-                                                        setIsSaved(false);
-                                                    }}
-                                                >
-                                                    <SelectTrigger className="w-full mt-1">
-                                                        <SelectValue />
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                        <SelectItem value="bogor">
-                                                            Bogor
-                                                        </SelectItem>
-                                                        <SelectItem value="jakarta">
-                                                            Jakarta
-                                                        </SelectItem>
-                                                        <SelectItem value="bandung">
-                                                            Bandung
-                                                        </SelectItem>
-                                                    </SelectContent>
-                                                </Select>
-                                            </div>
-
-                                            <div>
-                                                <Label>Kendala *</Label>
+                                                <Label>Deskripsi</Label>
                                                 <Textarea
+                                                    style={{
+                                                        borderRadius: "10px",
+                                                    }}
                                                     value={data.title}
                                                     onChange={(e) => {
                                                         setData(
@@ -395,13 +370,16 @@ export default function Create({
                                                     }}
                                                     rows={4}
                                                     className="mt-1"
-                                                    placeholder="Jelaskan kendala..."
+                                                    placeholder="Masukan deskripsi..."
                                                 />
                                             </div>
 
                                             <div>
                                                 <Label>Dokumen Pendukung</Label>
                                                 <Input
+                                                    style={{
+                                                        borderRadius: "10px",
+                                                    }}
                                                     type="file"
                                                     onChange={handleFileChange}
                                                     accept=".pdf,.jpg,.jpeg,.png"
@@ -417,7 +395,12 @@ export default function Create({
 
                                     {/* Dynamic Fields */}
                                     {activeFields?.length > 0 && (
-                                        <div className="border-t pt-6 mt-6">
+                                        <div
+                                            className="border-t pt-6 mt-6"
+                                            style={{
+                                                borderRadius: "10px",
+                                            }}
+                                        >
                                             <h3 className="text-lg font-semibold mb-4">
                                                 Informasi Tambahan
                                             </h3>
@@ -448,6 +431,10 @@ export default function Create({
                                                             {type ===
                                                             "textarea" ? (
                                                                 <Textarea
+                                                                    style={{
+                                                                        borderRadius:
+                                                                            "10px",
+                                                                    }}
                                                                     value={
                                                                         value
                                                                     }
@@ -466,6 +453,10 @@ export default function Create({
                                                             ) : type ===
                                                               "date" ? (
                                                                 <Input
+                                                                    style={{
+                                                                        borderRadius:
+                                                                            "10px",
+                                                                    }}
                                                                     type="date"
                                                                     value={
                                                                         value
@@ -483,6 +474,10 @@ export default function Create({
                                                                 />
                                                             ) : (
                                                                 <Input
+                                                                    style={{
+                                                                        borderRadius:
+                                                                            "10px",
+                                                                    }}
                                                                     value={
                                                                         value
                                                                     }
@@ -508,6 +503,9 @@ export default function Create({
                                     {/* Submit */}
                                     <div className="flex items-center justify-end gap-4 mt-4">
                                         <Button
+                                            style={{
+                                                borderRadius: "10px",
+                                            }}
                                             type="submit"
                                             disabled={processing}
                                             className="bg-blue-600 hover:bg-blue-700 text-white px-6"

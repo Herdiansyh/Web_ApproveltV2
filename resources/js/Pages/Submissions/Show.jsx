@@ -12,6 +12,7 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from "@/Components/ui/dropdown-menu";
+import { Printer } from "lucide-react";
 
 export default function Show({
     auth,
@@ -118,11 +119,11 @@ export default function Show({
     };
 
     const statusColor =
-        submission.status === "approved"
-            ? "bg-green-100 text-green-700"
+        submission.status === "Approved by Direktur"
+            ? " text-green-700"
             : submission.status === "rejected"
-            ? "bg-rose-100 text-rose-700"
-            : "bg-amber-100 text-amber-700";
+            ? " text-rose-700"
+            : " text-amber-500";
 
     const dataMap = useMemo(() => submission?.data_json || {}, [submission]);
 
@@ -143,31 +144,30 @@ export default function Show({
                         <Card className="p-8 rounded-2xl border border-border/50 shadow-sm backdrop-blur-md bg-card/80">
                             <div className="flex justify-between items-start flex-wrap gap-4">
                                 <div className="space-y-2">
-                                    <h3 className="text-2xl font-bold text-foreground/90">
-                                        {submission.title}
-                                    </h3>
-                                    <p className="text-sm text-muted-foreground">
+                                    <div className="flex items-center w-full justify-between">
+                                        <h3 className="text-md sm:text-2xl font-bold text-foreground/90">
+                                            {submission.title}
+                                        </h3>
+                                        <span
+                                            className={`px-3 py-1 rounded-full text-xs sm:text-sm font-bold ${statusColor}`}
+                                        >
+                                            {submission.status ===
+                                            "Approved by Direktur"
+                                                ? "• Disetujui"
+                                                : submission.status ===
+                                                  "• rejected"
+                                                ? "Ditolak"
+                                                : "• Menunggu Persetujuan"}
+                                        </span>
+                                    </div>
+                                    <p className="sm:text-sm text-xs text-muted-foreground">
                                         <span className="font-semibold">
                                             Diajukan oleh:
                                         </span>{" "}
                                         {submission.user.name} (
                                         {submission.user.division?.name ?? "-"})
                                     </p>
-                                    <div className="flex items-center gap-2">
-                                        <span className="font-semibold text-muted-foreground">
-                                            Status:
-                                        </span>
-                                        <span
-                                            className={`px-3 py-1 rounded-full text-xs font-medium ${statusColor}`}
-                                        >
-                                            {submission.status === "approved"
-                                                ? "Disetujui"
-                                                : submission.status ===
-                                                  "rejected"
-                                                ? "Ditolak"
-                                                : "Menunggu Persetujuan"}
-                                        </span>
-                                    </div>
+
                                     {submission.approval_note && (
                                         <p className="text-sm text-muted-foreground mt-1">
                                             📝 {submission.approval_note}
@@ -175,13 +175,13 @@ export default function Show({
                                     )}
                                 </div>
 
-                                <div className="flex flex-col gap-2">
+                                <div className="flex gap-2">
                                     <a
                                         href={route(
                                             "submissions.download",
                                             submission.id
                                         )}
-                                        className="inline-flex items-center justify-center px-4 py-1.5 text-sm font-medium rounded-full bg-blue-600 text-white hover:bg-blue-700 active:scale-[0.97] transition-all shadow-sm"
+                                        className="inline-flex items-center justify-center mb-2 py-1 px-2 text-sm font-medium rounded-full bg-blue-600 text-white hover:bg-blue-700 active:scale-[0.97] transition-all shadow-sm"
                                     >
                                         📄 Unduh Dokumen
                                     </a>
@@ -209,16 +209,20 @@ export default function Show({
                                             </a>
                                         )}
 
-                                    {Array.isArray(documentFields) && documentFields.length > 0 && (
-                                        <a
-                                            href={route("submissions.printDocument", submission.id)}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="inline-flex items-center justify-center px-4 py-1.5 text-sm font-medium rounded-full bg-muted text-foreground hover:bg-muted/70 active:scale-[0.97] transition-all shadow-sm"
-                                        >
-                                            🖨️ Print Dokumen
-                                        </a>
-                                    )}
+                                    {Array.isArray(documentFields) &&
+                                        documentFields.length > 0 && (
+                                            <a
+                                                href={route(
+                                                    "submissions.printDocument",
+                                                    submission.id
+                                                )}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="border border-gray-200 mb-3 inline-flex items-center justify-center p-2 text-sm font-medium rounded-[8px] bg-muted text-foreground hover:bg-muted/70 active:scale-[0.97] transition-all shadow-sm"
+                                            >
+                                                <Printer />
+                                            </a>
+                                        )}
 
                                     {(submission.status === "pending" ||
                                         submission.status
@@ -316,19 +320,37 @@ export default function Show({
                             </div>
 
                             {/* Read-only dynamic fields when available */}
-                            {Array.isArray(documentFields) && documentFields.length > 0 && (
-                                <Card className="p-4 mb-6">
-                                    <h4 className="font-semibold mb-3">Data Dokumen</h4>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                        {documentFields.map((f) => (
-                                            <div key={f.id || f.name} className="flex flex-col">
-                                                <span className="text-sm text-muted-foreground">{f.label}</span>
-                                                <span className="font-medium break-words">{String(dataMap?.[f.name] ?? "-")}</span>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </Card>
-                            )}
+                            {Array.isArray(documentFields) &&
+                                documentFields.length > 0 && (
+                                    <Card
+                                        className="p-4 mb-6"
+                                        style={{
+                                            borderRadius: "10px",
+                                        }}
+                                    >
+                                        <h4 className="font-semibold mb-3">
+                                            Data Dokumen
+                                        </h4>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                            {documentFields.map((f) => (
+                                                <div
+                                                    key={f.id || f.name}
+                                                    className="flex flex-col"
+                                                >
+                                                    <span className="text-sm text-muted-foreground">
+                                                        {f.label}
+                                                    </span>
+                                                    <span className="font-medium break-words">
+                                                        {String(
+                                                            dataMap?.[f.name] ??
+                                                                "-"
+                                                        )}
+                                                    </span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </Card>
+                                )}
 
                             <div className="mt-2 border border-border/40 rounded-xl overflow-hidden shadow-inner bg-muted/10">
                                 <object
