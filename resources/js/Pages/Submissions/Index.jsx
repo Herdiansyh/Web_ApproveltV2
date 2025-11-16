@@ -86,6 +86,9 @@ export default function Index({ auth, submissions }) {
                                             Judul
                                         </th>
                                         <th className="py-3 px-6 text-left">
+                                            Series
+                                        </th>
+                                        <th className="py-3 px-6 text-left">
                                             Jenis Dokumen
                                         </th>
                                         {auth.user.role === "manager" && (
@@ -120,6 +123,9 @@ export default function Index({ auth, submissions }) {
                                         >
                                             <td className="hover:underline py-2 px-6 font-medium">
                                                 {submission.title}
+                                            </td>
+                                            <td className="py-2 px-6 text-xs text-muted-foreground font-mono">
+                                                {submission.series_code || "-"}
                                             </td>
                                             <td className="py-2 px-6 hover:underline">
                                                 {submission.workflow?.document

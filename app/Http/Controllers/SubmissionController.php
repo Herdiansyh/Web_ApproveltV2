@@ -8,6 +8,7 @@ use App\Models\SubmissionWorkflowStep;
 use App\Models\Workflow;
 use App\Models\Document;
 use App\Models\WorkflowStepPermission;
+use App\Models\DocumentNameSeries;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Storage;
@@ -180,7 +181,7 @@ class SubmissionController extends Controller
         $division = $user->division;
 
         $workflows = Workflow::where('is_active', true)
-            ->with(['document.fields'])
+            ->with(['document.fields', 'document.nameSeries'])
             ->get();
 
         // Active templates so user can create from template within the same page
@@ -302,6 +303,75 @@ class SubmissionController extends Controller
         ])->render();
 
         return response($html);
+    }
+
+    /**
+     * Generate series_code untuk submission berdasarkan konfigurasi DocumentNameSeries.
+     * Hanya akan mengupdate jika series_code masih null.
+     */
+    protected function generateSeriesCode(Submission $submission): void
+    {
+        if ($submission->series_code) {
+            return; // sudah ada, jangan generate ulang
+        }
+
+        $workflow = $submission->workflow;
+        $document = $workflow?->document;
+        if (!$document) {
+            return;
+        }
+
+        $now = now();
+        $series = DocumentNameSeries::firstOrCreate(
+            ['document_id' => $document->id],
+            [
+                'series_pattern' => 'yyyy-mm-####',
+                'prefix' => null,
+                'current_number' => 0,
+                'reset_type' => 'none',
+                'last_reset_at' => null,
+            ]
+        );
+
+        // Handle reset bulanan/tahunan jika diperlukan
+        if ($series->reset_type === 'monthly' && $series->last_reset_at) {
+            if ($series->last_reset_at->format('Y-m') !== $now->format('Y-m')) {
+                $series->current_number = 0;
+            }
+        } elseif ($series->reset_type === 'yearly' && $series->last_reset_at) {
+            if ($series->last_reset_at->format('Y') !== $now->format('Y')) {
+                $series->current_number = 0;
+            }
+        }
+
+        // Increment counter dan update last_reset_at
+        $series->current_number = (int) $series->current_number + 1;
+        $series->last_reset_at = $now;
+        $series->save();
+
+        $pattern = $series->series_pattern ?: 'yyyy-mm-####';
+        $number = (int) $series->current_number;
+
+        // Ganti token tanggal
+        $formatted = str_replace(
+            ['yyyy', 'yy', 'mm', 'dd'],
+            [
+                $now->format('Y'),
+                $now->format('y'),
+                $now->format('m'),
+                $now->format('d'),
+            ],
+            $pattern
+        );
+
+        // Ganti blok # dengan nomor ber-padding
+        $formatted = preg_replace_callback('/(#+)/', function ($m) use ($number) {
+            $len = strlen($m[1]);
+            return str_pad((string) $number, $len, '0', STR_PAD_LEFT);
+        }, $formatted);
+
+        $submission->series_code = ($series->prefix ?? '') . $formatted;
+        $submission->save();
     }
 
     /** ------------------------
@@ -483,6 +553,9 @@ class SubmissionController extends Controller
 
         $filePath = $request->file('file')->store('submissions', 'private');
 
+        // Catatan: series_code tidak digenerate di sini.
+        // Nomor lengkap baru akan dibuat saat dokumen final-approved atau ketika dicetak.
+
         $submission = Submission::create([
             'user_id' => $user->id,
             'division_id' => $user->division_id,
@@ -524,6 +597,7 @@ class SubmissionController extends Controller
         $submission->load([
             'user.division',
             'workflow.document',
+            'workflow.document.nameSeries',
             'workflowSteps.division',
             'workflow.steps.division',
             'workflow.steps.permissions.subdivision',
@@ -636,6 +710,9 @@ class SubmissionController extends Controller
     {
         $this->authorize('view', $submission);
         $submission->load(['user', 'workflow.document.fields', 'workflowSteps.approver']);
+
+        // Pastikan series_code sudah ada ketika dokumen dicetak
+        $this->generateSeriesCode($submission);
         $fields = $submission->workflow?->document?->fields ?? collect();
 
         // Derive approval info (same as template preview)
@@ -737,6 +814,9 @@ class SubmissionController extends Controller
             $currentDiv = $currentStep->division;
             $currentDivName = $currentDiv ? $currentDiv->name : 'Final Division';
             $submission->status = 'Approved by ' . $currentDivName;
+
+            // Generate final series code hanya ketika dokumen sudah final approved
+            $this->generateSeriesCode($submission);
         } else {
             // Move to next step and set waiting status
             $nextStepOrder = $submission->current_step + 1;

@@ -25,6 +25,7 @@ class Submission extends Model
         'division_id',
         'notes',
         'document_id', // ✅ tambahkan ini
+        'series_code',
         'current_step', // urutan langkah sekarang
         'watermark_x',
         'watermark_y',

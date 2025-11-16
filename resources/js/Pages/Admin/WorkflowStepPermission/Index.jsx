@@ -137,6 +137,10 @@ export default function WorkflowStepPermissionIndex({
                                                                     <div className="flex items-center gap-3 mt-1">
                                                                         <label className="inline-flex items-center gap-2">
                                                                             <Checkbox
+                                                                                style={{
+                                                                                    borderRadius:
+                                                                                        "4px",
+                                                                                }}
                                                                                 checked={
                                                                                     !!perm.can_view
                                                                                 }
@@ -154,6 +158,10 @@ export default function WorkflowStepPermissionIndex({
                                                                         </label>
                                                                         <label className="inline-flex items-center gap-2">
                                                                             <Checkbox
+                                                                                style={{
+                                                                                    borderRadius:
+                                                                                        "4px",
+                                                                                }}
                                                                                 checked={
                                                                                     !!perm.can_approve
                                                                                 }
@@ -171,6 +179,10 @@ export default function WorkflowStepPermissionIndex({
                                                                         </label>
                                                                         <label className="inline-flex items-center gap-2">
                                                                             <Checkbox
+                                                                                style={{
+                                                                                    borderRadius:
+                                                                                        "4px",
+                                                                                }}
                                                                                 checked={
                                                                                     !!perm.can_reject
                                                                                 }
@@ -188,6 +200,10 @@ export default function WorkflowStepPermissionIndex({
                                                                         </label>
                                                                         <label className="inline-flex items-center gap-2">
                                                                             <Checkbox
+                                                                                style={{
+                                                                                    borderRadius:
+                                                                                        "4px",
+                                                                                }}
                                                                                 checked={
                                                                                     !!perm.can_request_next
                                                                                 }
@@ -206,6 +222,10 @@ export default function WorkflowStepPermissionIndex({
                                                                         </label>
                                                                         <label className="inline-flex items-center gap-2">
                                                                             <Checkbox
+                                                                                style={{
+                                                                                    borderRadius:
+                                                                                        "4px",
+                                                                                }}
                                                                                 checked={
                                                                                     !!perm.can_edit
                                                                                 }
@@ -223,6 +243,10 @@ export default function WorkflowStepPermissionIndex({
                                                                         </label>
                                                                         <label className="inline-flex items-center gap-2">
                                                                             <Checkbox
+                                                                                style={{
+                                                                                    borderRadius:
+                                                                                        "4px",
+                                                                                }}
                                                                                 checked={
                                                                                     !!perm.can_delete
                                                                                 }

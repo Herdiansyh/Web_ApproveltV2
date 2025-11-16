@@ -45,6 +45,20 @@ export default function Create({
         [workflows, data.workflow_id]
     );
 
+    // Pattern series dari Document Type (Name Series)
+    const selectedSeriesPattern = useMemo(() => {
+        const doc = selectedWorkflow?.document;
+        if (!doc) return "";
+
+        // Inertia biasanya mengirim relasi hasOne sebagai name_series
+        const ns = doc.name_series || doc.nameSeries || null;
+        if (!ns) return "";
+
+        const pattern = ns.series_pattern || "yyyy-mm-####";
+        const prefix = ns.prefix || "";
+        return `${prefix}${pattern}`;
+    }, [selectedWorkflow]);
+
     const documentFields = useMemo(() => {
         const f = selectedWorkflow?.document?.fields || [];
         return Array.isArray(f) ? f : [];
@@ -238,7 +252,10 @@ export default function Create({
                                                     style={{
                                                         borderRadius: "10px",
                                                     }}
-                                                    value="SUB-.YYYY.-.MM.-."
+                                                    value={
+                                                        selectedSeriesPattern ||
+                                                        "yyyy-mm-####"
+                                                    }
                                                     disabled
                                                     className="mt-1 bg-gray-50"
                                                 />

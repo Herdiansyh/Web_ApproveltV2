@@ -149,6 +149,30 @@ export default function Index({ auth, documents, divisions }) {
         return matchText && matchDocument;
     });
 
+    const handleSaveSeries = (doc, payload) => {
+        router.post(route("documents.nameSeries.update", doc.id), payload, {
+            onSuccess: () =>
+                Swal.fire("Success", "Name Series updated", "success"),
+        });
+    };
+
+    const handleResetSeries = (doc) => {
+        Swal.fire({
+            title: "Reset counter?",
+            text: "Counter akan di-reset ke 0.",
+            icon: "warning",
+            showCancelButton: true,
+            confirmButtonText: "Yes, reset",
+        }).then((res) => {
+            if (res.isConfirmed) {
+                router.post(route("documents.nameSeries.reset", doc.id), {}, {
+                    onSuccess: () =>
+                        Swal.fire("Reset", "Counter reset to 0", "success"),
+                });
+            }
+        });
+    };
+
     const handleDelete = (docId) => {
         Swal.fire({
             title: "Are you sure?",
@@ -266,48 +290,157 @@ export default function Index({ auth, documents, divisions }) {
                                                     {doc.division?.name || "-"}
                                                 </TableCell>
                                                 <TableCell>
-                                                    <div className="flex space-x-2">
-                                                        <Button
-                                                            variant="outline"
-                                                            size="sm"
-                                                            onClick={() =>
-                                                                openFields(doc)
-                                                            }
-                                                            style={{
-                                                                borderRadius:
-                                                                    "15px",
-                                                            }}
-                                                        >
-                                                            Manage Fields
-                                                        </Button>
-                                                        <Button
-                                                            variant="outline"
-                                                            size="sm"
-                                                            onClick={() =>
-                                                                handleEdit(doc)
-                                                            }
-                                                            style={{
-                                                                borderRadius:
-                                                                    "15px",
-                                                            }}
-                                                        >
-                                                            Edit
-                                                        </Button>
-                                                        <Button
-                                                            variant="destructive"
-                                                            size="sm"
-                                                            onClick={() =>
-                                                                handleDelete(
-                                                                    doc.id
-                                                                )
-                                                            }
-                                                            style={{
-                                                                borderRadius:
-                                                                    "15px",
-                                                            }}
-                                                        >
-                                                            Delete
-                                                        </Button>
+                                                    <div className="flex flex-col gap-2">
+                                                        <div className="flex space-x-2">
+                                                            <Button
+                                                                variant="outline"
+                                                                size="sm"
+                                                                onClick={() =>
+                                                                    openFields(doc)
+                                                                }
+                                                                style={{
+                                                                    borderRadius:
+                                                                        "15px",
+                                                                }}
+                                                            >
+                                                                Manage Fields
+                                                            </Button>
+                                                            <Button
+                                                                variant="outline"
+                                                                size="sm"
+                                                                onClick={() =>
+                                                                    handleEdit(doc)
+                                                                }
+                                                                style={{
+                                                                    borderRadius:
+                                                                        "15px",
+                                                                }}
+                                                            >
+                                                                Edit
+                                                            </Button>
+                                                            <Button
+                                                                variant="destructive"
+                                                                size="sm"
+                                                                onClick={() =>
+                                                                    handleDelete(
+                                                                        doc.id
+                                                                    )
+                                                                }
+                                                                style={{
+                                                                    borderRadius:
+                                                                        "15px",
+                                                                }}
+                                                            >
+                                                                Delete
+                                                            </Button>
+                                                        </div>
+
+                                                        {/* Name Series Config */}
+                                                       
+<div className="p-4 rounded-2xl border border-slate-200 bg-gradient-to-br from-white to-slate-50 shadow-sm">
+    <p className="text-sm font-semibold text-slate-700 mb-3">
+        Name Series
+    </p>
+
+    <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-4">
+
+        {/* Pattern */}
+        <div className="flex flex-col gap-1">
+            <label className="text-xs font-medium text-slate-600">
+                Pattern
+            </label>
+            <Input
+                placeholder="yyyy-mm-####"
+                defaultValue={doc.name_series?.series_pattern || ""}
+                data-series-field="pattern"
+                className="h-8 text-xs rounded-xl bg-slate-100 border-slate-300 focus:ring-2 focus:ring-blue-400"
+            />
+        </div>
+
+        {/* Prefix */}
+        <div className="flex flex-col gap-1">
+            <label className="text-xs font-medium text-slate-600">
+                Prefix
+            </label>
+            <Input
+                placeholder="SUB-"
+                defaultValue={doc.name_series?.prefix || ""}
+                data-series-field="prefix"
+                className="h-8 text-xs rounded-xl bg-slate-100 border-slate-300 focus:ring-2 focus:ring-blue-400"
+            />
+        </div>
+
+        {/* Reset Type */}
+        <div className="flex flex-col gap-1">
+            <label className="text-xs font-medium text-slate-600">
+                Reset Type
+            </label>
+            <select
+                defaultValue={doc.name_series?.reset_type || "none"}
+                data-series-field="reset_type"
+                className="h-8 text-xs rounded-xl bg-slate-100 border border-slate-300 px-2 focus:ring-2 focus:ring-blue-400"
+            >
+                <option value="none">No Reset</option>
+                <option value="monthly">Monthly</option>
+                <option value="yearly">Yearly</option>
+            </select>
+        </div>
+
+        {/* Current Number */}
+        <div className="flex flex-col gap-1">
+            <label className="text-xs font-medium text-slate-600">
+                Current Number
+            </label>
+            <Input
+                type="number"
+                defaultValue={doc.name_series?.current_number ?? 0}
+                data-series-field="current_number"
+                className="h-8 text-xs rounded-xl bg-slate-100 border-slate-300 focus:ring-2 focus:ring-blue-400"
+            />
+        </div>
+    </div>
+
+    {/* Buttons */}
+    <div className="flex justify-end gap-2">
+        <Button
+            size="sm"
+            variant="outline"
+            className="rounded-xl h-8 text-xs border-slate-300 hover:bg-blue-100 hover:text-blue-700 transition"
+            onClick={(e) => {
+                const container = e.currentTarget.closest(
+                    "div.p-4.rounded-2xl"
+                );
+                const getVal = (selector) => {
+                    const el = container.querySelector(selector);
+                    return el ? el.value : "";
+                };
+
+                const payload = {
+                    series_pattern: getVal("[data-series-field='pattern']"),
+                    prefix: getVal("[data-series-field='prefix']"),
+                    reset_type: getVal("[data-series-field='reset_type']"),
+                    current_number: Number(
+                        getVal("[data-series-field='current_number']") || 0
+                    ),
+                };
+
+                handleSaveSeries(doc, payload);
+            }}
+        >
+            Save
+        </Button>
+
+        <Button
+            size="sm"
+            variant="outline"
+            className="rounded-xl h-8 text-xs border-red-300 text-red-600 hover:bg-red-100 transition"
+            onClick={() => handleResetSeries(doc)}
+        >
+            Reset Counter
+        </Button>
+    </div>
+</div>
+
                                                     </div>
                                                 </TableCell>
                                             </TableRow>

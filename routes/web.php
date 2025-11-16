@@ -203,6 +203,10 @@ Route::middleware(['auth'])->group(function () {
         Route::put('documents/{document}/fields/{field}', [DocumentController::class, 'updateField'])->name('documents.fields.update');
         Route::delete('documents/{document}/fields/{field}', [DocumentController::class, 'deleteField'])->name('documents.fields.destroy');
 
+        // Document Name Series management
+        Route::post('documents/{document}/name-series', [DocumentController::class, 'updateNameSeries'])->name('documents.nameSeries.update');
+        Route::post('documents/{document}/name-series/reset', [DocumentController::class, 'resetNameSeries'])->name('documents.nameSeries.reset');
+
         // Template Management (Admin) — to be retired soon
         Route::resource('templates', AdminTemplateController::class);
 

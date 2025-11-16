@@ -127,6 +127,19 @@ export default function Show({
 
     const dataMap = useMemo(() => submission?.data_json || {}, [submission]);
 
+    // Pattern series dari Document Type (Name Series) untuk tampilan saja
+    const seriesPattern = useMemo(() => {
+        const doc = submission?.workflow?.document;
+        if (!doc) return "";
+
+        const ns = doc.name_series || doc.nameSeries || null;
+        if (!ns) return "";
+
+        const pattern = ns.series_pattern || "yyyy-mm-####";
+        const prefix = ns.prefix || "";
+        return `${prefix}${pattern}`;
+    }, [submission]);
+
     return (
         <AuthenticatedLayout
             user={auth.user}
@@ -144,10 +157,17 @@ export default function Show({
                         <Card className="p-8 rounded-2xl border border-border/50 shadow-sm backdrop-blur-md bg-card/80">
                             <div className="flex justify-between items-start flex-wrap gap-4">
                                 <div className="space-y-2">
-                                    <div className="flex items-center w-full justify-between">
-                                        <h3 className="text-md sm:text-2xl font-bold text-foreground/90">
-                                            {submission.title}
-                                        </h3>
+                                    <div className="flex flex-col sm:flex-row sm:items-center w-full justify-between gap-1 sm:gap-2">
+                                        <div>
+                                            {seriesPattern && (
+                                                <p className="text-xs font-mono text-muted-foreground mb-0.5">
+                                                    Series Pattern: {seriesPattern}
+                                                </p>
+                                            )}
+                                            <h3 className="text-md sm:text-2xl font-bold text-foreground/90">
+                                                {submission.title}
+                                            </h3>
+                                        </div>
                                         <span
                                             className={`px-3 py-1 rounded-full text-xs sm:text-sm font-bold ${statusColor}`}
                                         >
