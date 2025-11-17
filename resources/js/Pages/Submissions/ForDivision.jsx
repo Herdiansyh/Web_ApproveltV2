@@ -70,7 +70,7 @@ export default function ForDivision({ auth, submissions }) {
                                 <thead>
                                     <tr className="bg-muted/40 text-muted-foreground uppercase text-xs tracking-wider">
                                         <th className="py-3 px-6 text-left">
-                                            Judul
+                                            Judul / Deskripsi
                                         </th>
                                         <th className="py-3 px-6 text-left">
                                             Pengirim
@@ -102,8 +102,15 @@ export default function ForDivision({ auth, submissions }) {
                                                     className=" cursor-pointer hover:bg-gray-100 transition"
                                                     key={submission.id}
                                                 >
-                                                    <td className="py-3 hover:underline px-6 font-medium">
-                                                        {submission.title}
+                                                    <td className="py-3 px-6">
+                                                        <div className="font-medium hover:underline">
+                                                            {submission.title}
+                                                        </div>
+                                                        {submission.description && (
+                                                            <div className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
+                                                                {submission.description}
+                                                            </div>
+                                                        )}
                                                     </td>
                                                     <td className="py-3 px-6 hover:underline">
                                                         {submission.user.name}

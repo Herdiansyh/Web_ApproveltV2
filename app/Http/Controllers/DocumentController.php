@@ -25,13 +25,45 @@ class DocumentController extends Controller
     public function store(Request $request)
     {
         $this->authorize('create', Document::class);
-        $request->validate([
+        $data = $request->validate([
             'division_id' => 'required|exists:divisions,id',
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
+
+            // optional name series config, can be filled from create/edit modal
+            'series_pattern' => 'nullable|string|max:255',
+            'prefix' => 'nullable|string|max:50',
+            'reset_type' => 'nullable|in:none,monthly,yearly',
+            'current_number' => 'nullable|integer|min:0',
         ]);
 
-        Document::create($request->only('division_id', 'name', 'description'));
+        $document = Document::create([
+            'division_id' => $data['division_id'],
+            'name' => $data['name'],
+            'description' => $data['description'] ?? null,
+        ]);
+
+        // if name series is provided at creation time, configure it here
+        if (!empty($data['series_pattern'])) {
+            $series = DocumentNameSeries::firstOrCreate(
+                ['document_id' => $document->id],
+                [
+                    'series_pattern' => 'yyyy-mm-####',
+                    'prefix' => null,
+                    'current_number' => 0,
+                    'reset_type' => 'none',
+                    'last_reset_at' => null,
+                ]
+            );
+
+            $series->series_pattern = $data['series_pattern'];
+            $series->prefix = $data['prefix'] ?? null;
+            $series->reset_type = $data['reset_type'] ?? 'none';
+            if (array_key_exists('current_number', $data) && $data['current_number'] !== null) {
+                $series->current_number = (int) $data['current_number'];
+            }
+            $series->save();
+        }
 
         return back()->with('success', 'Dokumen berhasil ditambahkan.');
     }
@@ -39,13 +71,45 @@ class DocumentController extends Controller
     public function update(Request $request, Document $document)
     {
         $this->authorize('update', $document);
-        $request->validate([
+        $data = $request->validate([
             'division_id' => 'required|exists:divisions,id',
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
+
+            // optional name series config from modal
+            'series_pattern' => 'nullable|string|max:255',
+            'prefix' => 'nullable|string|max:50',
+            'reset_type' => 'nullable|in:none,monthly,yearly',
+            'current_number' => 'nullable|integer|min:0',
         ]);
 
-        $document->update($request->only('division_id', 'name', 'description'));
+        $document->update([
+            'division_id' => $data['division_id'],
+            'name' => $data['name'],
+            'description' => $data['description'] ?? null,
+        ]);
+
+        // update name series if provided
+        if (!empty($data['series_pattern'])) {
+            $series = DocumentNameSeries::firstOrCreate(
+                ['document_id' => $document->id],
+                [
+                    'series_pattern' => 'yyyy-mm-####',
+                    'prefix' => null,
+                    'current_number' => 0,
+                    'reset_type' => 'none',
+                    'last_reset_at' => null,
+                ]
+            );
+
+            $series->series_pattern = $data['series_pattern'];
+            $series->prefix = $data['prefix'] ?? null;
+            $series->reset_type = $data['reset_type'] ?? 'none';
+            if (array_key_exists('current_number', $data) && $data['current_number'] !== null) {
+                $series->current_number = (int) $data['current_number'];
+            }
+            $series->save();
+        }
 
         return back()->with('success', 'Dokumen berhasil diperbarui.');
     }

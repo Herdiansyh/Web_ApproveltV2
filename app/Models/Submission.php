@@ -31,18 +31,15 @@ class Submission extends Model
         'watermark_y',
         'watermark_width',
         'watermark_height',
-        // templating
-        'template_id',
         'data_json',
-        'generated_pdf_path',
-        'generated_pdf_hash',
     ];
 
     protected $casts = [
         'approved_at' => 'datetime',
         'data_json' => 'array',
     ];
-public function document()
+
+    public function document()
 {
     return $this->belongsTo(Document::class);
 }
@@ -60,11 +57,6 @@ public function document()
     public function approver(): BelongsTo
     {
         return $this->belongsTo(User::class, 'approved_by');
-    }
-
-    public function template(): BelongsTo
-    {
-        return $this->belongsTo(Template::class);
     }
 
     public function files(): HasMany

@@ -161,25 +161,32 @@ export default function Show({
                                         <div>
                                             {seriesPattern && (
                                                 <p className="text-xs font-mono text-muted-foreground mb-0.5">
-                                                    Series Pattern: {seriesPattern}
+                                                    {seriesPattern}
                                                 </p>
                                             )}
-                                            <h3 className="text-md sm:text-2xl font-bold text-foreground/90">
-                                                {submission.title}
-                                            </h3>
+                                            <div className="flex items-center">
+                                                <h3 className="text-md sm:text-2xl font-bold text-foreground/90">
+                                                    Judul: {submission.title}
+                                                </h3>
+                                                <span
+                                                    className={`px-3 py-1  rounded-full text-xs sm:text-sm font-bold ${statusColor}`}
+                                                >
+                                                    {submission.status ===
+                                                    "Approved by Direktur"
+                                                        ? "• Disetujui"
+                                                        : submission.status ===
+                                                          "• rejected"
+                                                        ? "Ditolak"
+                                                        : "• Menunggu Persetujuan"}
+                                                </span>
+                                            </div>
                                         </div>
-                                        <span
-                                            className={`px-3 py-1 rounded-full text-xs sm:text-sm font-bold ${statusColor}`}
-                                        >
-                                            {submission.status ===
-                                            "Approved by Direktur"
-                                                ? "• Disetujui"
-                                                : submission.status ===
-                                                  "• rejected"
-                                                ? "Ditolak"
-                                                : "• Menunggu Persetujuan"}
-                                        </span>
                                     </div>
+                                    {submission.description && (
+                                        <p className="text-sm text-muted-foreground">
+                                            Deskripsi: {submission.description}
+                                        </p>
+                                    )}
                                     <p className="sm:text-sm text-xs text-muted-foreground">
                                         <span className="font-semibold">
                                             Diajukan oleh:
@@ -196,38 +203,17 @@ export default function Show({
                                 </div>
 
                                 <div className="flex gap-2">
-                                    <a
-                                        href={route(
-                                            "submissions.download",
-                                            submission.id
-                                        )}
-                                        className="inline-flex items-center justify-center mb-2 py-1 px-2 text-sm font-medium rounded-full bg-blue-600 text-white hover:bg-blue-700 active:scale-[0.97] transition-all shadow-sm"
-                                    >
-                                        📄 Unduh Dokumen
-                                    </a>
-
-                                    {submission.template_id &&
-                                        (auth?.user?.id ===
-                                            submission.user_id ||
-                                            ((submission.status === "pending" ||
-                                                submission.status
-                                                    ?.toLowerCase()
-                                                    .includes("waiting")) &&
-                                                currentSubmissionStep?.status ===
-                                                    "pending" &&
-                                                canApprove)) && (
-                                            <a
-                                                href={route(
-                                                    "submissions.previewTemplateSubmission",
-                                                    submission.id
-                                                )}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                className="inline-flex items-center justify-center px-4 py-1.5 text-sm font-medium rounded-full bg-muted text-foreground hover:bg-muted/70 active:scale-[0.97] transition-all shadow-sm"
-                                            >
-                                                👁️ Preview Template
-                                            </a>
-                                        )}
+                                    {submission.file_path && (
+                                        <a
+                                            href={route(
+                                                "submissions.download",
+                                                submission.id
+                                            )}
+                                            className="inline-flex items-center justify-center mb-2 py-1 px-2 text-sm font-medium rounded-full bg-blue-600 text-white hover:bg-blue-700 active:scale-[0.97] transition-all shadow-sm"
+                                        >
+                                            � Unduh Dokumen
+                                        </a>
+                                    )}
 
                                     {Array.isArray(documentFields) &&
                                         documentFields.length > 0 && (
@@ -373,26 +359,35 @@ export default function Show({
                                 )}
 
                             <div className="mt-2 border border-border/40 rounded-xl overflow-hidden shadow-inner bg-muted/10">
-                                <object
-                                    data={fileUrl}
-                                    type="application/pdf"
-                                    className="w-full h-[600px]"
-                                >
+                                {submission.file_path ? (
+                                    <object
+                                        data={fileUrl}
+                                        type="application/pdf"
+                                        className="w-full h-[600px]"
+                                    >
+                                        <div className="text-center p-6">
+                                            <p className="text-muted-foreground">
+                                                Dokumen tidak dapat ditampilkan
+                                                di browser ini.
+                                            </p>
+                                            <a
+                                                href={fileUrl}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="text-primary hover:underline"
+                                            >
+                                                Buka di tab baru
+                                            </a>
+                                        </div>
+                                    </object>
+                                ) : (
                                     <div className="text-center p-6">
                                         <p className="text-muted-foreground">
-                                            Dokumen tidak dapat ditampilkan di
-                                            browser ini.
+                                            Tidak ada dokumen pendukung yang
+                                            diunggah.
                                         </p>
-                                        <a
-                                            href={fileUrl}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="text-primary hover:underline"
-                                        >
-                                            Buka di tab baru
-                                        </a>
                                     </div>
-                                </object>
+                                )}
                             </div>
                         </Card>
                     </div>

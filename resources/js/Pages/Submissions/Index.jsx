@@ -83,7 +83,7 @@ export default function Index({ auth, submissions }) {
                                 <thead>
                                     <tr className="bg-muted/40 text-muted-foreground uppercase text-xs tracking-wider">
                                         <th className="py-3 px-6 text-left">
-                                            Judul
+                                            Judul / Deskripsi
                                         </th>
                                         <th className="py-3 px-6 text-left">
                                             Series
@@ -121,8 +121,15 @@ export default function Index({ auth, submissions }) {
                                             className="hover:bg-gray-100 cursor-pointer hover:bg-muted/30 transition"
                                             key={submission.id}
                                         >
-                                            <td className="hover:underline py-2 px-6 font-medium">
-                                                {submission.title}
+                                            <td className="py-2 px-6">
+                                                <div className="font-medium hover:underline">
+                                                    {submission.title}
+                                                </div>
+                                                {submission.description && (
+                                                    <div className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
+                                                        {submission.description}
+                                                    </div>
+                                                )}
                                             </td>
                                             <td className="py-2 px-6 text-xs text-muted-foreground font-mono">
                                                 {submission.series_code || "-"}
@@ -166,7 +173,10 @@ export default function Index({ auth, submissions }) {
                                                     submission.created_at
                                                 ).toLocaleDateString("id-ID")}
                                             </td>
-                                            <td className="py-2 px-6 text-center">
+                                            <td
+                                                className="py-2 px-6 text-center"
+                                                onClick={(e) => e.stopPropagation()}
+                                            >
                                                 <DropdownMenu>
                                                     <DropdownMenuTrigger
                                                         asChild
@@ -175,6 +185,7 @@ export default function Index({ auth, submissions }) {
                                                             variant="ghost"
                                                             size="icon"
                                                             className="rounded-full hover:bg-muted/60"
+                                                            onClick={(e) => e.stopPropagation()}
                                                         >
                                                             <MoreVertical className="w-4 h-4 text-muted-foreground" />
                                                         </Button>
@@ -190,6 +201,7 @@ export default function Index({ auth, submissions }) {
                                                                 ?.can_edit) && (
                                                             <DropdownMenuItem
                                                                 asChild
+                                                                onClick={(e) => e.stopPropagation()}
                                                             >
                                                                 <Link
                                                                     href={route(
@@ -210,7 +222,8 @@ export default function Index({ auth, submissions }) {
                                                                 .permission_for_me
                                                                 ?.can_delete) && (
                                                             <DropdownMenuItem
-                                                                onClick={() => {
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
                                                                     setToDeleteId(
                                                                         submission.id
                                                                     );

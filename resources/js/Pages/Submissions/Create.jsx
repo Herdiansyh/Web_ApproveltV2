@@ -20,23 +20,16 @@ export default function Create({
     auth,
     userDivision,
     workflows,
-    templates = [],
 }) {
     const { data, setData, post, processing, errors, reset } = useForm({
         workflow_id: "",
         title: "",
         description: "",
         file: null,
-        template_id: "",
         data: {},
     });
 
     const [isSaved, setIsSaved] = useState(false);
-
-    const selectedTemplate = useMemo(
-        () => templates.find((t) => String(t.id) === String(data.template_id)),
-        [templates, data.template_id]
-    );
 
     const selectedWorkflow = useMemo(
         () =>
@@ -65,10 +58,8 @@ export default function Create({
     }, [selectedWorkflow]);
 
     const activeFields = useMemo(() => {
-        if (documentFields.length > 0) return documentFields;
-        const f = selectedTemplate?.fields || [];
-        return Array.isArray(f) ? f : [];
-    }, [documentFields, selectedTemplate]);
+        return documentFields;
+    }, [documentFields]);
 
     // 🔹 Load data dari localStorage ketika halaman dibuka
     useEffect(() => {
@@ -158,14 +149,6 @@ export default function Create({
             Swal.fire({
                 icon: "warning",
                 title: "Pilih workflow terlebih dahulu",
-            });
-            return;
-        }
-
-        if (!data.file) {
-            Swal.fire({
-                icon: "warning",
-                title: "File wajib diunggah",
             });
             return;
         }
@@ -403,8 +386,7 @@ export default function Create({
                                                     className="mt-1"
                                                 />
                                                 <p className="text-xs text-gray-500 mt-1">
-                                                    Format: PDF, JPG, PNG (maks.
-                                                    10MB)
+                                                    Opsional. Format: PDF, JPG, PNG (maks. 10MB)
                                                 </p>
                                             </div>
                                         </div>
@@ -436,6 +418,58 @@ export default function Create({
                                                             [f.name]: v,
                                                         });
                                                         setIsSaved(false);
+                                                    };
+
+                                                    const options = Array.isArray(
+                                                        f.options
+                                                    )
+                                                        ? f.options
+                                                        : [];
+
+                                                    const renderSelectOptions = () => {
+                                                        if (!options.length) return null;
+                                                        return options.map((opt, idx) => {
+                                                            if (
+                                                                opt &&
+                                                                typeof opt ===
+                                                                    "object"
+                                                            ) {
+                                                                const val =
+                                                                    String(
+                                                                        opt.value ??
+                                                                            opt.id ??
+                                                                            ""
+                                                                    );
+                                                                const label =
+                                                                    opt.label ??
+                                                                    String(
+                                                                        opt.name ??
+                                                                            val
+                                                                    );
+                                                                return (
+                                                                    <SelectItem
+                                                                        key={
+                                                                            val ||
+                                                                            idx
+                                                                        }
+                                                                        value={val}
+                                                                    >
+                                                                        {label}
+                                                                    </SelectItem>
+                                                                );
+                                                            }
+                                                            const val = String(
+                                                                opt
+                                                            );
+                                                            return (
+                                                                <SelectItem
+                                                                    key={val}
+                                                                    value={val}
+                                                                >
+                                                                    {val}
+                                                                </SelectItem>
+                                                            );
+                                                        });
                                                     };
 
                                                     return (
@@ -489,6 +523,43 @@ export default function Create({
                                                                     }
                                                                     className="mt-1"
                                                                 />
+                                                            ) : type ===
+                                                              "select" ? (
+                                                                <Select
+                                                                    value={
+                                                                        value ===
+                                                                        null
+                                                                            ? ""
+                                                                            : String(
+                                                                                  value
+                                                                              )
+                                                                    }
+                                                                    onValueChange={(
+                                                                        v
+                                                                    ) =>
+                                                                        setVal(
+                                                                            v
+                                                                        )
+                                                                    }
+                                                                >
+                                                                    <SelectTrigger
+                                                                        style={{
+                                                                            borderRadius:
+                                                                                "10px",
+                                                                        }}
+                                                                        className="w-full mt-1"
+                                                                    >
+                                                                        <SelectValue placeholder={`Pilih ${f.label}`} />
+                                                                    </SelectTrigger>
+                                                                    <SelectContent
+                                                                        style={{
+                                                                            borderRadius:
+                                                                                "10px",
+                                                                        }}
+                                                                    >
+                                                                        {renderSelectOptions()}
+                                                                    </SelectContent>
+                                                                </Select>
                                                             ) : (
                                                                 <Input
                                                                     style={{

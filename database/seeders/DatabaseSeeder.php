@@ -14,7 +14,6 @@ class DatabaseSeeder extends Seeder
         $this->call([
             InitialDataSeeder::class,
             DocumentTypeWithFieldsSeeder::class,
-            TemplateStarterSeeder::class,
         ]);
     }
 }

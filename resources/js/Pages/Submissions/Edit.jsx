@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React from "react";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
 import { Head, useForm, Link } from "@inertiajs/react";
 import { Card } from "@/Components/ui/card";
@@ -9,11 +9,12 @@ import { Textarea } from "@/Components/ui/textarea";
 import Header from "@/Components/Header";
 import Swal from "sweetalert2";
 
-export default function Edit({ auth, submission }) {
+export default function Edit({ auth, submission, documentFields = [] }) {
     const { data, setData, post, processing, errors, reset, transform } = useForm({
         title: submission.title || "",
         description: submission.description || "",
         file: null,
+        data: submission.data_json || {},
     });
 
     const handleFileChange = (e) => {
@@ -148,6 +149,81 @@ export default function Edit({ auth, submission }) {
                                             </p>
                                         )}
                                     </div>
+
+                                    {Array.isArray(documentFields) &&
+                                        documentFields.length > 0 && (
+                                            <div className="border-t pt-4 mt-4">
+                                                <h3 className="font-semibold mb-3">
+                                                    Data Dokumen
+                                                </h3>
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                    {documentFields.map((f) => {
+                                                        const type = String(
+                                                            f.type || "text"
+                                                        ).toLowerCase();
+                                                        const value =
+                                                            data.data?.[f.name] ?? "";
+                                                        const setVal = (v) => {
+                                                            setData("data", {
+                                                                ...(data.data || {}),
+                                                                [f.name]: v,
+                                                            });
+                                                        };
+
+                                                        return (
+                                                            <div
+                                                                key={f.id || f.name}
+                                                            >
+                                                                <Label>
+                                                                    {f.label}
+                                                                </Label>
+                                                                {type ===
+                                                                "textarea" ? (
+                                                                    <Textarea
+                                                                        value={value}
+                                                                        onChange={(e) =>
+                                                                            setVal(
+                                                                                e
+                                                                                    .target
+                                                                                    .value
+                                                                            )
+                                                                        }
+                                                                        rows={3}
+                                                                        className="mt-1"
+                                                                    />
+                                                                ) : type ===
+                                                                  "date" ? (
+                                                                    <Input
+                                                                        type="date"
+                                                                        value={value}
+                                                                        onChange={(e) =>
+                                                                            setVal(
+                                                                                e
+                                                                                    .target
+                                                                                    .value
+                                                                            )
+                                                                        }
+                                                                        className="mt-1"
+                                                                    />
+                                                                ) : (
+                                                                    <Input
+                                                                        value={value}
+                                                                        onChange={(e) =>
+                                                                            setVal(
+                                                                                e
+                                                                                    .target
+                                                                                    .value
+                                                                            )
+                                                                        }
+                                                                        className="mt-1"
+                                                                    />
+                                                                )}
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </div>
+                                        )}
 
                                     <div className="flex items-center justify-end gap-2">
                                         <Button

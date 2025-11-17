@@ -6,38 +6,47 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
- public function up(): void
-{
-    Schema::create('submissions', function (Blueprint $table) {
-        $table->id();
+    public function up(): void
+    {
+        Schema::create('submissions', function (Blueprint $table) {
+            $table->id();
 
-        $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
-        $table->foreignId('division_id')->nullable()->constrained('divisions')->nullOnDelete();
+            $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
+            $table->foreignId('division_id')->nullable()->constrained('divisions')->nullOnDelete();
 
-        $table->string('title');
-        $table->text('description')->nullable();
-        $table->string('file_path')->nullable();
-        $table->string('signature_path')->nullable();
+            $table->string('title');
+            $table->text('description')->nullable();
+            $table->string('file_path')->nullable();
+            $table->string('signature_path')->nullable();
 
-        $table->foreignId('workflow_id')->nullable()->constrained('workflows')->nullOnDelete();
-        $table->integer('current_step')->default(1);
+            $table->foreignId('workflow_id')->nullable()->constrained('workflows')->nullOnDelete();
+            $table->integer('current_step')->default(1);
 
-        $table->enum('status', ['pending', 'approved', 'rejected'])->default('pending');
-        $table->timestamp('approved_at')->nullable();
-        $table->foreignId('approved_by')->nullable()->constrained('users')->nullOnDelete();
-        $table->text('approval_note')->nullable();
-        $table->text('notes')->nullable();
+            $table->enum('status', ['pending', 'approved', 'rejected'])->default('pending');
+            $table->timestamp('approved_at')->nullable();
+            $table->foreignId('approved_by')->nullable()->constrained('users')->nullOnDelete();
+            $table->text('approval_note')->nullable();
+            $table->text('notes')->nullable();
+            $table->json('data_json')->nullable();
 
-        $table->foreignId('document_id')->nullable()->constrained('documents')->nullOnDelete();
 
-        $table->float('watermark_x')->nullable();
-        $table->float('watermark_y')->nullable();
-        $table->float('watermark_width')->nullable();
-        $table->float('watermark_height')->nullable();
+            $table->foreignId('document_id')->nullable()->constrained('documents')->nullOnDelete();
 
-        $table->timestamps();
-    });
-}
+            // watermark
+            $table->float('watermark_x')->nullable();
+            $table->float('watermark_y')->nullable();
+            $table->float('watermark_width')->nullable();
+            $table->float('watermark_height')->nullable();
+
+            // Kolom lama *tidak* dimasukkan karena sudah didelete:
+            // template_id
+            // generated_pdf_path
+            // generated_pdf_hash
+
+            $table->timestamps();
+        });
+    }
+
     public function down(): void
     {
         Schema::dropIfExists('submissions');
