@@ -220,7 +220,7 @@ export default function Index({ auth, users, divisions, subdivisions, roles }) {
                         <h1 className=" top-5 text-2xl font-bold">
                             User Management
                         </h1>
-                        <Card className="p-6">
+                        <Card style={{ borderRadius: "15px" }} className="p-6">
                             {/* Filter & Add */}
                             <div className="flex flex-col md:flex-row justify-between gap-3 mb-4">
                                 <div className="flex flex-col md:flex-row gap-2 w-full">

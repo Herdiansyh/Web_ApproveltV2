@@ -88,7 +88,7 @@ export default function Index({ auth, subdivisions, divisions }) {
                     <div className="mx-auto p-6 lg:px-8">
                         <h1 className="text-2xl font-bold ">Subdivisions</h1>
 
-                        <Card className="p-6">
+                        <Card style={{ borderRadius: "15px" }} className="p-6">
                             {/* Filter dan tombol tambah */}
                             <div className="flex  md:flex-row justify-between gap-3 mb-4">
                                 <div className="flex flex-col md:flex-row gap-2 w-full">

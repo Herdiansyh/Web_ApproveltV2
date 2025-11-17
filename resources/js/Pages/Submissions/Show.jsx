@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useRef } from "react";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
 import { Head, useForm } from "@inertiajs/react";
 import { Card } from "@/Components/ui/card";
@@ -25,6 +25,7 @@ export default function Show({
 }) {
     const [showApproveModal, setShowApproveModal] = useState(false);
     const [showRejectModal, setShowRejectModal] = useState(false);
+    const printFrameRef = useRef(null);
     const { data, setData, post, processing, reset } = useForm({
         approval_note: "",
     });
@@ -36,6 +37,27 @@ export default function Show({
             text: "Anda tidak memiliki hak untuk tindakan ini.",
             confirmButtonText: "OK",
         });
+    };
+
+    const handlePrint = () => {
+        const url = route("submissions.printDocument", submission.id);
+        const frame = printFrameRef.current;
+        if (!frame) return;
+
+        const onLoad = () => {
+            try {
+                if (frame.contentWindow) {
+                    frame.contentWindow.focus();
+                    frame.contentWindow.print();
+                }
+            } catch (e) {
+                // ignore
+            }
+            frame.removeEventListener("load", onLoad);
+        };
+
+        frame.addEventListener("load", onLoad);
+        frame.src = `${url}?_=${Date.now()}`;
     };
 
     const handleApprove = () => {
@@ -164,6 +186,7 @@ export default function Show({
                                                     {seriesPattern}
                                                 </p>
                                             )}
+
                                             <div className="flex items-center">
                                                 <h3 className="text-md sm:text-2xl font-bold text-foreground/90">
                                                     Judul: {submission.title}
@@ -187,8 +210,8 @@ export default function Show({
                                             Deskripsi: {submission.description}
                                         </p>
                                     )}
-                                    <p className="sm:text-sm text-xs text-muted-foreground">
-                                        <span className="font-semibold">
+                                    <p className="sm:text-sm text-xs text-muted-foreground ">
+                                        <span className="font-semibold ">
                                             Diajukan oleh:
                                         </span>{" "}
                                         {submission.user.name} (
@@ -217,17 +240,14 @@ export default function Show({
 
                                     {Array.isArray(documentFields) &&
                                         documentFields.length > 0 && (
-                                            <a
-                                                href={route(
-                                                    "submissions.printDocument",
-                                                    submission.id
-                                                )}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
+                                            <button
+                                                type="button"
+                                                onClick={handlePrint}
                                                 className="border border-gray-200 mb-3 inline-flex items-center justify-center p-2 text-sm font-medium rounded-[8px] bg-muted text-foreground hover:bg-muted/70 active:scale-[0.97] transition-all shadow-sm"
+                                                aria-label="Print"
                                             >
                                                 <Printer />
-                                            </a>
+                                            </button>
                                         )}
 
                                     {(submission.status === "pending" ||
@@ -329,24 +349,27 @@ export default function Show({
                             {Array.isArray(documentFields) &&
                                 documentFields.length > 0 && (
                                     <Card
-                                        className="p-4 mb-6"
-                                        style={{
-                                            borderRadius: "10px",
-                                        }}
+                                        className="p-5 mt-6 mb-6 border border-border shadow-sm bg-card"
+                                        style={{ borderRadius: "14px" }}
                                     >
-                                        <h4 className="font-semibold mb-3">
+                                        <h4 className="font-semibold mb-4 text-foreground text-lg">
                                             Data Dokumen
                                         </h4>
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                             {documentFields.map((f) => (
                                                 <div
                                                     key={f.id || f.name}
-                                                    className="flex flex-col"
+                                                    style={{
+                                                        borderRadius: "15px",
+                                                    }}
+                                                    className="flex flex-col p-2 rounded-lg bg-muted/40 hover:bg-muted transition-colors border border-border/60"
                                                 >
-                                                    <span className="text-sm text-muted-foreground">
+                                                    <span className="text-xs text-muted-foreground tracking-wide">
                                                         {f.label}
                                                     </span>
-                                                    <span className="font-medium break-words">
+
+                                                    <span className="font-medium text-sm leading-relaxed text-foreground">
                                                         {String(
                                                             dataMap?.[f.name] ??
                                                                 "-"
@@ -358,7 +381,10 @@ export default function Show({
                                     </Card>
                                 )}
 
-                            <div className="mt-2 border border-border/40 rounded-xl overflow-hidden shadow-inner bg-muted/10">
+                            <div
+                                style={{ borderRadius: "15px" }}
+                                className="mt-2 border border-border/40 overflow-hidden shadow-inner bg-muted/10"
+                            >
                                 {submission.file_path ? (
                                     <object
                                         data={fileUrl}
@@ -381,7 +407,7 @@ export default function Show({
                                         </div>
                                     </object>
                                 ) : (
-                                    <div className="text-center p-6">
+                                    <div className="text-center p-4">
                                         <p className="text-muted-foreground">
                                             Tidak ada dokumen pendukung yang
                                             diunggah.
@@ -463,6 +489,16 @@ export default function Show({
                     </Card>
                 </div>
             )}
+            {/* Hidden iframe for printing */}
+            <iframe
+                ref={printFrameRef}
+                title="print-frame"
+                style={{ width: 0, height: 0, border: 0, position: "absolute", left: -9999, top: -9999 }}
+                aria-hidden="true"
+            />
         </AuthenticatedLayout>
     );
 }
+
+// Hidden iframe used for printing the server-rendered print view without opening a new tab
+// Placed outside to avoid layout shifts

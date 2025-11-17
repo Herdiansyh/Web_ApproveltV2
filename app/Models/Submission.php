@@ -26,6 +26,8 @@ class Submission extends Model
         'notes',
         'document_id', // ✅ tambahkan ini
         'series_code',
+        'verification_token',
+        'qr_code_path',
         'current_step', // urutan langkah sekarang
         'watermark_x',
         'watermark_y',

@@ -16,6 +16,8 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Support\Facades\Log;
 use App\Jobs\StampPdfOnDecision;
+use Illuminate\Support\Str;
+use SimpleSoftwareIO\QrCode\Facades\QrCode;
 
 class SubmissionController extends Controller
 {
@@ -247,6 +249,55 @@ class SubmissionController extends Controller
         $submission->save();
     }
 
+    /**
+     * Pastikan submission memiliki token verifikasi unik yang tidak dapat ditebak.
+     */
+    protected function ensureVerificationToken(Submission $submission): void
+    {
+        if ($submission->verification_token) {
+            return;
+        }
+
+        do {
+            $token = Str::random(48);
+        } while (Submission::where('verification_token', $token)->exists());
+
+        $submission->verification_token = $token;
+        $submission->save();
+    }
+
+    /**
+     * Generate file QR untuk URL verifikasi dan simpan ke storage publik.
+     */
+    protected function ensureQrCode(Submission $submission): void
+    {
+        // Pastikan token ada
+        $this->ensureVerificationToken($submission);
+
+        $verifyUrl = route('verification.show', $submission->verification_token);
+        $dir = 'qrcodes/submissions';
+        $filename = $submission->id . '.svg';
+        $relativePath = $dir . '/' . $filename;
+
+        // Buat direktori jika belum ada
+        if (!Storage::disk('public')->exists($dir)) {
+            Storage::disk('public')->makeDirectory($dir);
+        }
+
+        // Generate QR (SVG - tidak membutuhkan ekstensi imagick)
+        $svg = QrCode::format('svg')
+            ->size(200)
+            ->margin(1)
+            ->errorCorrection('M')
+            ->generate($verifyUrl);
+
+        Storage::disk('public')->put($relativePath, $svg);
+
+        // Simpan path relatif ke kolom
+        $submission->qr_code_path = $relativePath;
+        $submission->save();
+    }
+
     /** ------------------------
      *  SIMPAN PENGAJUAN DOKUMEN GENERIK (tanpa template)
      *  ------------------------ */
@@ -326,9 +377,6 @@ class SubmissionController extends Controller
             $filePath = $request->file('file')->store('submissions', 'private');
         }
 
-        // Catatan: series_code tidak digenerate di sini.
-        // Nomor lengkap baru akan dibuat saat dokumen final-approved atau ketika dicetak.
-
         $submission = Submission::create([
             'user_id' => $user->id,
             'division_id' => $user->division_id,
@@ -340,6 +388,12 @@ class SubmissionController extends Controller
             'current_step' => 1,
             'data_json' => $dataPayload ?: null,
         ]);
+
+        // Generate series_code saat dibuat agar nomor dokumen tersedia sejak awal
+        $this->generateSeriesCode($submission);
+        // Generate token verifikasi & QR code
+        $this->ensureVerificationToken($submission);
+        $this->ensureQrCode($submission);
 
         foreach ($steps as $step) {
             SubmissionWorkflowStep::create([
@@ -475,10 +529,24 @@ class SubmissionController extends Controller
     public function printDocument(Submission $submission)
     {
         $this->authorize('view', $submission);
-        $submission->load(['user', 'workflow.document.fields', 'workflowSteps.approver']);
+        $submission->load(['user.division', 'workflow.document.fields', 'workflowSteps.approver', 'workflowSteps.division']);
 
         // Pastikan series_code sudah ada ketika dokumen dicetak
         $this->generateSeriesCode($submission);
+        // Pastikan QR tersedia sebelum render
+        if (!$submission->qr_code_path) {
+            $this->ensureQrCode($submission);
+        }
+        // Pastikan token tersedia untuk generate QR inline
+        $this->ensureVerificationToken($submission);
+        $verifyUrl = route('verification.show', $submission->verification_token);
+        $qrSvg = QrCode::format('svg')
+            ->size(180)
+            ->margin(0)
+            ->errorCorrection('M')
+            ->color(17, 24, 39) // #111827
+            ->backgroundColor(255, 255, 255)
+            ->generate($verifyUrl);
         $fields = $submission->workflow?->document?->fields ?? collect();
 
         // Derive approval info (same as template preview)
@@ -494,6 +562,8 @@ class SubmissionController extends Controller
             'data' => $submission->data_json ?? [],
             'approvedBy' => $approvedBy,
             'approvedAt' => $approvedAt,
+            'qrSvg' => $qrSvg,
+            'verifyUrl' => $verifyUrl,
         ])->render();
 
         return response($html);

@@ -8,6 +8,7 @@ use App\Http\Controllers\SubmissionController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\WorkflowController;
 use App\Http\Controllers\WorkflowStepPermissionController;
+use App\Http\Controllers\VerificationController;
 use App\Models\Document;
 use App\Models\Submission;
 use App\Models\SubmissionWorkflowStep;
@@ -26,6 +27,16 @@ Route::get('/', function () {
         'phpVersion' => PHP_VERSION,
     ]);
 });
+
+// Public verification route (no auth)
+Route::get('/verify/{token}', [VerificationController::class, 'show'])
+    ->name('verification.show')
+    ->middleware('throttle:30,1');
+
+// Compatibility path: /submissions/verify/{token} -> redirect ke /verify/{token}
+Route::get('/submissions/verify/{token}', function (string $token) {
+    return redirect()->route('verification.show', $token);
+})->middleware('throttle:30,1');
 
 // PDF view
 Route::get('/view-pdf/{filename}', function ($filename) {

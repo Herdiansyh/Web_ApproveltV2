@@ -336,7 +336,7 @@ export default function Index({
                         <h1 className=" top-5 text-2xl font-bold mb-3">
                             Workflow Management
                         </h1>
-                        <Card className="p-6 shadow-sm">
+                        <Card style={{ borderRadius: "15px" }} className="p-6 shadow-sm">
                             {/* Filters & Create Button */}
                             <div className="flex flex-col md:flex-row justify-between mb-6 gap-4">
                                 <div className="flex flex-col lg:flex-row gap-2 flex-1">

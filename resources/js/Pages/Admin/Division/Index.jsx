@@ -100,9 +100,9 @@ export default function Index({ auth, divisions }) {
                     <div className="mx-auto p-6 lg:px-8">
                         <h1 className="text-2xl font-bold  mb-3">Divisions</h1>
 
-                        <Card className="p-6">
+                        <Card className="p-6" style={{ borderRadius: "15px" }}>
                             {/* Filter & Add Button */}
-                            <div className="flex flex-col md:flex-row justify-between gap-3 mb-4">
+                            <div  className="flex flex-col md:flex-row justify-between gap-3 mb-4">
                                 <div className="flex flex-col lg:flex-row gap-2 w-full">
                                     <Input
                                         className="lg:w-1/3"
