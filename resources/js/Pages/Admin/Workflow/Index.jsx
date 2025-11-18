@@ -44,6 +44,7 @@ export default function Index({
         description: "",
         document_id: "",
         steps: [{ division_id: "", step_name: "" }],
+        is_active: true,
     });
 
     // Fungsi untuk menampilkan notifikasi error
@@ -91,6 +92,7 @@ export default function Index({
             description: "",
             document_id: "",
             steps: [{ division_id: "", step_name: "", actions: [] }],
+            is_active: true,
         });
         setShowModal(true);
     };
@@ -101,6 +103,7 @@ export default function Index({
             name: workflow.name,
             description: workflow.description || "",
             document_id: workflow.document_id?.toString() || "",
+            is_active: !!workflow.is_active,
             steps: workflow.steps?.map((s) => {
                 // Parse actions jika masih string
                 let actionsArray = [];
@@ -216,6 +219,7 @@ export default function Index({
             name: data.name,
             description: data.description,
             document_id: parseInt(data.document_id),
+            is_active: !!data.is_active,
             steps: data.steps.map((step, index) => ({
                 division_id: parseInt(step.division_id),
                 role: step.step_name, // PASTIKAN INI 'role' BUKAN 'step_name'
@@ -465,6 +469,26 @@ export default function Index({
                                                             Permissions
                                                         </Button>
                                                         <Button
+                                                            variant={wf.is_active ? "outline" : "secondary"}
+                                                            size="sm"
+                                                            onClick={() => {
+                                                                const payload = {
+                                                                    name: wf.name,
+                                                                    description: wf.description || "",
+                                                                    document_id: wf.document_id,
+                                                                    is_active: !wf.is_active,
+                                                                };
+                                                                router.put(route("workflows.update", wf.id), payload, {
+                                                                    onSuccess: () => {
+                                                                        Swal.fire("Success", `Workflow ${!wf.is_active ? "activated" : "deactivated"}`, "success");
+                                                                    },
+                                                                });
+                                                            }}
+                                                            style={{ borderRadius: "15px" }}
+                                                        >
+                                                            {wf.is_active ? "Deactivate" : "Activate"}
+                                                        </Button>
+                                                        <Button
                                                             variant="outline"
                                                             size="sm"
                                                             onClick={() =>
@@ -598,6 +622,17 @@ export default function Index({
                                     className="w-full border rounded p-2"
                                     rows={3}
                                 />
+                            </div>
+
+                            {/* Active Toggle */}
+                            <div className="flex items-center gap-2">
+                                <input
+                                    id="wf_is_active"
+                                    type="checkbox"
+                                    checked={!!data.is_active}
+                                    onChange={(e) => setData("is_active", e.target.checked)}
+                                />
+                                <Label htmlFor="wf_is_active">Active</Label>
                             </div>
 
                             {/* Steps */}

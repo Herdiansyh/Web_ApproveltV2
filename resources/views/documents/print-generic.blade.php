@@ -164,7 +164,9 @@
         }
 
         @media print {
-            .preview-toolbar { display: none !important; }
+            .preview-toolbar {
+                display: none !important;
+            }
         }
     </style>
 </head>
@@ -188,14 +190,14 @@
             <!-- Series -->
             @if (!empty($submission->series_code))
                 <div class="series-box">
-                    Series<br><strong>{{ $submission->series_code }}</strong>
+                    <strong>{{ $submission->series_code }}</strong>
                 </div>
             @endif
         </div>
 
         <div class="doc-meta">
-            Nomor Pengajuan: <strong>#{{ $submission->id }}</strong>  
-            &nbsp;•&nbsp;  
+            Nomor Pengajuan: <strong>#{{ $submission->id }}</strong>
+            &nbsp;•&nbsp;
             Tanggal: {{ now()->format('d M Y, H:i') }}
         </div>
 
@@ -242,7 +244,7 @@
 
     <!-- FOOTER -->
     <div class="doc-footer">
-        Dokumen: {{ $submission->workflow?->document?->name ?? '-' }}  
+        Dokumen: {{ $submission->workflow?->document?->name ?? '-' }}
     </div>
 
     <!-- QR CODE -->
@@ -259,8 +261,11 @@
                     if ($qrPath && strtolower(pathinfo($qrPath, PATHINFO_EXTENSION)) === 'svg') {
                         try {
                             $full = public_path('storage/' . $qrPath);
-                            if (file_exists($full)) { $svgContent = file_get_contents($full); }
-                        } catch (\Throwable $e) {}
+                            if (file_exists($full)) {
+                                $svgContent = file_get_contents($full);
+                            }
+                        } catch (\Throwable $e) {
+                        }
                     }
                 @endphp
 
@@ -277,7 +282,7 @@
     <!-- APPROVAL -->
     @if (!empty($approvedBy))
         <div class="approval-stamp">
-            <span class="label">Approved by:</span>  
+            <span class="label">Approved by:</span>
             {{ $approvedBy }}
             @if (!empty($approvedAt))
                 • {{ $approvedAt }}
@@ -286,4 +291,5 @@
     @endif
 
 </body>
+
 </html>

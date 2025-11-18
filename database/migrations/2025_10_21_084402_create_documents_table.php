@@ -10,9 +10,9 @@ return new class extends Migration
     {
         Schema::create('documents', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('division_id')->constrained('divisions')->onDelete('cascade');
-            $table->string('name'); // Nama dokumen yang juga berfungsi sebagai jenis dokumen
+            $table->string('name');                   // Nama dokumen / jenis dokumen
             $table->text('description')->nullable(); // Deskripsi singkat
+            $table->boolean('is_active')->default(true); // Status aktif/non-aktif
             $table->timestamps();
         });
     }

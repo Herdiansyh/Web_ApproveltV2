@@ -44,6 +44,7 @@ class WorkflowController extends Controller
             'steps.*.instructions' => 'nullable|string',
             'steps.*.actions' => 'nullable|array',
             'steps.*.permissions' => 'array',
+            'is_active' => 'sometimes|boolean',
         ]);
 
         DB::transaction(function () use ($validated) {
@@ -57,7 +58,7 @@ class WorkflowController extends Controller
                 'division_from_id' => $divisionFromId,
                 'division_to_id' => $divisionToId,
                 'document_id' => $validated['document_id'],
-                'is_active' => true,
+                'is_active' => array_key_exists('is_active', $validated) ? (bool)$validated['is_active'] : true,
                 'total_steps' => count($validated['steps']),
             ]);
 
@@ -106,6 +107,7 @@ class WorkflowController extends Controller
             'steps.*.instructions' => 'nullable|string',
             'steps.*.actions' => 'nullable|array',
             'steps.*.permissions' => 'array',
+            'is_active' => 'sometimes|boolean',
         ]);
 
         DB::transaction(function () use ($validated, $id) {
@@ -120,6 +122,7 @@ class WorkflowController extends Controller
                 'division_from_id' => $divisionFromId,
                 'division_to_id' => $divisionToId,
                 'document_id' => $validated['document_id'],
+                'is_active' => array_key_exists('is_active', $validated) ? (bool)$validated['is_active'] : $workflow->is_active,
                 'total_steps' => isset($validated['steps']) ? count($validated['steps']) : $workflow->total_steps,
             ]);
 

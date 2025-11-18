@@ -43,4 +43,17 @@ class Workflow extends Model
     {
         return $this->belongsTo(Division::class, 'division_to_id');
     }
+
+    public function scopeActive($query)
+    {
+        return $query->where('is_active', true);
+    }
+
+    public function scopeActiveWithActiveDocument($query)
+    {
+        return $query->where('is_active', true)
+            ->whereHas('document', function ($q) {
+                $q->where('is_active', true);
+            });
+    }
 }

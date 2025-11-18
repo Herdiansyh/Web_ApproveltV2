@@ -171,7 +171,10 @@ class SubmissionController extends Controller
         $division = $user->division;
 
         $workflows = Workflow::where('is_active', true)
-            ->with(['document.fields', 'document.nameSeries'])
+            ->whereHas('document', function ($q) {
+                $q->where('is_active', true);
+            })
+            ->with(['steps', 'document.fields'])
             ->get();
 
         return Inertia::render('Submissions/Create', [
@@ -359,6 +362,9 @@ class SubmissionController extends Controller
         $workflow = Workflow::with('steps', 'document.fields')
             ->where('id', $validated['workflow_id'])
             ->where('is_active', true)
+            ->whereHas('document', function ($q) {
+                $q->where('is_active', true);
+            })
             ->firstOrFail();
 
         $steps = $workflow->steps->sortBy('step_order')->values();
@@ -423,10 +429,6 @@ class SubmissionController extends Controller
             'workflow.steps.permissions.subdivision',
         ]);
 
-        // Jika workflow hilang → error
-        if (!$submission->workflow) {
-            abort(404, 'Workflow untuk pengajuan ini sudah tidak tersedia.');
-        }
 
         $user = Auth::user();
 

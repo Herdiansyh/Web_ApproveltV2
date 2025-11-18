@@ -25,7 +25,7 @@ import {
 import Header from "@/Components/Header.jsx";
 import { Textarea } from "@/Components/ui/textarea.jsx";
 
-export default function Index({ auth, documents, divisions }) {
+export default function Index({ auth, documents }) {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingDocument, setEditingDocument] = useState(null);
     const [isFieldsOpen, setIsFieldsOpen] = useState(false);
@@ -276,7 +276,7 @@ export default function Index({ auth, documents, divisions }) {
                                     <TableRow>
                                         <TableHead>Name</TableHead>
                                         <TableHead>Description</TableHead>
-                                        <TableHead>Division</TableHead>
+                                        <TableHead>Status</TableHead>
                                         <TableHead>Actions</TableHead>
                                     </TableRow>
                                 </TableHeader>
@@ -291,7 +291,11 @@ export default function Index({ auth, documents, divisions }) {
                                                     {doc.description || "-"}
                                                 </TableCell>
                                                 <TableCell>
-                                                    {doc.division?.name || "-"}
+                                                    <span
+                                                        className={`inline-flex items-center px-2 py-1 rounded-full text-xs ${doc.is_active ? "bg-green-100 text-green-700" : "bg-gray-200 text-gray-700"}`}
+                                                    >
+                                                        {doc.is_active ? "Active" : "Inactive"}
+                                                    </span>
                                                 </TableCell>
                                                 <TableCell>
                                                     <div className="flex flex-col gap-2">
@@ -310,6 +314,25 @@ export default function Index({ auth, documents, divisions }) {
                                                                 }}
                                                             >
                                                                 Manage Fields
+                                                            </Button>
+                                                            <Button
+                                                                variant={doc.is_active ? "outline" : "secondary"}
+                                                                size="sm"
+                                                                onClick={() => {
+                                                                    const payload = {
+                                                                        name: doc.name,
+                                                                        description: doc.description || "",
+                                                                        is_active: !doc.is_active,
+                                                                    };
+                                                                    router.put(route("documents.update", doc.id), payload, {
+                                                                        onSuccess: () => {
+                                                                            Swal.fire("Success", `Document ${!doc.is_active ? "activated" : "deactivated"}`, "success");
+                                                                        },
+                                                                    });
+                                                                }}
+                                                                style={{ borderRadius: "15px" }}
+                                                            >
+                                                                {doc.is_active ? "Deactivate" : "Activate"}
                                                             </Button>
                                                             <Button
                                                                 variant="outline"
@@ -537,7 +560,6 @@ export default function Index({ auth, documents, divisions }) {
                     setEditingDocument(null);
                 }}
                 document={editingDocument}
-                divisions={divisions}
             />
 
             {/* Fields Modal */}

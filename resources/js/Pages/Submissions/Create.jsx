@@ -38,6 +38,21 @@ export default function Create({
         [workflows, data.workflow_id]
     );
 
+    const availableWorkflows = useMemo(() => {
+        return (workflows || []).filter(
+            (w) => w?.is_active && w?.document && w.document?.is_active
+        );
+    }, [workflows]);
+
+    useEffect(() => {
+        if (
+            data.workflow_id &&
+            !availableWorkflows.some((w) => String(w.id) === String(data.workflow_id))
+        ) {
+            setData("workflow_id", "");
+        }
+    }, [availableWorkflows]);
+
     // Pattern series dari Document Type (Name Series)
     const selectedSeriesPattern = useMemo(() => {
         const doc = selectedWorkflow?.document;
@@ -320,9 +335,8 @@ export default function Create({
                                                                 "10px",
                                                         }}
                                                     >
-                                                        {workflows?.length >
-                                                        0 ? (
-                                                            workflows.map(
+                                                        {availableWorkflows?.length > 0 ? (
+                                                            availableWorkflows.map(
                                                                 (wf) =>
                                                                     wf.id && (
                                                                         <SelectItem
@@ -346,8 +360,7 @@ export default function Create({
                                                                 disabled
                                                                 value="wd"
                                                             >
-                                                                Tidak ada
-                                                                dokumen
+                                                                Tidak ada workflow yang tersedia. Minta admin mengaktifkan Document Type/Workflow.
                                                             </SelectItem>
                                                         )}
                                                     </SelectContent>

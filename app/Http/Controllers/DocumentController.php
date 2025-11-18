@@ -3,8 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\Document;
-use App\Models\Division;
 use App\Models\DocumentField;
+use App\Models\Workflow;
 use App\Models\DocumentNameSeries;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -17,8 +17,7 @@ class DocumentController extends Controller
     public function index()
     {
         return Inertia::render('Admin/Documents/Index', [
-            'documents' => Document::with(['division', 'fields', 'nameSeries'])->get(),
-            'divisions' => Division::all(),
+            'documents' => Document::with(['fields', 'nameSeries'])->get(),
         ]);
     }
 
@@ -26,9 +25,9 @@ class DocumentController extends Controller
     {
         $this->authorize('create', Document::class);
         $data = $request->validate([
-            'division_id' => 'required|exists:divisions,id',
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
+            'is_active' => 'sometimes|boolean',
 
             // optional name series config, can be filled from create/edit modal
             'series_pattern' => 'nullable|string|max:255',
@@ -38,9 +37,9 @@ class DocumentController extends Controller
         ]);
 
         $document = Document::create([
-            'division_id' => $data['division_id'],
             'name' => $data['name'],
             'description' => $data['description'] ?? null,
+            'is_active' => array_key_exists('is_active', $data) ? (bool)$data['is_active'] : true,
         ]);
 
         // if name series is provided at creation time, configure it here
@@ -72,9 +71,9 @@ class DocumentController extends Controller
     {
         $this->authorize('update', $document);
         $data = $request->validate([
-            'division_id' => 'required|exists:divisions,id',
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
+            'is_active' => 'sometimes|boolean',
 
             // optional name series config from modal
             'series_pattern' => 'nullable|string|max:255',
@@ -84,9 +83,9 @@ class DocumentController extends Controller
         ]);
 
         $document->update([
-            'division_id' => $data['division_id'],
             'name' => $data['name'],
             'description' => $data['description'] ?? null,
+            'is_active' => array_key_exists('is_active', $data) ? (bool)$data['is_active'] : $document->is_active,
         ]);
 
         // update name series if provided
@@ -117,6 +116,14 @@ class DocumentController extends Controller
     public function destroy(Document $document)
     {
         $this->authorize('delete', $document);
+
+        $usedBySubmissions = $document->submissions()->exists();
+        $usedByWorkflows = Workflow::where('document_id', $document->id)->exists();
+
+        if ($usedBySubmissions || $usedByWorkflows) {
+            return back()->with('error', 'Dokumen tidak dapat dihapus karena sudah digunakan. Non-aktifkan dokumen jika tidak ingin digunakan lagi.');
+        }
+
         $document->delete();
         return back()->with('success', 'Dokumen berhasil dihapus.');
     }

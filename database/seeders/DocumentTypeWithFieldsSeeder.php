@@ -3,7 +3,6 @@
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
-use App\Models\Division;
 use App\Models\Document;
 use App\Models\DocumentField;
 
@@ -16,7 +15,6 @@ class DocumentTypeWithFieldsSeeder extends Seeder
             [
                 'name' => 'Form Cuti',
                 'description' => 'Dokumen pengajuan cuti karyawan',
-                'division' => 'HR',
                 'fields' => [
                     ['name' => 'jenis_cuti', 'label' => 'Jenis Cuti', 'type' => 'select', 'required' => true, 'order' => 1, 'options' => [
                         'Cuti Tahunan', 'Cuti Sakit', 'Cuti Melahirkan', 'Cuti Menikah', 'Cuti Keperluan Lainnya'
@@ -31,7 +29,6 @@ class DocumentTypeWithFieldsSeeder extends Seeder
             [
                 'name' => 'Surat Permintaan Pembelian',
                 'description' => 'Dokumen untuk pengajuan pembelian barang',
-                'division' => 'Operations',
                 'fields' => [
                     ['name' => 'nama_barang', 'label' => 'Nama Barang', 'type' => 'text', 'required' => true, 'order' => 1],
                     ['name' => 'jumlah', 'label' => 'Jumlah', 'type' => 'number', 'required' => true, 'order' => 2],
@@ -40,20 +37,32 @@ class DocumentTypeWithFieldsSeeder extends Seeder
                     ['name' => 'vendor_disarankan', 'label' => 'Vendor Disarankan', 'type' => 'text', 'required' => false, 'order' => 5],
                 ],
             ],
+            [
+                'name' => 'Memo',
+                'description' => 'Dokumen memo internal',
+                'fields' => [
+                    // Identitas
+                    ['name' => 'nomor_memo', 'label' => 'Nomor Memo', 'type' => 'text', 'required' => true, 'order' => 1],
+                    ['name' => 'tanggal', 'label' => 'Tanggal', 'type' => 'date', 'required' => true, 'order' => 2],
+                    ['name' => 'perihal', 'label' => 'Perihal', 'type' => 'text', 'required' => true, 'order' => 3],
+                    ['name' => 'dari', 'label' => 'Dari', 'type' => 'text', 'required' => true, 'order' => 4],
+                    ['name' => 'kepada', 'label' => 'Kepada', 'type' => 'text', 'required' => true, 'order' => 5],
+                    ['name' => 'tembusan', 'label' => 'Tembusan', 'type' => 'textarea', 'required' => false, 'order' => 6],
+                    // Konten
+                    ['name' => 'isi_memo', 'label' => 'Isi Memo', 'type' => 'textarea', 'required' => true, 'order' => 7],
+                    ['name' => 'lampiran', 'label' => 'Lampiran', 'type' => 'text', 'required' => false, 'order' => 8],
+                    // Opsional
+                    ['name' => 'kode_arsip', 'label' => 'Kode Arsip', 'type' => 'text', 'required' => false, 'order' => 9],
+                    ['name' => 'catatan', 'label' => 'Catatan', 'type' => 'textarea', 'required' => false, 'order' => 10],
+                ],
+            ],
         ];
 
         foreach ($doctypes as $dt) {
-            $division = Division::where('name', $dt['division'])->first();
-            if (!$division) {
-                // Skip if division missing
-                continue;
-            }
-
             $document = Document::firstOrCreate(
                 ['name' => $dt['name']],
                 [
                     'description' => $dt['description'] ?? null,
-                    'division_id' => $division->id,
                 ]
             );
 
