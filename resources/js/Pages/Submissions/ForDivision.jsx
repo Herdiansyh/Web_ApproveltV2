@@ -44,7 +44,7 @@ export default function ForDivision({ auth, submissions }) {
             <div className="flex min-h-screen bg-gradient-to-b from-background to-muted/30 text-foreground">
                 <Header />
                 <div className="w-full p-8">
-                    <div className="max-w-6xl mx-auto bg-card shadow-sm rounded-2xl p-8 border border-border/50 backdrop-blur-sm">
+                    <div className=" mx-auto bg-card shadow-sm rounded-2xl p-8 border border-border/50 backdrop-blur-sm">
                         <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-3">
                             <div className="text-lg font-medium">
                                 Lihat Daftar Pengajuan
@@ -108,7 +108,9 @@ export default function ForDivision({ auth, submissions }) {
                                                         </div>
                                                         {submission.description && (
                                                             <div className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
-                                                                {submission.description}
+                                                                {
+                                                                    submission.description
+                                                                }
                                                             </div>
                                                         )}
                                                     </td>

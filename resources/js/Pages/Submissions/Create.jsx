@@ -347,11 +347,7 @@ export default function Create({
                                                                                 wf.id
                                                                             )}
                                                                         >
-                                                                            {
-                                                                                wf
-                                                                                    .document
-                                                                                    ?.name
-                                                                            }
+                                                                            {wf.name}
                                                                         </SelectItem>
                                                                     )
                                                             )
@@ -573,6 +569,42 @@ export default function Create({
                                                                         {renderSelectOptions()}
                                                                     </SelectContent>
                                                                 </Select>
+                                                            ) : type ===
+                                                              "number" ? (
+                                                                <Input
+                                                                    style={{
+                                                                        borderRadius:
+                                                                            "10px",
+                                                                    }}
+                                                                    type="number"
+                                                                    value={
+                                                                        value
+                                                                    }
+                                                                    onChange={(
+                                                                        e
+                                                                    ) =>
+                                                                        setVal(
+                                                                            e
+                                                                                .target
+                                                                                .value
+                                                                        )
+                                                                    }
+                                                                    className="mt-1"
+                                                                />
+                                                            ) : type ===
+                                                              "file" ? (
+                                                                <Input
+                                                                    style={{
+                                                                        borderRadius:
+                                                                            "10px",
+                                                                    }}
+                                                                    type="file"
+                                                                    onChange={(e) => {
+                                                                        const file = e.target.files && e.target.files[0];
+                                                                        setVal(file ? file.name : "");
+                                                                    }}
+                                                                    className="mt-1"
+                                                                />
                                                             ) : (
                                                                 <Input
                                                                     style={{

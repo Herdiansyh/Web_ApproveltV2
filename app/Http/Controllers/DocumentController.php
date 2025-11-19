@@ -138,7 +138,7 @@ class DocumentController extends Controller
         $data = $request->validate([
             'name' => 'required|string|max:100',
             'label' => 'required|string|max:255',
-            'type' => 'required|string|in:text,textarea,number,date,select,file',
+            'type' => 'required|string|in:text,textarea,number,date,select',
             'required' => 'boolean',
             'order' => 'nullable|integer|min:0',
             'options' => 'nullable|array', // for select
@@ -165,7 +165,7 @@ class DocumentController extends Controller
 
         $data = $request->validate([
             'label' => 'sometimes|string|max:255',
-            'type' => 'sometimes|string|in:text,textarea,number,date,select,file',
+            'type' => 'sometimes|string|in:text,textarea,number,date,select',
             'required' => 'sometimes|boolean',
             'order' => 'sometimes|integer|min:0',
             'options' => 'nullable|array',

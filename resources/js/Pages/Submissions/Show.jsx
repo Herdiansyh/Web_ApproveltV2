@@ -234,7 +234,8 @@ export default function Show({
                                             )}
                                             className="inline-flex items-center justify-center mb-2 py-1 px-2 text-sm font-medium rounded-full bg-blue-600 text-white hover:bg-blue-700 active:scale-[0.97] transition-all shadow-sm"
                                         >
-                                        <Download className="mr-2 h-4 w-4" /> Unduh Dokumen
+                                            <Download className="mr-2 h-4 w-4" />{" "}
+                                            Unduh Dokumen
                                         </a>
                                     )}
 
@@ -493,7 +494,14 @@ export default function Show({
             <iframe
                 ref={printFrameRef}
                 title="print-frame"
-                style={{ width: 0, height: 0, border: 0, position: "absolute", left: -9999, top: -9999 }}
+                style={{
+                    width: 0,
+                    height: 0,
+                    border: 0,
+                    position: "absolute",
+                    left: -9999,
+                    top: -9999,
+                }}
                 aria-hidden="true"
             />
         </AuthenticatedLayout>

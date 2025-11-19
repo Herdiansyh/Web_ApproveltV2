@@ -29,14 +29,41 @@ class SubmissionController extends Controller
     public function index()
     {
         $user = Auth::user();
+        $divisionId = $user->division_id;
+        $subdivisionId = $user->subdivision_id;
 
-        // Lihat Pengajuan: tampilkan semua pengajuan yang sudah selesai (approved atau rejected)
+        // Lihat Pengajuan (Index):
+        // - Hanya pengajuan milik user sendiri
+        // - ATAU pengajuan milik divisi yang sama, jika subdivision user memiliki can_view pada salah satu step workflow
+        // - Tetap dibatasi pada status selesai (approved*/rejected*)
         $submissionsQuery = Submission::with([
                 'user.division',
                 'workflow.document',
                 'workflow.steps.division',
                 'workflowSteps.division'
             ])
+            ->where(function ($outer) use ($user, $divisionId, $subdivisionId) {
+                $outer->where('user_id', $user->id)
+                    ->orWhere(function ($or) use ($divisionId, $subdivisionId) {
+                        $or->where('division_id', $divisionId)
+                           ->whereNotNull('workflow_id')
+                           ->when($subdivisionId, function ($qp) use ($subdivisionId) {
+                               $qp->whereHas('workflow.steps.permissions', function ($qq) use ($subdivisionId) {
+                                   $qq->where('subdivision_id', $subdivisionId)
+                                      ->where('can_view', true);
+                               });
+                           });
+                    })
+                    // Tambahkan: tampilkan pengajuan yang step terakhirnya pernah di-approve/reject oleh user ini
+                    ->orWhereExists(function ($exists) use ($user) {
+                        $exists->selectRaw('1')
+                            ->from('submission_workflow_steps as s1')
+                            ->whereColumn('s1.submission_id', 'submissions.id')
+                            ->where('s1.approver_id', $user->id)
+                            ->whereIn('s1.status', ['approved', 'rejected'])
+                            ->whereRaw('s1.step_order = (select max(step_order) from submission_workflow_steps s2 where s2.submission_id = submissions.id)');
+                    });
+            })
             ->where(function ($q) {
                 $q->whereRaw('LOWER(status) = ?', ['approved'])
                   ->orWhereRaw('LOWER(status) = ?', ['rejected'])

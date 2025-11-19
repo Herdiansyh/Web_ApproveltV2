@@ -61,8 +61,16 @@ export default function WorkflowStepPermissionIndex({
     const handleSubmit = (e) => {
         e.preventDefault();
         post(route("workflow-steps.permissions.store", workflow.id), {
-            onSuccess: () =>
-                Swal.fire("Success", "Permissions updated!", "success"),
+            onSuccess: () => {
+                Swal.fire({
+                    title: "Success",
+                    text: "Permissions updated!",
+                    icon: "success",
+                }).then(() => {
+                    // redirect setelah tombol OK atau otomatis
+                    window.location.href = route("workflows.index");
+                });
+            },
         });
     };
 

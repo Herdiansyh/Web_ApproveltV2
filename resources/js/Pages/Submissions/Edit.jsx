@@ -205,6 +205,46 @@ export default function Edit({ auth, submission, documentFields = [] }) {
                                                                         }
                                                                         className="mt-1"
                                                                     />
+                                                                ) : type ===
+                                                                  "select" ? (
+                                                                    <select
+                                                                        className="w-full border rounded px-2 py-1 mt-1"
+                                                                        value={value ?? ""}
+                                                                        onChange={(e) => setVal(e.target.value)}
+                                                                    >
+                                                                        <option value="" disabled>Pilih {f.label}</option>
+                                                                        {(Array.isArray(f.options) ? f.options : []).map((opt, idx) => {
+                                                                            if (opt && typeof opt === 'object') {
+                                                                                const val = String(opt.value ?? opt.id ?? "");
+                                                                                const label = opt.label ?? String(opt.name ?? val);
+                                                                                return <option key={val || idx} value={val}>{label}</option>;
+                                                                            }
+                                                                            const val = String(opt ?? "");
+                                                                            return <option key={val || idx} value={val}>{val}</option>;
+                                                                        })}
+                                                                    </select>
+                                                                ) : type ===
+                                                                  "number" ? (
+                                                                    <Input
+                                                                        type="number"
+                                                                        value={value}
+                                                                        onChange={(e) =>
+                                                                            setVal(
+                                                                                e.target.value
+                                                                            )
+                                                                        }
+                                                                        className="mt-1"
+                                                                    />
+                                                                ) : type ===
+                                                                  "file" ? (
+                                                                    <Input
+                                                                        type="file"
+                                                                        onChange={(e) => {
+                                                                            const file = e.target.files && e.target.files[0];
+                                                                            setVal(file ? file.name : "");
+                                                                        }}
+                                                                        className="mt-1"
+                                                                    />
                                                                 ) : (
                                                                     <Input
                                                                         value={value}

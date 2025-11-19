@@ -46,7 +46,7 @@ export default function Index({ auth, submissions }) {
             <div className="flex min-h-screen bg-gradient-to-b from-background to-muted/30 text-foreground">
                 <Header />
                 <div className="w-full p-8">
-                    <div className="max-w-6xl mx-auto bg-card shadow-sm rounded-2xl p-8 border border-border/50 backdrop-blur-sm">
+                    <div className=" mx-auto bg-card shadow-sm rounded-2xl p-8 border border-border/50 backdrop-blur-sm">
                         <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-3">
                             <div className="relative w-full md:w-1/3">
                                 <Search className="absolute left-3 top-2.5 w-4 h-4 text-muted-foreground" />
@@ -135,8 +135,8 @@ export default function Index({ auth, submissions }) {
                                                 {submission.series_code || "-"}
                                             </td>
                                             <td className="py-2 px-6 hover:underline">
-                                                {submission.workflow?.document
-                                                    ?.name || "-"}
+                                                {submission.workflow?.name ||
+                                                    "-"}
                                             </td>
                                             {auth.user.role === "manager" && (
                                                 <td className="py-2 px-6 hover:underline">
@@ -175,7 +175,9 @@ export default function Index({ auth, submissions }) {
                                             </td>
                                             <td
                                                 className="py-2 px-6 text-center"
-                                                onClick={(e) => e.stopPropagation()}
+                                                onClick={(e) =>
+                                                    e.stopPropagation()
+                                                }
                                             >
                                                 <DropdownMenu>
                                                     <DropdownMenuTrigger
@@ -185,7 +187,9 @@ export default function Index({ auth, submissions }) {
                                                             variant="ghost"
                                                             size="icon"
                                                             className="rounded-full hover:bg-muted/60"
-                                                            onClick={(e) => e.stopPropagation()}
+                                                            onClick={(e) =>
+                                                                e.stopPropagation()
+                                                            }
                                                         >
                                                             <MoreVertical className="w-4 h-4 text-muted-foreground" />
                                                         </Button>
@@ -201,7 +205,9 @@ export default function Index({ auth, submissions }) {
                                                                 ?.can_edit) && (
                                                             <DropdownMenuItem
                                                                 asChild
-                                                                onClick={(e) => e.stopPropagation()}
+                                                                onClick={(e) =>
+                                                                    e.stopPropagation()
+                                                                }
                                                             >
                                                                 <Link
                                                                     href={route(
@@ -222,7 +228,9 @@ export default function Index({ auth, submissions }) {
                                                                 .permission_for_me
                                                                 ?.can_delete) && (
                                                             <DropdownMenuItem
-                                                                onClick={(e) => {
+                                                                onClick={(
+                                                                    e
+                                                                ) => {
                                                                     e.stopPropagation();
                                                                     setToDeleteId(
                                                                         submission.id
