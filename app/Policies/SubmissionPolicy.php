@@ -4,7 +4,7 @@ namespace App\Policies;
 
 use App\Models\User;
 use App\Models\Submission;
-use App\Models\WorkflowStepPermission;
+use App\Models\SubdivisionPermission;
 
 class SubmissionPolicy
 {
@@ -13,23 +13,22 @@ class SubmissionPolicy
      */
     public function view(User $user, Submission $submission): bool
     {
-        // pemilik, manager, admin selalu boleh
+        // Pemilik selalu boleh
         if ($user->id === $submission->user_id) return true;
-        if (in_array($user->role, ['manager', 'admin'])) return true;
+        // Admin bypass (tetap dipertahankan)
+        if ($user->role === 'admin') return true;
 
-        // Guard: butuh subdivision dan workflow
-        if (!$user->subdivision_id || !$submission->workflow) return false;
+        // Guard: butuh subdivision
+        if (!$user->subdivision_id) return false;
 
-        // Izinkan lintas divisi jika subdivision user memang diberi can_view di workflow step terkait
+        // Global can_view: boleh melihat semua pengajuan milik divisi yang sama
+        if ($user->division_id !== $submission->division_id) return false;
 
-        // Boleh melihat jika subdivision user punya can_view pada SALAH SATU step di workflow pengajuan
-        return $submission->workflow
-            ->steps()
-            ->whereHas('permissions', function ($q) use ($user) {
-                $q->where('subdivision_id', $user->subdivision_id)
-                  ->where('can_view', true);
-            })
+        $perm = SubdivisionPermission::where('subdivision_id', $user->subdivision_id)
+            ->where('can_view', true)
             ->exists();
+
+        return $perm;
     }
 
     /**
@@ -46,16 +45,16 @@ class SubmissionPolicy
      */
     public function approve(User $user, Submission $submission): bool
     {
-        if (!$user->subdivision_id) return false;
-
+        // Admin bypass
+        if ($user->role === 'admin') return true;
+        if (!$user->subdivision_id || !$submission->workflow) return false;
         $workflowStep = $submission->workflow->steps
             ->where('step_order', $submission->current_step)
             ->first();
-
         if (!$workflowStep) return false;
-
-        return WorkflowStepPermission::where('workflow_step_id', $workflowStep->id)
-            ->where('subdivision_id', $user->subdivision_id)
+        // Harus divisi pemilik step aktif
+        if ($user->division_id !== $workflowStep->division_id) return false;
+        return SubdivisionPermission::where('subdivision_id', $user->subdivision_id)
             ->where('can_approve', true)
             ->exists();
     }
@@ -65,16 +64,15 @@ class SubmissionPolicy
      */
     public function reject(User $user, Submission $submission): bool
     {
-        if (!$user->subdivision_id) return false;
-
+        // Admin bypass
+        if ($user->role === 'admin') return true;
+        if (!$user->subdivision_id || !$submission->workflow) return false;
         $workflowStep = $submission->workflow->steps
             ->where('step_order', $submission->current_step)
             ->first();
-
         if (!$workflowStep) return false;
-
-        return WorkflowStepPermission::where('workflow_step_id', $workflowStep->id)
-            ->where('subdivision_id', $user->subdivision_id)
+        if ($user->division_id !== $workflowStep->division_id) return false;
+        return SubdivisionPermission::where('subdivision_id', $user->subdivision_id)
             ->where('can_reject', true)
             ->exists();
     }
@@ -86,22 +84,17 @@ class SubmissionPolicy
     {
         // Owner can always edit
         if ($user->id === $submission->user_id) return true;
+        // Admin bypass
+        if ($user->role === 'admin') return true;
 
-        // Require subdivision and workflow
-        if (!$user->subdivision_id || !$submission->workflow) return false;
+        // Require subdivision
+        if (!$user->subdivision_id) return false;
 
         // Only users in the same division as the owner may edit
         if ($user->division_id !== $submission->division_id) return false;
 
-        // Check permission on current workflow step for the user's subdivision
-        $workflowStep = $submission->workflow->steps
-            ->where('step_order', $submission->current_step)
-            ->first();
-
-        if (!$workflowStep) return false;
-
-        return WorkflowStepPermission::where('workflow_step_id', $workflowStep->id)
-            ->where('subdivision_id', $user->subdivision_id)
+        // Global can_edit
+        return SubdivisionPermission::where('subdivision_id', $user->subdivision_id)
             ->where('can_edit', true)
             ->exists();
     }
@@ -113,22 +106,17 @@ class SubmissionPolicy
     {
         // Owner can always delete
         if ($user->id === $submission->user_id) return true;
+        // Admin bypass
+        if ($user->role === 'admin') return true;
 
-        // Require subdivision and workflow
-        if (!$user->subdivision_id || !$submission->workflow) return false;
+        // Require subdivision
+        if (!$user->subdivision_id) return false;
 
         // Only users in the same division as the owner may delete
         if ($user->division_id !== $submission->division_id) return false;
 
-        // Check permission on current workflow step for the user's subdivision
-        $workflowStep = $submission->workflow->steps
-            ->where('step_order', $submission->current_step)
-            ->first();
-
-        if (!$workflowStep) return false;
-
-        return WorkflowStepPermission::where('workflow_step_id', $workflowStep->id)
-            ->where('subdivision_id', $user->subdivision_id)
+        // Global can_delete
+        return SubdivisionPermission::where('subdivision_id', $user->subdivision_id)
             ->where('can_delete', true)
             ->exists();
     }

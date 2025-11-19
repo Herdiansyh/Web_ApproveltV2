@@ -8,6 +8,7 @@ use App\Http\Controllers\SubmissionController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\WorkflowController;
 use App\Http\Controllers\WorkflowStepPermissionController;
+use App\Http\Controllers\GlobalPermissionController;
 use App\Http\Controllers\VerificationController;
 use App\Models\Document;
 use App\Models\Submission;
@@ -17,6 +18,7 @@ use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
+use App\Models\SubdivisionPermission;
 
 // Login page
 Route::get('/', function () {
@@ -59,27 +61,27 @@ Route::get('/dashboard', function () {
     // 1) Total pengajuan yang dibuat oleh user ini
     $totalSubmission = Submission::where('user_id', $user->id)->count();
 
-    // 2) Menunggu persetujuan oleh user/divisi ini
-    //    - current step dimiliki oleh divisi user
-    //    - step saat ini statusnya pending pada SubmissionWorkflowStep
-    //    - subdivision user memiliki can_approve pada step tersebut
-    $waitingApproval = Submission::query()
-        ->whereNotNull('workflow_id')
-        ->whereHas('workflow.steps', function ($q) use ($user) {
-            $q->whereColumn('workflow_steps.step_order', 'submissions.current_step')
-              ->where('workflow_steps.division_id', $user->division_id)
-              ->when($user->subdivision_id, function ($qp) use ($user) {
-                  $qp->whereHas('permissions', function ($qq) use ($user) {
-                      $qq->where('subdivision_id', $user->subdivision_id)
-                         ->where('can_approve', true);
-                  });
-              });
-        })
-        ->whereHas('workflowSteps', function ($q) {
-            $q->whereColumn('submission_workflow_steps.step_order', 'submissions.current_step')
-              ->where('submission_workflow_steps.status', 'pending');
-        })
-        ->count();
+    // 2) Menunggu persetujuan oleh user/divisi ini (pakai permission global)
+    $canApproveGlobal = $user->role === 'admin' ? true : ($user->subdivision_id
+        ? (bool) SubdivisionPermission::where('subdivision_id', $user->subdivision_id)->value('can_approve')
+        : false);
+
+    $waitingApproval = 0;
+    if ($canApproveGlobal) {
+        $waitingApprovalQuery = Submission::query()
+            ->whereNotNull('workflow_id')
+            ->whereHas('workflow.steps', function ($q) use ($user) {
+                $q->whereColumn('workflow_steps.step_order', 'submissions.current_step');
+                if ($user->role !== 'admin') {
+                    $q->where('workflow_steps.division_id', $user->division_id);
+                }
+            })
+            ->whereHas('workflowSteps', function ($q) {
+                $q->whereColumn('submission_workflow_steps.step_order', 'submissions.current_step')
+                  ->where('submission_workflow_steps.status', 'pending');
+            });
+        $waitingApproval = $waitingApprovalQuery->count();
+    }
 
     // 3) Total disetujui oleh user ini (berdasarkan step yang ia approve)
     $approvedSubmissions = SubmissionWorkflowStep::where('approver_id', $user->id)
@@ -92,26 +94,25 @@ Route::get('/dashboard', function () {
         ->count();
 
     // Preview 5 item yang menunggu persetujuan (untuk alert/notification)
-    $pendingItems = Submission::query()
-        ->select(['id', 'title', 'current_step', 'status'])
-        ->whereNotNull('workflow_id')
-        ->whereHas('workflow.steps', function ($q) use ($user) {
-            $q->whereColumn('workflow_steps.step_order', 'submissions.current_step')
-              ->where('workflow_steps.division_id', $user->division_id)
-              ->when($user->subdivision_id, function ($qp) use ($user) {
-                  $qp->whereHas('permissions', function ($qq) use ($user) {
-                      $qq->where('subdivision_id', $user->subdivision_id)
-                         ->where('can_approve', true);
-                  });
-              });
-        })
-        ->whereHas('workflowSteps', function ($q) {
-            $q->whereColumn('submission_workflow_steps.step_order', 'submissions.current_step')
-              ->where('submission_workflow_steps.status', 'pending');
-        })
-        ->latest()
-        ->take(5)
-        ->get();
+    $pendingItems = collect();
+    if ($canApproveGlobal) {
+        $pendingItemsQuery = Submission::query()
+            ->select(['id', 'title', 'current_step', 'status'])
+            ->whereNotNull('workflow_id')
+            ->whereHas('workflow.steps', function ($q) use ($user) {
+                $q->whereColumn('workflow_steps.step_order', 'submissions.current_step');
+                if ($user->role !== 'admin') {
+                    $q->where('workflow_steps.division_id', $user->division_id);
+                }
+            })
+            ->whereHas('workflowSteps', function ($q) {
+                $q->whereColumn('submission_workflow_steps.step_order', 'submissions.current_step')
+                  ->where('submission_workflow_steps.status', 'pending');
+            })
+            ->latest()
+            ->take(5);
+        $pendingItems = $pendingItemsQuery->get();
+    }
 
     return Inertia::render('Dashboard', 
     [
@@ -209,6 +210,10 @@ Route::middleware(['auth'])->group(function () {
         // Document Name Series management
         Route::post('documents/{document}/name-series', [DocumentController::class, 'updateNameSeries'])->name('documents.nameSeries.update');
         Route::post('documents/{document}/name-series/reset', [DocumentController::class, 'resetNameSeries'])->name('documents.nameSeries.reset');
+
+        // Global Subdivision Permissions
+        Route::get('/global-permissions', [GlobalPermissionController::class, 'index'])->name('global-permissions.index');
+        Route::post('/global-permissions', [GlobalPermissionController::class, 'store'])->name('global-permissions.store');
 
        // Workflow Step Permission Routes
 Route::prefix('workflows/{workflow}')->group(function () {

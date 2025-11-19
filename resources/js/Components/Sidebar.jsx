@@ -104,6 +104,12 @@ export default function Sidebar({ open }) {
                       active: route().current("workflows.*"),
                       icon: <Workflow className="h-5 w-5" />,
                   },
+                  {
+                      label: "Global Permissions",
+                      href: route("global-permissions.index"),
+                      active: route().current("global-permissions.*"),
+                      icon: <CheckCircle2 className="h-5 w-5" />,
+                  },
               ]
             : []),
     ];

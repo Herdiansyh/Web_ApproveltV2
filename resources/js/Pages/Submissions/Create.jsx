@@ -364,7 +364,7 @@ export default function Create({
                                             </div>
 
                                             <div>
-                                                <Label>Deskripsi</Label>
+                                                <Label>Judul *</Label>
                                                 <Textarea
                                                     style={{
                                                         borderRadius: "10px",
@@ -373,6 +373,26 @@ export default function Create({
                                                     onChange={(e) => {
                                                         setData(
                                                             "title",
+                                                            e.target.value
+                                                        );
+                                                        setIsSaved(false);
+                                                    }}
+                                                    rows={2}
+                                                    className="mt-1"
+                                                    placeholder="Masukan judul pengajuan..."
+                                                />
+                                            </div>
+
+                                            <div>
+                                                <Label>Deskripsi</Label>
+                                                <Textarea
+                                                    style={{
+                                                        borderRadius: "10px",
+                                                    }}
+                                                    value={data.description}
+                                                    onChange={(e) => {
+                                                        setData(
+                                                            "description",
                                                             e.target.value
                                                         );
                                                         setIsSaved(false);

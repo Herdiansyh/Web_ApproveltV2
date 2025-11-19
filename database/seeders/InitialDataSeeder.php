@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use App\Models\User;
 use App\Models\Division;
 use App\Models\Subdivision;
+use App\Models\SubdivisionPermission;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 
@@ -45,11 +46,23 @@ class InitialDataSeeder extends Seeder
         ];
 
         foreach ($subdivisions as $sub) {
-            Subdivision::create([
+            $created = Subdivision::create([
                 'division_id' => Division::where('name', $sub['division'])->first()->id,
                 'name' => $sub['name'],
                 'description' => $sub['description'],
             ]);
+            // Seed default global permissions (all false)
+            SubdivisionPermission::firstOrCreate(
+                ['subdivision_id' => $created->id],
+                [
+                    'can_view' => true,
+                    'can_approve' => false,
+                    'can_reject' => false,
+                    'can_request_next' => false,
+                    'can_edit' => false,
+                    'can_delete' => false,
+                ]
+            );
         }
 
         // Create manager account

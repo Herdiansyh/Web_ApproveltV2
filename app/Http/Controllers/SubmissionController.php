@@ -7,7 +7,7 @@ use App\Models\Submission;
 use App\Models\SubmissionWorkflowStep;
 use App\Models\Workflow;
 use App\Models\Document;
-use App\Models\WorkflowStepPermission;
+use App\Models\SubdivisionPermission;
 use App\Models\DocumentNameSeries;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -31,6 +31,9 @@ class SubmissionController extends Controller
         $user = Auth::user();
         $divisionId = $user->division_id;
         $subdivisionId = $user->subdivision_id;
+        $canViewGlobal = $subdivisionId
+            ? (bool) SubdivisionPermission::where('subdivision_id', $subdivisionId)->value('can_view')
+            : false;
 
         // Lihat Pengajuan (Index):
         // - Hanya pengajuan milik user sendiri
@@ -42,26 +45,20 @@ class SubmissionController extends Controller
                 'workflow.steps.division',
                 'workflowSteps.division'
             ])
-            ->where(function ($outer) use ($user, $divisionId, $subdivisionId) {
+            ->where(function ($outer) use ($user, $divisionId, $subdivisionId, $canViewGlobal) {
                 $outer->where('user_id', $user->id)
-                    ->orWhere(function ($or) use ($divisionId, $subdivisionId) {
-                        $or->where('division_id', $divisionId)
-                           ->whereNotNull('workflow_id')
-                           ->when($subdivisionId, function ($qp) use ($subdivisionId) {
-                               $qp->whereHas('workflow.steps.permissions', function ($qq) use ($subdivisionId) {
-                                   $qq->where('subdivision_id', $subdivisionId)
-                                      ->where('can_view', true);
-                               });
-                           });
-                    })
-                    // Tambahkan: tampilkan pengajuan yang step terakhirnya pernah di-approve/reject oleh user ini
-                    ->orWhereExists(function ($exists) use ($user) {
-                        $exists->selectRaw('1')
-                            ->from('submission_workflow_steps as s1')
-                            ->whereColumn('s1.submission_id', 'submissions.id')
-                            ->where('s1.approver_id', $user->id)
-                            ->whereIn('s1.status', ['approved', 'rejected'])
-                            ->whereRaw('s1.step_order = (select max(step_order) from submission_workflow_steps s2 where s2.submission_id = submissions.id)');
+                    ->orWhere(function ($or) use ($user, $divisionId, $canViewGlobal) {
+                        if ($user->role === 'admin') {
+                            // Admin: lihat semua submission
+                            $or->whereRaw('1=1');
+                        } else {
+                            if ($canViewGlobal) {
+                                $or->where('division_id', $divisionId)
+                                   ->whereNotNull('workflow_id');
+                            } else {
+                                $or->whereRaw('1=0');
+                            }
+                        }
                     });
             })
             ->where(function ($q) {
@@ -74,21 +71,11 @@ class SubmissionController extends Controller
 
         $submissions = $submissionsQuery->paginate(10);
 
-        // Attach permission info for the current user's subdivision (for showing edit/delete buttons)
+        // Attach permission info for the current user's subdivision (for showing permitted actions)
         if ($user->subdivision_id) {
             foreach ($submissions as $s) {
-                $wfStep = $s->workflow
-                    ? $s->workflow->steps->where('step_order', $s->current_step)->first()
-                    : null;
-
-                // Only expose permission when same division as the submission owner
-                $perm = ($wfStep && $user->division_id === $s->division_id)
-                    ? WorkflowStepPermission::where('workflow_step_id', $wfStep->id)
-                        ->where('subdivision_id', $user->subdivision_id)
-                        ->first()
-                    : null;
-
-                $s->permission_for_me = $perm;
+                // Global permission snapshot
+                $s->permission_for_me = SubdivisionPermission::where('subdivision_id', $user->subdivision_id)->first();
             }
         }
 
@@ -107,6 +94,9 @@ class SubmissionController extends Controller
         $divisionId = $user->division_id;
         $subdivisionId = $user->subdivision_id;
         $statusFilter = $request->get('status', 'all');
+        $canViewGlobal = $subdivisionId
+            ? (bool) SubdivisionPermission::where('subdivision_id', $subdivisionId)->value('can_view')
+            : false;
 
         // Lihat List Persetujuan:
         // - Pengajuan milik user
@@ -118,33 +108,29 @@ class SubmissionController extends Controller
                 'workflow.steps.division',
                 'workflowSteps'
             ])
-            ->where(function ($outer) use ($user, $divisionId, $subdivisionId) {
+            ->where(function ($outer) use ($user, $divisionId, $subdivisionId, $canViewGlobal) {
                 // (1) Pengajuan yang dibuat oleh user saat ini (termasuk template-only)
                 $outer->where('user_id', $user->id)
-                // (2) ATAU pengajuan yang ditujukan ke user (step saat ini milik divisi user & subdivision punya can_view)
-                  ->orWhere(function ($or) use ($divisionId, $subdivisionId) {
-                      $or->whereNotNull('workflow_id')
-                         ->whereHas('workflow.steps', function ($q) use ($divisionId, $subdivisionId) {
-                             $q->whereColumn('workflow_steps.step_order', 'submissions.current_step')
-                               ->where('workflow_steps.division_id', $divisionId)
-                               ->when($subdivisionId, function ($qp) use ($subdivisionId) {
-                                   $qp->whereHas('permissions', function ($qq) use ($subdivisionId) {
-                                       $qq->where('subdivision_id', $subdivisionId)
-                                          ->where('can_view', true);
-                                   });
-                               });
-                         });
+                // (2) ATAU pengajuan yang ditujukan ke divisi user (step saat ini milik divisi user) HANYA jika punya can_view global
+                  ->orWhere(function ($or) use ($divisionId, $canViewGlobal, $user) {
+                      if ($user->role === 'admin' || $canViewGlobal) {
+                          $or->whereNotNull('workflow_id')
+                             ->whereHas('workflow.steps', function ($q) use ($divisionId) {
+                                 $q->whereColumn('workflow_steps.step_order', 'submissions.current_step')
+                                   ->where('workflow_steps.division_id', $divisionId);
+                             });
+                      } else {
+                          $or->whereRaw('1=0');
+                      }
                   })
-                // (3) ATAU pengajuan milik divisi yang sama dgn user, jika subdivision user memiliki can_view di salah satu step workflow
-                ->orWhere(function ($or) use ($divisionId, $subdivisionId) {
-                    $or->where('division_id', $divisionId)
-                       ->whereNotNull('workflow_id')
-                       ->when($subdivisionId, function ($qp) use ($subdivisionId) {
-                           $qp->whereHas('workflow.steps.permissions', function ($qq) use ($subdivisionId) {
-                               $qq->where('subdivision_id', $subdivisionId)
-                                  ->where('can_view', true);
-                           });
-                       });
+                // (3) ATAU pengajuan milik divisi yang sama dgn user, jika subdivision user memiliki can_view global
+                ->orWhere(function ($or) use ($divisionId, $canViewGlobal) {
+                    if ($canViewGlobal) {
+                        $or->where('division_id', $divisionId)
+                           ->whereNotNull('workflow_id');
+                    } else {
+                        $or->whereRaw('1=0');
+                    }
                 });
             })
             // Kecualikan yang sudah selesai (approved*/rejected*) dari daftar persetujuan
@@ -161,24 +147,12 @@ class SubmissionController extends Controller
 
         $submissions = $submissionsQuery->paginate(10);
 
-        // Attach permission info per submission for current user's subdivision (berdasarkan step saat ini)
+        // Attach permission info per submission for current user's subdivision (global)
         if ($subdivisionId) {
             foreach ($submissions as $s) {
-                $wfStep = $s->workflow
-                    ? $s->workflow->steps
-                        ->where('step_order', $s->current_step)
-                        ->first()
-                    : null;
-
-                // Expose permission for the current step regardless of submission owner's division
-                $perm = $wfStep
-                    ? WorkflowStepPermission::where('workflow_step_id', $wfStep->id)
-                        ->where('subdivision_id', $subdivisionId)
-                        ->first()
-                    : null;
-
+                $wfStep = $s->workflow ? $s->workflow->steps->where('step_order', $s->current_step)->first() : null;
                 $s->current_workflow_step = $wfStep;
-                $s->permission_for_me = $perm;
+                $s->permission_for_me = SubdivisionPermission::where('subdivision_id', $subdivisionId)->first();
             }
         }
 
@@ -479,15 +453,15 @@ class SubmissionController extends Controller
         // 🔥 Hanya izinkan aksi bila step saat ini masih pending
         $isCurrentStepPending = $currentSubmissionStep && $currentSubmissionStep->status === 'pending';
 
-        // 🔥 Cek permission berdasarkan subdivision user dan pembatasan divisi pemilik step
-        if ($currentWorkflowStep && $isCurrentStepPending && ($user->division_id === $currentWorkflowStep->division_id)) {
-            $permission = WorkflowStepPermission::where('workflow_step_id', $currentWorkflowStep->id)
-                ->where('subdivision_id', $user->subdivision_id)
-                ->first();
+        // 🔥 Cek permission global; admin bypass
+        if ($currentWorkflowStep && $isCurrentStepPending && ($user->role === 'admin' || $user->division_id === $currentWorkflowStep->division_id)) {
+            $permission = $user->subdivision_id
+                ? SubdivisionPermission::where('subdivision_id', $user->subdivision_id)->first()
+                : null;
 
-            if ($permission) {
-                // User bisa approve jika punya permission can_approve, can_reject, atau can_request_next
-                $canApprove = $permission->can_approve || $permission->can_reject || $permission->can_request_next;
+            if ($permission || $user->role === 'admin') {
+                // User bisa approve jika punya permission global
+                $canApprove = $user->role === 'admin' ? true : ($permission->can_approve || $permission->can_reject || $permission->can_request_next);
 
                 // Pastikan actions berbentuk array sebelum difilter
                 $actionsRaw = $currentWorkflowStep->actions;
@@ -501,8 +475,9 @@ class SubmissionController extends Controller
                 }
 
                 // Filter actions sesuai permission
-                $filteredActions = array_values(array_filter($actionsArray, function ($action) use ($permission) {
+                $filteredActions = array_values(array_filter($actionsArray, function ($action) use ($permission, $user) {
                     $a = strtolower((string) $action);
+                    if ($user->role === 'admin') return true;
                     if (str_contains($a, 'approve')) return (bool) $permission->can_approve;
                     if (str_contains($a, 'reject')) return (bool) $permission->can_reject;
                     if (str_contains($a, 'request')) return (bool) $permission->can_request_next;
@@ -644,14 +619,13 @@ class SubmissionController extends Controller
             ->where('step_order', $submission->current_step)
             ->first();
 
-        // Batasi aksi hanya untuk divisi pemilik step saat ini
-        if (!$workflowStep || $user->division_id !== $workflowStep->division_id) {
+        // Batasi aksi hanya untuk divisi pemilik step saat ini, admin bypass
+        if (!$workflowStep || ($user->role !== 'admin' && $user->division_id !== $workflowStep->division_id)) {
             abort(403, 'Aksi hanya dapat dilakukan oleh divisi pemilik langkah ini.');
         }
 
-        $permission = $workflowStep && $user->subdivision_id
-            ? WorkflowStepPermission::where('workflow_step_id', $workflowStep->id)
-                ->where('subdivision_id', $user->subdivision_id)
+        $permission = $user->subdivision_id
+            ? SubdivisionPermission::where('subdivision_id', $user->subdivision_id)
                 ->where('can_approve', true)
                 ->first()
             : null;
@@ -733,9 +707,8 @@ class SubmissionController extends Controller
             ->where('step_order', $submission->current_step)
             ->first();
 
-        $permission = $workflowStep && $user->subdivision_id
-            ? WorkflowStepPermission::where('workflow_step_id', $workflowStep->id)
-                ->where('subdivision_id', $user->subdivision_id)
+        $permission = $user->subdivision_id
+            ? SubdivisionPermission::where('subdivision_id', $user->subdivision_id)
                 ->where('can_reject', true)
                 ->first()
             : null;
@@ -798,8 +771,8 @@ class SubmissionController extends Controller
             abort(404, 'Langkah tidak ditemukan.');
         }
 
-        // Batasi aksi hanya untuk divisi pemilik step saat ini
-        if (!$currentWorkflowStep || $user->division_id !== $currentWorkflowStep->division_id) {
+        // Batasi aksi hanya untuk divisi pemilik step saat ini, admin bypass
+        if (!$currentWorkflowStep || ($user->role !== 'admin' && $user->division_id !== $currentWorkflowStep->division_id)) {
             abort(403, 'Aksi hanya dapat dilakukan oleh divisi pemilik langkah ini.');
         }
 
@@ -809,8 +782,7 @@ class SubmissionController extends Controller
         }
 
         // Check permission can_request_next
-        $permission = WorkflowStepPermission::where('workflow_step_id', $currentWorkflowStep->id)
-            ->where('subdivision_id', $user->subdivision_id)
+        $permission = SubdivisionPermission::where('subdivision_id', $user->subdivision_id)
             ->where('can_request_next', true)
             ->first();
 

@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useEffect, useMemo } from "react";
 import { Head, useForm } from "@inertiajs/react";
 import { Card } from "@/Components/ui/card";
 import { Button } from "@/Components/ui/button";
@@ -11,6 +11,15 @@ export default function WorkflowStepPermissionIndex({
     steps = [],
     subdivisions = [],
 }) {
+    // Show deprecated notice once on mount
+    useEffect(() => {
+        Swal.fire({
+            icon: "info",
+            title: "Deprecated",
+            html:
+                'Halaman ini sudah tidak digunakan lagi. Gunakan halaman <b>Global Permissions</b> untuk mengatur izin per subdivisi.',
+        });
+    }, []);
     // inisialisasi permissions untuk SEMUA subdivisi pada setiap step
     const initialPermissions = useMemo(() => {
         const perms = [];
@@ -60,17 +69,11 @@ export default function WorkflowStepPermissionIndex({
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        post(route("workflow-steps.permissions.store", workflow.id), {
-            onSuccess: () => {
-                Swal.fire({
-                    title: "Success",
-                    text: "Permissions updated!",
-                    icon: "success",
-                }).then(() => {
-                    // redirect setelah tombol OK atau otomatis
-                    window.location.href = route("workflows.index");
-                });
-            },
+        Swal.fire({
+            icon: "info",
+            title: "Deprecated",
+            html:
+                'Pengaturan per-step tidak digunakan lagi. Silakan atur di <b>Global Permissions</b>.',
         });
     };
 
@@ -80,6 +83,9 @@ export default function WorkflowStepPermissionIndex({
             <div className="flex-1 p-8">
                 <Head title={`Workflow Permissions - ${workflow.name}`} />
                 <Card className="p-6">
+                    <div className="mb-4 p-3 rounded-md bg-yellow-50 text-yellow-800 border border-yellow-200">
+                        <b>Deprecated:</b> Halaman ini tidak lagi digunakan. Silakan gunakan menu <b>Global Permissions</b> untuk mengatur izin global per subdivisi.
+                    </div>
                     <h2 className="text-xl font-semibold mb-4">
                         Workflow: {workflow.name}
                     </h2>

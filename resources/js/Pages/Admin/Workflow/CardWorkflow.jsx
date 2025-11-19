@@ -126,19 +126,7 @@ export default function CardWorkflow({
                                 </TableCell>
                                 <TableCell>
                                     <div className="flex space-x-2">
-                                        <Button
-                                            variant="outline"
-                                            size="sm"
-                                            onClick={() =>
-                                                goToPermissions(wf.id)
-                                            }
-                                            style={{
-                                                borderRadius: "15px",
-                                            }}
-                                        >
-                                            <Settings className="h-4 w-4 mr-1" />{" "}
-                                            Permissions
-                                        </Button>
+                                        {/* Deprecated: Per-step permissions (hidden) */}
                                         <Button
                                             variant={
                                                 wf.is_active

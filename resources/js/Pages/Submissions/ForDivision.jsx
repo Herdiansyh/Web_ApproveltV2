@@ -149,7 +149,7 @@ export default function ForDivision({ auth, submissions }) {
                                                             "id-ID"
                                                         )}
                                                     </td>
-                                                    <td className="py-3 px-6 text-center">
+                                                    <td className="py-3 px-6 text-center" onClick={(e) => e.stopPropagation()}>
                                                         <DropdownMenu>
                                                             <DropdownMenuTrigger
                                                                 asChild
@@ -158,6 +158,7 @@ export default function ForDivision({ auth, submissions }) {
                                                                     variant="ghost"
                                                                     size="icon"
                                                                     className="rounded-full hover:bg-muted/60"
+                                                                    onClick={(e) => e.stopPropagation()}
                                                                 >
                                                                     <MoreVertical className="w-4 h-4 text-muted-foreground" />
                                                                 </Button>
@@ -174,6 +175,7 @@ export default function ForDivision({ auth, submissions }) {
                                                                         ?.can_edit) && (
                                                                     <DropdownMenuItem
                                                                         asChild
+                                                                        onClick={(e) => e.stopPropagation()}
                                                                     >
                                                                         <Link
                                                                             href={route(
@@ -195,7 +197,8 @@ export default function ForDivision({ auth, submissions }) {
                                                                         .permission_for_me
                                                                         ?.can_delete) && (
                                                                     <DropdownMenuItem
-                                                                        onClick={() => {
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
                                                                             setToDeleteId(
                                                                                 submission.id
                                                                             );
