@@ -21,7 +21,7 @@ import {
 import { Eye, MoreVertical, Pencil, Trash2, Search } from "lucide-react";
 import PrimaryButton from "@/Components/PrimaryButton";
 
-export default function Index({ auth, submissions }) {
+export default function Index({ auth, submissions, userDivision }) {
     const [filter, setFilter] = useState("");
     const [confirmOpen, setConfirmOpen] = useState(false);
     const [toDeleteId, setToDeleteId] = useState(null);
@@ -102,9 +102,15 @@ export default function Index({ auth, submissions }) {
                                         <th className="py-3 px-6 text-left">
                                             Tanggal
                                         </th>
-                                        <th className="py-3 px-6 text-center">
-                                            Aksi
-                                        </th>
+                                        {!String(
+                                            submissions.data?.[0]?.status || ""
+                                        )
+                                            .toLowerCase()
+                                            .includes("approved") && (
+                                            <th className="py-3 px-6 text-center">
+                                                Aksi
+                                            </th>
+                                        )}
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-border/40">
@@ -143,7 +149,7 @@ export default function Index({ auth, submissions }) {
                                                     {submission.user.name}
                                                 </td>
                                             )}
-                                            <td className="py-2 px-6 flex ">
+                                            <td className="py-2 px-6 ">
                                                 <span
                                                     className={`px-3 py-1 rounded-full text-[0.8em] sm:text-xs font-medium ${
                                                         submission.status ===
@@ -167,87 +173,149 @@ export default function Index({ auth, submissions }) {
                                                         : submission.status ||
                                                           "Waiting"}
                                                 </span>
+                                                {String(submission.status)
+                                                    .toLowerCase()
+                                                    .includes("approved") && (
+                                                    <span
+                                                        className="ml-2 text-[11px] rounded-full px-2 py-0.5 bg-gray-100 text-gray-700"
+                                                        title="Dokumen final – aksi edit/delete dinonaktifkan."
+                                                    >
+                                                        Final
+                                                    </span>
+                                                )}
                                             </td>
                                             <td className="py-2 px-6 text-muted-foreground">
                                                 {new Date(
                                                     submission.created_at
                                                 ).toLocaleDateString("id-ID")}
                                             </td>
-                                            <td
-                                                className="py-2 px-6 text-center"
-                                                onClick={(e) =>
-                                                    e.stopPropagation()
-                                                }
-                                            >
-                                                <DropdownMenu>
-                                                    <DropdownMenuTrigger
-                                                        asChild
-                                                    >
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="icon"
-                                                            className="rounded-full hover:bg-muted/60"
-                                                            onClick={(e) =>
-                                                                e.stopPropagation()
-                                                            }
+                                            {!String(submission.status)
+                                                .toLowerCase()
+                                                .includes("approved") && (
+                                                <td
+                                                    className="py-2 px-6 text-center"
+                                                    onClick={(e) =>
+                                                        e.stopPropagation()
+                                                    }
+                                                >
+                                                    <DropdownMenu>
+                                                        <DropdownMenuTrigger
+                                                            asChild
                                                         >
-                                                            <MoreVertical className="w-4 h-4 text-muted-foreground" />
-                                                        </Button>
-                                                    </DropdownMenuTrigger>
-                                                    <DropdownMenuContent
-                                                        align="end"
-                                                        className="w-36 shadow-lg border border-border/40"
-                                                    >
-                                                        {(auth.user.id ===
-                                                            submission.user_id ||
-                                                            submission
-                                                                .permission_for_me
-                                                                ?.can_edit) && (
-                                                            <DropdownMenuItem
-                                                                asChild
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                className="rounded-full hover:bg-muted/60"
                                                                 onClick={(e) =>
                                                                     e.stopPropagation()
                                                                 }
                                                             >
-                                                                <Link
-                                                                    href={route(
-                                                                        "submissions.edit",
-                                                                        submission.id
-                                                                    )}
-                                                                    className="flex items-center gap-2"
+                                                                <MoreVertical className="w-4 h-4 text-muted-foreground" />
+                                                            </Button>
+                                                        </DropdownMenuTrigger>
+                                                        <DropdownMenuContent
+                                                            align="end"
+                                                            className="w-36 shadow-lg border border-border/40"
+                                                        >
+                                                            {(() => {
+                                                                const isApproved =
+                                                                    String(
+                                                                        submission.status
+                                                                    )
+                                                                        .toLowerCase()
+                                                                        .includes(
+                                                                            "approved"
+                                                                        );
+                                                                const isOwner =
+                                                                    auth.user
+                                                                        .id ===
+                                                                    submission.user_id;
+                                                                const sameDivision =
+                                                                    userDivision?.id &&
+                                                                    submission.division_id ===
+                                                                        userDivision.id;
+                                                                const canEditGlobal =
+                                                                    !!submission
+                                                                        .permission_for_me
+                                                                        ?.can_edit;
+                                                                const showEdit =
+                                                                    !isApproved &&
+                                                                    (isOwner ||
+                                                                        (sameDivision &&
+                                                                            canEditGlobal));
+                                                                return showEdit;
+                                                            })() && (
+                                                                <DropdownMenuItem
+                                                                    asChild
+                                                                    onClick={(
+                                                                        e
+                                                                    ) =>
+                                                                        e.stopPropagation()
+                                                                    }
                                                                 >
-                                                                    <Pencil className="w-4 h-4" />{" "}
-                                                                    Edit
-                                                                </Link>
-                                                            </DropdownMenuItem>
-                                                        )}
+                                                                    <Link
+                                                                        href={route(
+                                                                            "submissions.edit",
+                                                                            submission.id
+                                                                        )}
+                                                                        className="flex items-center gap-2"
+                                                                    >
+                                                                        <Pencil className="w-4 h-4" />{" "}
+                                                                        Edit
+                                                                    </Link>
+                                                                </DropdownMenuItem>
+                                                            )}
 
-                                                        {(auth.user.id ===
-                                                            submission.user_id ||
-                                                            submission
-                                                                .permission_for_me
-                                                                ?.can_delete) && (
-                                                            <DropdownMenuItem
-                                                                onClick={(
-                                                                    e
-                                                                ) => {
-                                                                    e.stopPropagation();
-                                                                    setToDeleteId(
-                                                                        submission.id
-                                                                    );
-                                                                    setConfirmOpen(
-                                                                        true
-                                                                    );
-                                                                }}
-                                                                className="flex items-center gap-2 text-red-600"
-                                                            >
-                                                                <Trash2 className="w-4 h-4" />{" "}
-                                                                Hapus
-                                                            </DropdownMenuItem>
-                                                        )}
-                                                    </DropdownMenuContent>
-                                                </DropdownMenu>
-                                            </td>
+                                                            {(() => {
+                                                                const isApproved =
+                                                                    String(
+                                                                        submission.status
+                                                                    )
+                                                                        .toLowerCase()
+                                                                        .includes(
+                                                                            "approved"
+                                                                        );
+                                                                const isOwner =
+                                                                    auth.user
+                                                                        .id ===
+                                                                    submission.user_id;
+                                                                const sameDivision =
+                                                                    userDivision?.id &&
+                                                                    submission.division_id ===
+                                                                        userDivision.id;
+                                                                const canDeleteGlobal =
+                                                                    !!submission
+                                                                        .permission_for_me
+                                                                        ?.can_delete;
+                                                                const showDelete =
+                                                                    !isApproved &&
+                                                                    (isOwner ||
+                                                                        (sameDivision &&
+                                                                            canDeleteGlobal));
+                                                                return showDelete;
+                                                            })() && (
+                                                                <DropdownMenuItem
+                                                                    onClick={(
+                                                                        e
+                                                                    ) => {
+                                                                        e.stopPropagation();
+                                                                        setToDeleteId(
+                                                                            submission.id
+                                                                        );
+                                                                        setConfirmOpen(
+                                                                            true
+                                                                        );
+                                                                    }}
+                                                                    className="flex items-center gap-2 text-red-600"
+                                                                >
+                                                                    <Trash2 className="w-4 h-4" />{" "}
+                                                                    Hapus
+                                                                </DropdownMenuItem>
+                                                            )}
+                                                        </DropdownMenuContent>
+                                                    </DropdownMenu>
+                                                </td>
+                                            )}
                                         </tr>
                                     ))}
                                 </tbody>

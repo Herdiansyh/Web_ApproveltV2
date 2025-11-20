@@ -18,9 +18,9 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from "@/Components/ui/dropdown-menu";
-import { Eye, MoreVertical, Pencil, Trash2, Search } from "lucide-react";
+import { MoreVertical, Pencil, Trash2, Search } from "lucide-react";
 
-export default function ForDivision({ auth, submissions }) {
+export default function ForDivision({ auth, submissions, userDivision }) {
     const [filter, setFilter] = useState("");
     const [confirmOpen, setConfirmOpen] = useState(false);
     const [toDeleteId, setToDeleteId] = useState(null);
@@ -141,6 +141,20 @@ export default function ForDivision({ auth, submissions }) {
                                                                 : submission.status ||
                                                                   "Pending"}
                                                         </span>
+                                                        {String(
+                                                            submission.status
+                                                        )
+                                                            .toLowerCase()
+                                                            .includes(
+                                                                "approved"
+                                                            ) && (
+                                                            <span
+                                                                className="ml-2 text-[11px] rounded px-2 py-0.5 bg-gray-100 text-gray-700"
+                                                                title="Dokumen final – aksi edit/delete dinonaktifkan."
+                                                            >
+                                                                Final
+                                                            </span>
+                                                        )}
                                                     </td>
                                                     <td className="py-3 px-6 text-muted-foreground">
                                                         {new Date(
@@ -149,7 +163,12 @@ export default function ForDivision({ auth, submissions }) {
                                                             "id-ID"
                                                         )}
                                                     </td>
-                                                    <td className="py-3 px-6 text-center" onClick={(e) => e.stopPropagation()}>
+                                                    <td
+                                                        className="py-3 px-6 text-center"
+                                                        onClick={(e) =>
+                                                            e.stopPropagation()
+                                                        }
+                                                    >
                                                         <DropdownMenu>
                                                             <DropdownMenuTrigger
                                                                 asChild
@@ -158,7 +177,11 @@ export default function ForDivision({ auth, submissions }) {
                                                                     variant="ghost"
                                                                     size="icon"
                                                                     className="rounded-full hover:bg-muted/60"
-                                                                    onClick={(e) => e.stopPropagation()}
+                                                                    onClick={(
+                                                                        e
+                                                                    ) =>
+                                                                        e.stopPropagation()
+                                                                    }
                                                                 >
                                                                     <MoreVertical className="w-4 h-4 text-muted-foreground" />
                                                                 </Button>
@@ -167,15 +190,42 @@ export default function ForDivision({ auth, submissions }) {
                                                                 align="end"
                                                                 className="w-36 shadow-lg border border-border/40"
                                                             >
-                                                                {(auth.user
-                                                                    .id ===
-                                                                    submission.user_id ||
-                                                                    submission
-                                                                        .permission_for_me
-                                                                        ?.can_edit) && (
+                                                                {(() => {
+                                                                    const isApproved =
+                                                                        String(
+                                                                            submission.status
+                                                                        )
+                                                                            .toLowerCase()
+                                                                            .includes(
+                                                                                "approved"
+                                                                            );
+                                                                    const isOwner =
+                                                                        auth
+                                                                            .user
+                                                                            .id ===
+                                                                        submission.user_id;
+                                                                    const sameDivision =
+                                                                        userDivision?.id &&
+                                                                        submission.division_id ===
+                                                                            userDivision.id;
+                                                                    const canEditGlobal =
+                                                                        !!submission
+                                                                            .permission_for_me
+                                                                            ?.can_edit;
+                                                                    const showEdit =
+                                                                        !isApproved &&
+                                                                        (isOwner ||
+                                                                            (sameDivision &&
+                                                                                canEditGlobal));
+                                                                    return showEdit;
+                                                                })() && (
                                                                     <DropdownMenuItem
                                                                         asChild
-                                                                        onClick={(e) => e.stopPropagation()}
+                                                                        onClick={(
+                                                                            e
+                                                                        ) =>
+                                                                            e.stopPropagation()
+                                                                        }
                                                                     >
                                                                         <Link
                                                                             href={route(
@@ -190,15 +240,37 @@ export default function ForDivision({ auth, submissions }) {
                                                                     </DropdownMenuItem>
                                                                 )}
 
-                                                                {(auth.user
-                                                                    .id ===
-                                                                    submission.user_id ||
-                                                                    submission
-                                                                        .permission_for_me
-                                                                        ?.can_delete) && (
+                                                                {(() => {
+                                                                    const isApproved =
+                                                                        String(
+                                                                            submission.status
+                                                                        )
+                                                                            .toLowerCase()
+                                                                            .includes(
+                                                                                "approved"
+                                                                            );
+                                                                    const isOwner =
+                                                                        auth
+                                                                            .user
+                                                                            .id ===
+                                                                        submission.user_id;
+                                                                    const sameDivision =
+                                                                        userDivision?.id &&
+                                                                        submission.division_id ===
+                                                                            userDivision.id;
+                                                                    const canDeleteGlobal =
+                                                                        !!submission
+                                                                            .permission_for_me
+                                                                            ?.can_delete;
+                                                                    const showDelete =
+                                                                        !isApproved &&
+                                                                        (isOwner ||
+                                                                            (sameDivision &&
+                                                                                canDeleteGlobal));
+                                                                    return showDelete;
+                                                                })() && (
                                                                     <DropdownMenuItem
-                                                                        onClick={(e) => {
-                                                                            e.stopPropagation();
+                                                                        onClick={() => {
                                                                             setToDeleteId(
                                                                                 submission.id
                                                                             );

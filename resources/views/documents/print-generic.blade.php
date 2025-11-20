@@ -216,7 +216,7 @@
 
     <!-- IDENTITAS PENGAJU -->
     <div class="section">
-        <div class="section-title">Data Pengaju</div>
+        <div class="section-title">Data Pemohon</div>
         <table class="fields-table">
             <tr>
                 <td class="label">Nama</td>

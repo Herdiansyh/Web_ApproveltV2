@@ -16,11 +16,7 @@ import {
 } from "@/Components/ui/select";
 import Header from "@/Components/Header";
 
-export default function Create({
-    auth,
-    userDivision,
-    workflows,
-}) {
+export default function Create({ auth, userDivision, workflows }) {
     const { data, setData, post, processing, errors, reset } = useForm({
         workflow_id: "",
         title: "",
@@ -47,7 +43,9 @@ export default function Create({
     useEffect(() => {
         if (
             data.workflow_id &&
-            !availableWorkflows.some((w) => String(w.id) === String(data.workflow_id))
+            !availableWorkflows.some(
+                (w) => String(w.id) === String(data.workflow_id)
+            )
         ) {
             setData("workflow_id", "");
         }
@@ -197,7 +195,14 @@ export default function Create({
     };
 
     return (
-        <AuthenticatedLayout user={auth.user}>
+        <AuthenticatedLayout
+            user={auth.user}
+            header={
+                <h2 className="font-semibold text-xl text-foreground">
+                    📁 Create Submission
+                </h2>
+            }
+        >
             <Head title="Buat Pengajuan" />
             <div className="flex min-h-screen bg-background">
                 <Header />
@@ -335,7 +340,8 @@ export default function Create({
                                                                 "10px",
                                                         }}
                                                     >
-                                                        {availableWorkflows?.length > 0 ? (
+                                                        {availableWorkflows?.length >
+                                                        0 ? (
                                                             availableWorkflows.map(
                                                                 (wf) =>
                                                                     wf.id && (
@@ -347,7 +353,9 @@ export default function Create({
                                                                                 wf.id
                                                                             )}
                                                                         >
-                                                                            {wf.name}
+                                                                            {
+                                                                                wf.name
+                                                                            }
                                                                         </SelectItem>
                                                                     )
                                                             )
@@ -356,7 +364,13 @@ export default function Create({
                                                                 disabled
                                                                 value="wd"
                                                             >
-                                                                Tidak ada workflow yang tersedia. Minta admin mengaktifkan Document Type/Workflow.
+                                                                Tidak ada
+                                                                workflow yang
+                                                                tersedia. Minta
+                                                                admin
+                                                                mengaktifkan
+                                                                Document
+                                                                Type/Workflow.
                                                             </SelectItem>
                                                         )}
                                                     </SelectContent>
@@ -415,7 +429,8 @@ export default function Create({
                                                     className="mt-1"
                                                 />
                                                 <p className="text-xs text-gray-500 mt-1">
-                                                    Opsional. Format: PDF, JPG, PNG (maks. 10MB)
+                                                    Opsional. Format: PDF, JPG,
+                                                    PNG (maks. 10MB)
                                                 </p>
                                             </div>
                                         </div>
@@ -449,57 +464,71 @@ export default function Create({
                                                         setIsSaved(false);
                                                     };
 
-                                                    const options = Array.isArray(
-                                                        f.options
-                                                    )
-                                                        ? f.options
-                                                        : [];
+                                                    const options =
+                                                        Array.isArray(f.options)
+                                                            ? f.options
+                                                            : [];
 
-                                                    const renderSelectOptions = () => {
-                                                        if (!options.length) return null;
-                                                        return options.map((opt, idx) => {
-                                                            if (
-                                                                opt &&
-                                                                typeof opt ===
-                                                                    "object"
-                                                            ) {
-                                                                const val =
-                                                                    String(
-                                                                        opt.value ??
-                                                                            opt.id ??
-                                                                            ""
+                                                    const renderSelectOptions =
+                                                        () => {
+                                                            if (!options.length)
+                                                                return null;
+                                                            return options.map(
+                                                                (opt, idx) => {
+                                                                    if (
+                                                                        opt &&
+                                                                        typeof opt ===
+                                                                            "object"
+                                                                    ) {
+                                                                        const val =
+                                                                            String(
+                                                                                opt.value ??
+                                                                                    opt.id ??
+                                                                                    ""
+                                                                            );
+                                                                        const label =
+                                                                            opt.label ??
+                                                                            String(
+                                                                                opt.name ??
+                                                                                    val
+                                                                            );
+                                                                        return (
+                                                                            <SelectItem
+                                                                                key={
+                                                                                    val ||
+                                                                                    idx
+                                                                                }
+                                                                                value={
+                                                                                    val
+                                                                                }
+                                                                            >
+                                                                                {
+                                                                                    label
+                                                                                }
+                                                                            </SelectItem>
+                                                                        );
+                                                                    }
+                                                                    const val =
+                                                                        String(
+                                                                            opt
+                                                                        );
+                                                                    return (
+                                                                        <SelectItem
+                                                                            key={
+                                                                                val
+                                                                            }
+                                                                            value={
+                                                                                val
+                                                                            }
+                                                                        >
+                                                                            {
+                                                                                val
+                                                                            }
+                                                                        </SelectItem>
                                                                     );
-                                                                const label =
-                                                                    opt.label ??
-                                                                    String(
-                                                                        opt.name ??
-                                                                            val
-                                                                    );
-                                                                return (
-                                                                    <SelectItem
-                                                                        key={
-                                                                            val ||
-                                                                            idx
-                                                                        }
-                                                                        value={val}
-                                                                    >
-                                                                        {label}
-                                                                    </SelectItem>
-                                                                );
-                                                            }
-                                                            const val = String(
-                                                                opt
+                                                                }
                                                             );
-                                                            return (
-                                                                <SelectItem
-                                                                    key={val}
-                                                                    value={val}
-                                                                >
-                                                                    {val}
-                                                                </SelectItem>
-                                                            );
-                                                        });
-                                                    };
+                                                        };
 
                                                     return (
                                                         <div
@@ -578,7 +607,9 @@ export default function Create({
                                                                         }}
                                                                         className="w-full mt-1"
                                                                     >
-                                                                        <SelectValue placeholder={`Pilih ${f.label}`} />
+                                                                        <SelectValue
+                                                                            placeholder={`Pilih ${f.label}`}
+                                                                        />
                                                                     </SelectTrigger>
                                                                     <SelectContent
                                                                         style={{
@@ -619,9 +650,21 @@ export default function Create({
                                                                             "10px",
                                                                     }}
                                                                     type="file"
-                                                                    onChange={(e) => {
-                                                                        const file = e.target.files && e.target.files[0];
-                                                                        setVal(file ? file.name : "");
+                                                                    onChange={(
+                                                                        e
+                                                                    ) => {
+                                                                        const file =
+                                                                            e
+                                                                                .target
+                                                                                .files &&
+                                                                            e
+                                                                                .target
+                                                                                .files[0];
+                                                                        setVal(
+                                                                            file
+                                                                                ? file.name
+                                                                                : ""
+                                                                        );
                                                                     }}
                                                                     className="mt-1"
                                                                 />

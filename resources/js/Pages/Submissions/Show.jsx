@@ -22,6 +22,8 @@ export default function Show({
     currentStep = null,
     currentSubmissionStep = null,
     documentFields = [],
+    permissionForMe = null,
+    userDivisionId = null,
 }) {
     const [showApproveModal, setShowApproveModal] = useState(false);
     const [showRejectModal, setShowRejectModal] = useState(false);
@@ -162,6 +164,19 @@ export default function Show({
         return `${prefix}${pattern}`;
     }, [submission]);
 
+    const isApprovedFinal = String(submission?.status || "")
+        .toLowerCase()
+        .includes("approved");
+    const isOwner = auth?.user?.id === submission?.user_id;
+    const sameDivision =
+        userDivisionId && submission?.division_id === userDivisionId;
+    const canEditGlobal = !!permissionForMe?.can_edit;
+    const canDeleteGlobal = !!permissionForMe?.can_delete;
+    const canEditNow =
+        !isApprovedFinal && (isOwner || (sameDivision && canEditGlobal));
+    const canDeleteNow =
+        !isApprovedFinal && (isOwner || (sameDivision && canDeleteGlobal));
+
     return (
         <AuthenticatedLayout
             user={auth.user}
@@ -177,6 +192,17 @@ export default function Show({
                 <div className="py-10 px-6 w-full">
                     <div className=" mx-auto">
                         <Card className="p-8 rounded-2xl border border-border/50 shadow-sm backdrop-blur-md bg-card/80">
+                            {(isApprovedFinal ||
+                                (!canEditNow && !canDeleteNow)) && (
+                                <div
+                                    style={{ borderRadius: "15px" }}
+                                    className="mb-4 text-sm border border-blue-200 bg-blue-50 text-blue-800 px-3 py-2"
+                                >
+                                    {isApprovedFinal
+                                        ? "Pengajuan ini sudah disetujui dan tidak bisa diubah."
+                                        : "Anda tidak memiliki akses untuk mengubah atau menghapus pengajuan ini."}
+                                </div>
+                            )}
                             <div className="flex justify-between items-start flex-wrap gap-4">
                                 <div className="space-y-2">
                                     <div className="flex flex-col sm:flex-row sm:items-center w-full justify-between gap-1 sm:gap-2">
@@ -202,6 +228,14 @@ export default function Show({
                                                         ? "Ditolak"
                                                         : "• Menunggu Persetujuan"}
                                                 </span>
+                                                {isApprovedFinal && (
+                                                    <span
+                                                        className="ml-2 text-[11px] rounded px-2 py-0.5 bg-gray-100 text-gray-700"
+                                                        title="Dokumen final – aksi edit/delete dinonaktifkan."
+                                                    >
+                                                        Final
+                                                    </span>
+                                                )}
                                             </div>
                                         </div>
                                     </div>
@@ -244,10 +278,10 @@ export default function Show({
                                             <button
                                                 type="button"
                                                 onClick={handlePrint}
-                                                className="border border-gray-200 mb-3 inline-flex items-center justify-center p-2 text-sm font-medium rounded-[8px] bg-muted text-foreground hover:bg-muted/70 active:scale-[0.97] transition-all shadow-sm"
+                                                className="border border-gray-200 mb-3 inline-flex items-center justify-center p-1 md:p-2 text-sm font-medium rounded-[8px] bg-muted text-foreground hover:bg-muted/70 active:scale-[0.97] transition-all shadow-sm"
                                                 aria-label="Print"
                                             >
-                                                <Printer />
+                                                <Printer className="w-5 md:w-7" />
                                             </button>
                                         )}
 
@@ -364,7 +398,7 @@ export default function Show({
                                                     style={{
                                                         borderRadius: "15px",
                                                     }}
-                                                    className="flex flex-col p-2 rounded-lg bg-muted/40 hover:bg-muted transition-colors border border-border/60"
+                                                    className="flex flex-col px-2 py-1 rounded-lg bg-muted/40 hover:bg-muted transition-colors border-b border-border/60"
                                                 >
                                                     <span className="text-xs text-muted-foreground tracking-wide">
                                                         {f.label}

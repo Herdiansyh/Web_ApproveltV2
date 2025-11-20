@@ -10,6 +10,10 @@ import {
     Workflow,
     DockIcon,
     Layers,
+    CheckCircleIcon,
+    CheckLineIcon,
+    FileTextIcon,
+    LayoutDashboard,
 } from "lucide-react";
 
 import {
@@ -44,7 +48,7 @@ export default function Sidebar({ open }) {
                       label: "Dashboard",
                       href: route("dashboard"),
                       active: route().current("dashboard"),
-                      icon: <FileText className="h-5 w-5" />,
+                      icon: <LayoutDashboard className="h-5 w-5" />,
                   },
               ]
             : [
@@ -52,7 +56,7 @@ export default function Sidebar({ open }) {
                       label: "Admin Dashboard",
                       href: route("Admindashboard"),
                       active: route().current("Admindashboard"),
-                      icon: <FileText className="h-5 w-5" />,
+                      icon: <LayoutDashboard className="h-5 w-5" />,
                   },
               ]),
 
@@ -64,11 +68,22 @@ export default function Sidebar({ open }) {
                       active: route().current("submissions.forDivision"),
                       icon: <ListCheck className="h-5 w-5" />,
                   },
+                  ...(user.role === "employee"
+                      ? [
+                            {
+                                label: "Lihat Pengajuan",
+                                href: route("submissions.index"),
+                                active: route().current("submissions.index"),
+                                icon: <FileTextIcon className="h-5 w-5" />,
+                            },
+                        ]
+                      : []),
+
                   {
-                      label: "Lihat Pengajuan",
-                      href: route("submissions.index"),
-                      active: route().current("submissions.index"),
-                      icon: <CheckCircle2 className="h-5 w-5" />,
+                      label: "Riwayat Pengajuan",
+                      href: route("submissions.history"),
+                      active: route().current("submissions.history"),
+                      icon: <CheckLineIcon className="h-5 w-5" />,
                   },
               ]
             : []),

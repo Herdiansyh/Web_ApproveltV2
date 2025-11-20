@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
 import { Head, router } from "@inertiajs/react";
-import { Card } from "@/Components/ui/card";
 import { Button } from "@/Components/ui/button";
 import {
     Table,
@@ -11,10 +10,8 @@ import {
     TableHeader,
     TableRow,
 } from "@/Components/ui/table";
-import Sidebar from "@/Components/Sidebar";
 import Swal from "sweetalert2";
 import DivisionModal from "./Create.jsx";
-import { Input } from "@/Components/ui/input.jsx";
 import {
     Dialog,
     DialogContent,
@@ -22,15 +19,10 @@ import {
     DialogTitle,
     DialogFooter,
 } from "@/Components/ui/dialog";
-import { X } from "lucide-react";
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/Components/ui/select.jsx";
+
 import Header from "@/Components/Header.jsx";
+import CardDivision from "./CardDivision.jsx";
+import { X } from "lucide-react";
 
 export default function Index({ auth, divisions }) {
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -100,143 +92,21 @@ export default function Index({ auth, divisions }) {
                     <div className="mx-auto p-6 lg:px-8">
                         <h1 className="text-2xl font-bold  mb-3">Divisions</h1>
 
-                        <Card className="p-6" style={{ borderRadius: "15px" }}>
-                            {/* Filter & Add Button */}
-                            <div  className="flex flex-col md:flex-row justify-between gap-3 mb-4">
-                                <div className="flex flex-col lg:flex-row gap-2 w-full">
-                                    <Input
-                                        className="lg:w-1/3"
-                                        placeholder="Search Division..."
-                                        value={search}
-                                        onChange={handleSearch}
-                                        style={{
-                                            borderRadius: "15px",
-                                        }}
-                                    />
-                                    <Select
-                                        value={selectedDivision}
-                                        onValueChange={(value) =>
-                                            setSelectedDivision(value)
-                                        }
-                                    >
-                                        <SelectTrigger
-                                            style={{
-                                                borderRadius: "15px",
-                                            }}
-                                            className="lg:w-1/4 text-[0.8rem]"
-                                        >
-                                            <SelectValue placeholder="Filter" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="all">
-                                                {" "}
-                                                {/* ✅ UBAH DARI "" KE "all" */}{" "}
-                                                All Divisions
-                                            </SelectItem>
-                                            {divisions.map((d) => (
-                                                <SelectItem
-                                                    key={d.id}
-                                                    value={d.name.toLowerCase()} // ✅ PASTIKAN VALUE TIDAK KOSONG
-                                                >
-                                                    {d.name}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-
-                                <Button
-                                    onClick={() => {
-                                        setEditingDivision(null);
-                                        setIsModalOpen(true);
-                                    }}
-                                    className="md:w-[180px] w-full  h-9 text-sm "
-                                    style={{
-                                        borderRadius: "15px",
-                                    }}
-                                >
-                                    + Add New Division
-                                </Button>
-                            </div>
-
-                            {/* Table */}
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead>Name</TableHead>
-                                        <TableHead>Description</TableHead>
-                                        <TableHead>Actions</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {filteredDivisions.length > 0 ? (
-                                        filteredDivisions.map((division) => (
-                                            <TableRow key={division.id}>
-                                                <TableCell>
-                                                    <button
-                                                        onClick={() =>
-                                                            setSelectedDivisionForSub(
-                                                                division
-                                                            )
-                                                        }
-                                                        className="text-blue-600 hover:underline"
-                                                    >
-                                                        {division.name}
-                                                    </button>
-                                                </TableCell>
-                                                <TableCell>
-                                                    {division.description ||
-                                                        "-"}
-                                                </TableCell>
-                                                <TableCell>
-                                                    <div className="flex space-x-2">
-                                                        <Button
-                                                            variant="outline"
-                                                            size="sm"
-                                                            onClick={() =>
-                                                                handleEdit(
-                                                                    division
-                                                                )
-                                                            }
-                                                            style={{
-                                                                borderRadius:
-                                                                    "15px",
-                                                            }}
-                                                        >
-                                                            Edit
-                                                        </Button>
-                                                        <Button
-                                                            variant="destructive"
-                                                            size="sm"
-                                                            onClick={() =>
-                                                                handleDelete(
-                                                                    division.id
-                                                                )
-                                                            }
-                                                            style={{
-                                                                borderRadius:
-                                                                    "15px",
-                                                            }}
-                                                        >
-                                                            Delete
-                                                        </Button>
-                                                    </div>
-                                                </TableCell>
-                                            </TableRow>
-                                        ))
-                                    ) : (
-                                        <TableRow>
-                                            <TableCell
-                                                colSpan={3}
-                                                className="text-center text-gray-500"
-                                            >
-                                                No divisions found.
-                                            </TableCell>
-                                        </TableRow>
-                                    )}
-                                </TableBody>
-                            </Table>
-                        </Card>
+                        <CardDivision
+                            divisions={divisions}
+                            handleSearch={handleSearch}
+                            search={search}
+                            selectedDivision={selectedDivision}
+                            setSelectedDivision={setSelectedDivision}
+                            filteredDivisions={filteredDivisions}
+                            handleEdit={handleEdit}
+                            handleDelete={handleDelete}
+                            setIsModalOpen={setIsModalOpen}
+                            setEditingDivision={setEditingDivision}
+                            setSelectedDivisionForSub={
+                                setSelectedDivisionForSub
+                            }
+                        />
                     </div>
                 </div>
             </div>

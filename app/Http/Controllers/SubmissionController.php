@@ -524,6 +524,8 @@ class SubmissionController extends Controller
             'fileUrl' => $fileUrl,
             'fileExists' => $fileExists,
             'documentFields' => $submission->workflow?->document?->fields ?? [],
+            'permissionForMe' => $user->subdivision_id ? SubdivisionPermission::where('subdivision_id', $user->subdivision_id)->first() : null,
+            'userDivisionId' => $user->division_id,
         ]);
     }
 
@@ -553,12 +555,23 @@ class SubmissionController extends Controller
             ->generate($verifyUrl);
         $fields = $submission->workflow?->document?->fields ?? collect();
 
-        // Derive approval info (same as template preview)
-        $lastApproved = $submission->workflowSteps
-            ? $submission->workflowSteps->where('status', 'approved')->sortByDesc('approved_at')->first()
-            : null;
-        $approvedBy = $lastApproved?->approver?->name;
-        $approvedAt = $lastApproved?->approved_at ? (string) $lastApproved->approved_at : null;
+        // Approved By hanya jika step FINAL sudah approved
+        $approvedBy = null;
+        $approvedAt = null;
+        if ($submission->workflow && $submission->workflow->steps && $submission->workflowSteps) {
+            $finalStep = $submission->workflow->steps->firstWhere('is_final_step', true);
+            $finalOrder = $finalStep?->step_order ?? ($submission->workflow->steps->max('step_order'));
+            if ($finalOrder !== null) {
+                $finalSubmissionStep = $submission->workflowSteps
+                    ->where('step_order', $finalOrder)
+                    ->where('status', 'approved')
+                    ->first();
+                if ($finalSubmissionStep) {
+                    $approvedBy = $finalSubmissionStep->approver?->name;
+                    $approvedAt = $finalSubmissionStep->approved_at ? (string) $finalSubmissionStep->approved_at : null;
+                }
+            }
+        }
 
         $html = view('documents.print-generic', [
             'submission' => $submission,
@@ -571,6 +584,42 @@ class SubmissionController extends Controller
         ])->render();
 
         return response($html);
+    }
+
+    /** ------------------------
+     *  HISTORY (Riwayat Pengajuan) - berdasarkan aksi user
+     *  ------------------------ */
+    public function history(Request $request)
+    {
+        $user = Auth::user();
+
+        $query = Submission::with([
+                'user',
+                'workflow.document',
+                'workflow.steps',
+                'workflowSteps.division',
+                'workflowSteps.approver',
+            ])
+            ->whereHas('workflowSteps', function ($q) use ($user) {
+                $q->where('approver_id', $user->id);
+            })
+            ->latest();
+
+        $submissions = $query->paginate(10);
+
+        foreach ($submissions as $s) {
+            $myStep = $s->workflowSteps
+                ->where('approver_id', $user->id)
+                ->sortByDesc(function ($ws) {
+                    return $ws->approved_at ?: $ws->updated_at;
+                })
+                ->first();
+            $s->my_history_step = $myStep;
+        }
+
+        return Inertia::render('Submissions/History', [
+            'submissions' => $submissions,
+        ]);
     }
 
     /** ------------------------

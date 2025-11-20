@@ -21,14 +21,31 @@ class SubmissionPolicy
         // Guard: butuh subdivision
         if (!$user->subdivision_id) return false;
 
-        // Global can_view: boleh melihat semua pengajuan milik divisi yang sama
-        if ($user->division_id !== $submission->division_id) return false;
+        // 1) Kasus approver: jika step aktif dimiliki divisi user dan subdivision punya izin aksi apapun, boleh lihat
+        if ($submission->workflow) {
+            $currentStep = $submission->workflow->steps
+                ->where('step_order', $submission->current_step)
+                ->first();
+            if ($currentStep && $currentStep->division_id === $user->division_id) {
+                $hasActionPerm = SubdivisionPermission::where('subdivision_id', $user->subdivision_id)
+                    ->where(function ($q) {
+                        $q->where('can_approve', true)
+                          ->orWhere('can_reject', true)
+                          ->orWhere('can_request_next', true);
+                    })
+                    ->exists();
+                if ($hasActionPerm) return true;
+            }
+        }
 
-        $perm = SubdivisionPermission::where('subdivision_id', $user->subdivision_id)
-            ->where('can_view', true)
-            ->exists();
+        // 2) Global can_view: boleh melihat semua pengajuan milik divisi yang sama dengan pembuat
+        if ($user->division_id === $submission->division_id) {
+            return SubdivisionPermission::where('subdivision_id', $user->subdivision_id)
+                ->where('can_view', true)
+                ->exists();
+        }
 
-        return $perm;
+        return false;
     }
 
     /**
@@ -83,8 +100,10 @@ class SubmissionPolicy
     public function update(User $user, Submission $submission): bool
     {
         // Owner can always edit
+        $status = strtolower((string) $submission->status);
+        if (str_contains($status, 'approved')) return false; // lock final for everyone
         if ($user->id === $submission->user_id) return true;
-        // Admin bypass
+        // Admin bypass (non-approved only)
         if ($user->role === 'admin') return true;
 
         // Require subdivision
@@ -105,8 +124,10 @@ class SubmissionPolicy
     public function delete(User $user, Submission $submission): bool
     {
         // Owner can always delete
+        $status = strtolower((string) $submission->status);
+        if (str_contains($status, 'approved')) return false; // lock final for everyone
         if ($user->id === $submission->user_id) return true;
-        // Admin bypass
+        // Admin bypass (non-approved only)
         if ($user->role === 'admin') return true;
 
         // Require subdivision

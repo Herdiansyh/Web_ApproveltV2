@@ -147,7 +147,10 @@ Route::middleware(['auth'])->group(function () {
 
     // Submission routes (common)
     Route::get('/submissions/division', [SubmissionController::class, 'forDivision'])->name('submissions.forDivision');
-    Route::resource('submissions', SubmissionController::class)->only(['index', 'show', 'edit', 'update', 'destroy']);
+    Route::get('/submissions', [SubmissionController::class, 'index'])->name('submissions.index');
+    Route::get('/submissions/for-division', [SubmissionController::class, 'forDivision'])->name('submissions.for-division');
+    Route::get('/submissions/history', [SubmissionController::class, 'history'])->name('submissions.history');
+    Route::resource('submissions', SubmissionController::class)->only(['show', 'edit', 'update', 'destroy']);
     Route::get('submissions/{submission}/file', [SubmissionController::class, 'file'])->name('submissions.file');
     Route::get('submissions/{submission}/download', [SubmissionController::class, 'download'])->name('submissions.download');
     Route::get('submissions/{submission}/print', [SubmissionController::class, 'printDocument'])->name('submissions.printDocument');
