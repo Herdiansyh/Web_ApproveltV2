@@ -23,6 +23,8 @@ import {
 } from "@/Components/ui/select.jsx";
 import Header from "@/Components/Header.jsx";
 import CardSubDivision from "./CardSubDivision.jsx";
+import { Separator } from "@/Components/ui/separator.jsx";
+import Footer from "@/Components/Footer.jsx";
 
 export default function Index({ auth, subdivisions, divisions }) {
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -104,6 +106,9 @@ export default function Index({ auth, subdivisions, divisions }) {
                     </div>
                 </div>
             </div>
+            <Separator className="my-10" />
+            {/* Footer */}
+            <Footer />
 
             <SubdivisionModal
                 isOpen={isModalOpen}

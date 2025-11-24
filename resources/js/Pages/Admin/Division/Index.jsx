@@ -23,6 +23,8 @@ import {
 import Header from "@/Components/Header.jsx";
 import CardDivision from "./CardDivision.jsx";
 import { X } from "lucide-react";
+import { Separator } from "@/Components/ui/separator.jsx";
+import Footer from "@/Components/Footer.jsx";
 
 export default function Index({ auth, divisions }) {
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -110,7 +112,9 @@ export default function Index({ auth, divisions }) {
                     </div>
                 </div>
             </div>
-
+            <Separator className="my-10" />
+            {/* Footer */}
+            <Footer />
             {/* Modal Add/Edit Division */}
             <DivisionModal
                 isOpen={isModalOpen}

@@ -10,12 +10,13 @@ import Header from "@/Components/Header";
 import Swal from "sweetalert2";
 
 export default function Edit({ auth, submission, documentFields = [] }) {
-    const { data, setData, post, processing, errors, reset, transform } = useForm({
-        title: submission.title || "",
-        description: submission.description || "",
-        file: null,
-        data: submission.data_json || {},
-    });
+    const { data, setData, post, processing, errors, reset, transform } =
+        useForm({
+            title: submission.title || "",
+            description: submission.description || "",
+            file: null,
+            data: submission.data_json || {},
+        });
 
     const handleFileChange = (e) => {
         const file = e.target.files[0];
@@ -56,7 +57,11 @@ export default function Edit({ auth, submission, documentFields = [] }) {
                 Swal.fire({
                     icon: "error",
                     title: "Gagal",
-                    text: errs?.title || errs?.file || errs?.description || "Terjadi kesalahan. Periksa kembali isian Anda.",
+                    text:
+                        errs?.title ||
+                        errs?.file ||
+                        errs?.description ||
+                        "Terjadi kesalahan. Periksa kembali isian Anda.",
                 });
             },
         });
@@ -76,8 +81,14 @@ export default function Edit({ auth, submission, documentFields = [] }) {
                 <Header />
                 <div className="p-5 w-full">
                     <div className="mx-auto sm:px-6 lg:px-8">
-                        <Card className="p-6 shadow-md">
-                            <form onSubmit={onSubmit} encType="multipart/form-data">
+                        <Card
+                            style={{ borderRadius: "15px" }}
+                            className="p-6 mt-6 shadow-md"
+                        >
+                            <form
+                                onSubmit={onSubmit}
+                                encType="multipart/form-data"
+                            >
                                 <div className="space-y-6">
                                     <div>
                                         <Label>Judul Pengajuan</Label>
@@ -88,6 +99,7 @@ export default function Edit({ auth, submission, documentFields = [] }) {
                                                 setData("title", e.target.value)
                                             }
                                             placeholder="Masukkan judul pengajuan"
+                                            style={{ borderRadius: "10px" }}
                                         />
                                         {errors.title && (
                                             <p className="text-red-600 text-sm">
@@ -99,6 +111,7 @@ export default function Edit({ auth, submission, documentFields = [] }) {
                                     <div>
                                         <Label>Deskripsi</Label>
                                         <Textarea
+                                            style={{ borderRadius: "10px" }}
                                             name="description"
                                             value={data.description || ""}
                                             onChange={(e) =>
@@ -120,16 +133,22 @@ export default function Edit({ auth, submission, documentFields = [] }) {
                                         <Label>Dokumen saat ini</Label>
                                         <div className="mt-2 text-sm">
                                             <a
-                                                href={route("submissions.file", submission.id)}
+                                                href={route(
+                                                    "submissions.file",
+                                                    submission.id
+                                                )}
                                                 target="_blank"
                                                 rel="noreferrer"
                                                 className="text-primary hover:underline"
+                                                style={{ borderRadius: "10px" }}
                                             >
                                                 Lihat Dokumen Saat Ini
                                             </a>
                                             {submission.file_path && (
                                                 <div className="text-muted-foreground mt-1 truncate">
-                                                    {submission.file_path.split("/").pop()}
+                                                    {submission.file_path
+                                                        .split("/")
+                                                        .pop()}
                                                 </div>
                                             )}
                                         </div>
@@ -138,6 +157,7 @@ export default function Edit({ auth, submission, documentFields = [] }) {
                                     <div>
                                         <Label>Ganti Dokumen (opsional)</Label>
                                         <Input
+                                            style={{ borderRadius: "10px" }}
                                             name="file"
                                             type="file"
                                             onChange={handleFileChange}
@@ -156,23 +176,29 @@ export default function Edit({ auth, submission, documentFields = [] }) {
                                                 <h3 className="font-semibold mb-3">
                                                     Data Dokumen
                                                 </h3>
-                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                <div className="grid  grid-cols-1 md:grid-cols-2 gap-4">
                                                     {documentFields.map((f) => {
                                                         const type = String(
                                                             f.type || "text"
                                                         ).toLowerCase();
                                                         const value =
-                                                            data.data?.[f.name] ?? "";
+                                                            data.data?.[
+                                                                f.name
+                                                            ] ?? "";
                                                         const setVal = (v) => {
                                                             setData("data", {
-                                                                ...(data.data || {}),
+                                                                ...(data.data ||
+                                                                    {}),
                                                                 [f.name]: v,
                                                             });
                                                         };
 
                                                         return (
                                                             <div
-                                                                key={f.id || f.name}
+                                                                key={
+                                                                    f.id ||
+                                                                    f.name
+                                                                }
                                                             >
                                                                 <Label>
                                                                     {f.label}
@@ -180,8 +206,16 @@ export default function Edit({ auth, submission, documentFields = [] }) {
                                                                 {type ===
                                                                 "textarea" ? (
                                                                     <Textarea
-                                                                        value={value}
-                                                                        onChange={(e) =>
+                                                                        style={{
+                                                                            borderRadius:
+                                                                                "10px",
+                                                                        }}
+                                                                        value={
+                                                                            value
+                                                                        }
+                                                                        onChange={(
+                                                                            e
+                                                                        ) =>
                                                                             setVal(
                                                                                 e
                                                                                     .target
@@ -194,9 +228,17 @@ export default function Edit({ auth, submission, documentFields = [] }) {
                                                                 ) : type ===
                                                                   "date" ? (
                                                                     <Input
+                                                                        style={{
+                                                                            borderRadius:
+                                                                                "10px",
+                                                                        }}
                                                                         type="date"
-                                                                        value={value}
-                                                                        onChange={(e) =>
+                                                                        value={
+                                                                            value
+                                                                        }
+                                                                        onChange={(
+                                                                            e
+                                                                        ) =>
                                                                             setVal(
                                                                                 e
                                                                                     .target
@@ -208,29 +250,118 @@ export default function Edit({ auth, submission, documentFields = [] }) {
                                                                 ) : type ===
                                                                   "select" ? (
                                                                     <select
+                                                                        style={{
+                                                                            borderRadius:
+                                                                                "10px",
+                                                                        }}
                                                                         className="w-full border rounded px-2 py-1 mt-1"
-                                                                        value={value ?? ""}
-                                                                        onChange={(e) => setVal(e.target.value)}
+                                                                        value={
+                                                                            value ??
+                                                                            ""
+                                                                        }
+                                                                        onChange={(
+                                                                            e
+                                                                        ) =>
+                                                                            setVal(
+                                                                                e
+                                                                                    .target
+                                                                                    .value
+                                                                            )
+                                                                        }
                                                                     >
-                                                                        <option value="" disabled>Pilih {f.label}</option>
-                                                                        {(Array.isArray(f.options) ? f.options : []).map((opt, idx) => {
-                                                                            if (opt && typeof opt === 'object') {
-                                                                                const val = String(opt.value ?? opt.id ?? "");
-                                                                                const label = opt.label ?? String(opt.name ?? val);
-                                                                                return <option key={val || idx} value={val}>{label}</option>;
+                                                                        <option
+                                                                            value=""
+                                                                            disabled
+                                                                        >
+                                                                            Pilih{" "}
+                                                                            {
+                                                                                f.label
                                                                             }
-                                                                            const val = String(opt ?? "");
-                                                                            return <option key={val || idx} value={val}>{val}</option>;
-                                                                        })}
+                                                                        </option>
+                                                                        {(Array.isArray(
+                                                                            f.options
+                                                                        )
+                                                                            ? f.options
+                                                                            : []
+                                                                        ).map(
+                                                                            (
+                                                                                opt,
+                                                                                idx
+                                                                            ) => {
+                                                                                if (
+                                                                                    opt &&
+                                                                                    typeof opt ===
+                                                                                        "object"
+                                                                                ) {
+                                                                                    const val =
+                                                                                        String(
+                                                                                            opt.value ??
+                                                                                                opt.id ??
+                                                                                                ""
+                                                                                        );
+                                                                                    const label =
+                                                                                        opt.label ??
+                                                                                        String(
+                                                                                            opt.name ??
+                                                                                                val
+                                                                                        );
+                                                                                    return (
+                                                                                        <option
+                                                                                            key={
+                                                                                                val ||
+                                                                                                idx
+                                                                                            }
+                                                                                            value={
+                                                                                                val
+                                                                                            }
+                                                                                        >
+                                                                                            {
+                                                                                                label
+                                                                                            }
+                                                                                        </option>
+                                                                                    );
+                                                                                }
+                                                                                const val =
+                                                                                    String(
+                                                                                        opt ??
+                                                                                            ""
+                                                                                    );
+                                                                                return (
+                                                                                    <option
+                                                                                        key={
+                                                                                            val ||
+                                                                                            idx
+                                                                                        }
+                                                                                        value={
+                                                                                            val
+                                                                                        }
+                                                                                    >
+                                                                                        {
+                                                                                            val
+                                                                                        }
+                                                                                    </option>
+                                                                                );
+                                                                            }
+                                                                        )}
                                                                     </select>
                                                                 ) : type ===
                                                                   "number" ? (
                                                                     <Input
+                                                                        style={{
+                                                                            borderRadius:
+                                                                                "10px",
+                                                                        }}
                                                                         type="number"
-                                                                        value={value}
-                                                                        onChange={(e) =>
+                                                                        value={
+                                                                            value
+                                                                        }
+                                                                        onChange={(
+                                                                            e
+                                                                        ) =>
                                                                             setVal(
-                                                                                e.target.value
+                                                                                e
+                                                                                    .target
+                                                                                    .value
                                                                             )
                                                                         }
                                                                         className="mt-1"
@@ -238,17 +369,41 @@ export default function Edit({ auth, submission, documentFields = [] }) {
                                                                 ) : type ===
                                                                   "file" ? (
                                                                     <Input
+                                                                        style={{
+                                                                            borderRadius:
+                                                                                "10px",
+                                                                        }}
                                                                         type="file"
-                                                                        onChange={(e) => {
-                                                                            const file = e.target.files && e.target.files[0];
-                                                                            setVal(file ? file.name : "");
+                                                                        onChange={(
+                                                                            e
+                                                                        ) => {
+                                                                            const file =
+                                                                                e
+                                                                                    .target
+                                                                                    .files &&
+                                                                                e
+                                                                                    .target
+                                                                                    .files[0];
+                                                                            setVal(
+                                                                                file
+                                                                                    ? file.name
+                                                                                    : ""
+                                                                            );
                                                                         }}
                                                                         className="mt-1"
                                                                     />
                                                                 ) : (
                                                                     <Input
-                                                                        value={value}
-                                                                        onChange={(e) =>
+                                                                        style={{
+                                                                            borderRadius:
+                                                                                "10px",
+                                                                        }}
+                                                                        value={
+                                                                            value
+                                                                        }
+                                                                        onChange={(
+                                                                            e
+                                                                        ) =>
                                                                             setVal(
                                                                                 e
                                                                                     .target
@@ -269,7 +424,11 @@ export default function Edit({ auth, submission, documentFields = [] }) {
                                         <Button
                                             type="button"
                                             variant="secondary"
-                                            onClick={() => (window.location.href = route("submissions.index"))}
+                                            style={{ borderRadius: "15px" }}
+                                            onClick={() =>
+                                                (window.location.href =
+                                                    route("submissions.index"))
+                                            }
                                         >
                                             Batal
                                         </Button>
@@ -279,7 +438,9 @@ export default function Edit({ auth, submission, documentFields = [] }) {
                                             className="bg-primary text-primary-foreground"
                                             style={{ borderRadius: "15px" }}
                                         >
-                                            {processing ? "Menyimpan..." : "Simpan Perubahan"}
+                                            {processing
+                                                ? "Menyimpan..."
+                                                : "Simpan Perubahan"}
                                         </Button>
                                     </div>
                                 </div>

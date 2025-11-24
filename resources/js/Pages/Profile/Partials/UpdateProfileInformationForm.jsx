@@ -2,6 +2,8 @@ import InputError from "@/Components/InputError";
 import InputLabel from "@/Components/InputLabel";
 import PrimaryButton from "@/Components/PrimaryButton";
 import TextInput from "@/Components/TextInput";
+import { Input } from "@/Components/ui/input";
+import { Label } from "@/Components/ui/label";
 import { Transition } from "@headlessui/react";
 import { Link, useForm, usePage } from "@inertiajs/react";
 
@@ -38,9 +40,10 @@ export default function UpdateProfileInformation({
 
             <form onSubmit={submit} className="mt-6 space-y-6">
                 <div>
-                    <InputLabel htmlFor="name" value="Name" />
+                    <Label htmlFor="name" value="Name" />
 
-                    <TextInput
+                    <Input
+                        style={{ borderRadius: "15px" }}
                         id="name"
                         className="mt-1 block w-full p-1"
                         value={data.name}
@@ -54,9 +57,10 @@ export default function UpdateProfileInformation({
                 </div>
 
                 <div>
-                    <InputLabel htmlFor="email" value="Email" />
+                    <Label htmlFor="email" value="Email" />
 
-                    <TextInput
+                    <Input
+                        style={{ borderRadius: "15px" }}
                         id="email"
                         type="email"
                         className="mt-1 block w-full p-1"
@@ -94,6 +98,7 @@ export default function UpdateProfileInformation({
 
                 <div className="flex items-center gap-4">
                     <PrimaryButton
+                        className="bg-blue-500"
                         disabled={processing}
                         style={{ borderRadius: "15px" }}
                     >

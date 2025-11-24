@@ -209,13 +209,13 @@ export default function Create({ auth, userDivision, workflows }) {
                 <div className="p-5 w-full">
                     <div className="mx-auto sm:px-6 lg:px-8">
                         {/* Header */}
-                        <div className="flex items-center justify-between mb-6">
-                            <h1 className="text-2xl font-semibold text-gray-800">
+                        <div className="flex  items-center justify-between mb-6">
+                            <h1 className="md:text-2xl ml-2 text-sm mt-5 font-semibold text-gray-800">
                                 New Pengajuan
                             </h1>
                             <div className="flex items-center gap-4">
                                 <span
-                                    className={`text-sm font-medium ${
+                                    className={`md:text-sm text-xs font-medium ${
                                         isSaved
                                             ? "text-green-600"
                                             : "text-orange-600"
@@ -244,7 +244,7 @@ export default function Create({ auth, userDivision, workflows }) {
                             >
                                 <div className="space-y-6">
                                     {/* Grid 2 kolom utama */}
-                                    <div className="grid grid-cols-2 gap-6">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                         {/* Kiri */}
                                         <div className="space-y-6">
                                             <div
@@ -447,7 +447,7 @@ export default function Create({ auth, userDivision, workflows }) {
                                             <h3 className="text-lg font-semibold mb-4">
                                                 Informasi Tambahan
                                             </h3>
-                                            <div className="grid grid-cols-2 gap-6">
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                                 {activeFields.map((f) => {
                                                     const type = String(
                                                         f.type || "text"

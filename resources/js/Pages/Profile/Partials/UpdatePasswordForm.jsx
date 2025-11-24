@@ -2,6 +2,7 @@ import InputError from "@/Components/InputError";
 import InputLabel from "@/Components/InputLabel";
 import PrimaryButton from "@/Components/PrimaryButton";
 import TextInput from "@/Components/TextInput";
+import { Input } from "@/Components/ui/input";
 import { Transition } from "@headlessui/react";
 import { useForm } from "@inertiajs/react";
 import { useRef } from "react";
@@ -59,14 +60,15 @@ export default function UpdatePasswordForm({ className = "" }) {
 
             <form onSubmit={updatePassword} className="mt-6 space-y-6">
                 <div>
-                    <InputLabel
+                    <Label
                         htmlFor="current_password"
                         value="Current Password"
                     />
 
-                    <TextInput
+                    <Input
                         id="current_password"
                         ref={currentPasswordInput}
+                        style={{ borderRadius: "15px" }}
                         value={data.current_password}
                         onChange={(e) =>
                             setData("current_password", e.target.value)
@@ -85,7 +87,8 @@ export default function UpdatePasswordForm({ className = "" }) {
                 <div>
                     <InputLabel htmlFor="password" value="New Password" />
 
-                    <TextInput
+                    <Input
+                        style={{ borderRadius: "15px" }}
                         id="password"
                         ref={passwordInput}
                         value={data.password}
@@ -104,7 +107,8 @@ export default function UpdatePasswordForm({ className = "" }) {
                         value="Confirm Password"
                     />
 
-                    <TextInput
+                    <Input
+                        style={{ borderRadius: "15px" }}
                         id="password_confirmation"
                         value={data.password_confirmation}
                         onChange={(e) =>
@@ -123,6 +127,7 @@ export default function UpdatePasswordForm({ className = "" }) {
 
                 <div className="flex items-center gap-4">
                     <PrimaryButton
+                        className="bg-blue-500"
                         disabled={processing}
                         style={{ borderRadius: "15px" }}
                     >

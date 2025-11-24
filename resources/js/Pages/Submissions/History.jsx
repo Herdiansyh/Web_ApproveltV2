@@ -9,9 +9,41 @@ export default function History({ auth, submissions }) {
     const formatDate = (d) => {
         if (!d) return "-";
         try {
-            return new Date(d).toLocaleString("id-ID");
+            let dt;
+            if (typeof d === "string") {
+                const s = d.trim();
+                const noTz = /^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}$/.test(s);
+                if (noTz) {
+                    // Interpret the string as Asia/Jakarta local time (UTC+7)
+                    const m = s.replace(" ", "T").split(/[T:.-]/);
+                    const y = parseInt(m[0], 10);
+                    const mo = parseInt(m[1], 10) - 1;
+                    const d2 = parseInt(m[2], 10);
+                    const hh = parseInt(m[3], 10);
+                    const mm = parseInt(m[4], 10);
+                    const ss = parseInt(m[5], 10);
+                    // Convert Asia/Jakarta local to UTC by subtracting 7 hours
+                    dt = new Date(Date.UTC(y, mo, d2, hh - 7, mm, ss));
+                } else {
+                    // Has timezone info; let JS parse it
+                    dt = new Date(s);
+                }
+            } else {
+                dt = new Date(d);
+            }
+            const fmt = new Intl.DateTimeFormat("id-ID", {
+                timeZone: "Asia/Jakarta",
+                year: "numeric",
+                month: "2-digit",
+                day: "2-digit",
+                hour: "2-digit",
+                minute: "2-digit",
+                second: "2-digit",
+                hour12: false,
+            });
+            return fmt.format(dt);
         } catch {
-            return d;
+            return String(d);
         }
     };
 
@@ -47,7 +79,7 @@ export default function History({ auth, submissions }) {
                                 <thead>
                                     <tr className="bg-muted/40 text-muted-foreground uppercase text-xs tracking-wider">
                                         <th className="py-3 px-6 text-left">
-                                            Name Series
+                                            Judul Pengajuan
                                         </th>
                                         <th className="py-3 px-6 text-left">
                                             Tanggal Diajukan
@@ -84,26 +116,6 @@ export default function History({ auth, submissions }) {
 
                                     {rows.map((s) => {
                                         const doc = s?.workflow?.document;
-                                        // Prefer the actual generated series code on the submission if available
-                                        const nameSeries = s?.series_code
-                                            ? s.series_code
-                                            : doc?.nameSeries?.prefix
-                                            ? `${doc.nameSeries.prefix}${
-                                                  doc.nameSeries
-                                                      .series_number ??
-                                                  doc.nameSeries
-                                                      .series_pattern ??
-                                                  ""
-                                              }`
-                                            : doc?.name_series?.prefix
-                                            ? `${doc.name_series.prefix}${
-                                                  doc.name_series
-                                                      .series_number ??
-                                                  doc.name_series
-                                                      .series_pattern ??
-                                                  ""
-                                              }`
-                                            : "-";
 
                                         const status = s?.status ?? "-";
                                         const myStep = s?.my_history_step;
@@ -122,8 +134,8 @@ export default function History({ auth, submissions }) {
                                                 className="cursor-pointer hover:bg-gray-100 transition"
                                                 onClick={() => onRowClick(s.id)}
                                             >
-                                                <td className="py-3 px-6 text-xs text-muted-foreground font-mono">
-                                                    {nameSeries}
+                                                <td className="py-3 px-6">
+                                                    {s?.title || "-"}
                                                 </td>
                                                 <td className="py-3 px-6">
                                                     {formatDate(s.created_at)}

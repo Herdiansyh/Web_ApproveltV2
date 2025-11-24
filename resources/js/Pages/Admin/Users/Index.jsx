@@ -26,6 +26,8 @@ import Header from "@/Components/Header";
 import CardUsers from "./CardUsers";
 import { set } from "zod";
 import CardCreate from "./CardCreate";
+import { Separator } from "@/Components/ui/separator";
+import Footer from "@/Components/Footer";
 
 export default function Index({ auth, users, divisions, subdivisions, roles }) {
     const [showCreateModal, setShowCreateModal] = useState(false);
@@ -240,7 +242,9 @@ export default function Index({ auth, users, divisions, subdivisions, roles }) {
                     </div>
                 </div>
             </div>
-
+            <Separator className="my-10" />
+            {/* Footer */}
+            <Footer />
             {/* Create/Edit Modal */}
             {(showCreateModal || editingUser) && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">

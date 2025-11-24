@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Workflow;
 use App\Models\WorkflowStep;
-use App\Models\WorkflowStepPermission;
+// use App\Models\WorkflowStepPermission; // deprecated, global permissions are used instead
 use App\Models\Division;
 use App\Models\Subdivision;
 use App\Models\Document;
@@ -17,7 +17,7 @@ class WorkflowController extends Controller
 {
     public function index()
     {
-        $workflows = Workflow::with(['document', 'steps.division', 'steps.permissions'])
+        $workflows = Workflow::with(['document', 'steps.division'])
             ->orderByDesc('id')
             ->get();
 
@@ -43,7 +43,6 @@ class WorkflowController extends Controller
             'steps.*.role' => 'nullable|string|max:100',
             'steps.*.instructions' => 'nullable|string',
             'steps.*.actions' => 'nullable|array',
-            'steps.*.permissions' => 'array',
             'is_active' => 'sometimes|boolean',
         ]);
 
@@ -73,22 +72,7 @@ class WorkflowController extends Controller
                     'actions' => isset($stepData['actions']) && is_array($stepData['actions']) ? $stepData['actions'] : [],
                 ]);
 
-                if (!empty($stepData['permissions'])) {
-                    foreach ($stepData['permissions'] as $perm) {
-                        WorkflowStepPermission::updateOrCreate(
-                            [
-                                'workflow_step_id' => $step->id,
-                                'subdivision_id' => $perm['subdivision_id'],
-                            ],
-                            [
-                                'can_view' => $perm['can_view'] ?? false,
-                                'can_approve' => $perm['can_approve'] ?? false,
-                                'can_reject' => $perm['can_reject'] ?? false,
-                                'can_request_next' => $perm['can_request_next'] ?? false,
-                            ]
-                        );
-                    }
-                }
+                // Ignore legacy per-step permissions payload (deprecated)
             }
         });
 
@@ -106,7 +90,6 @@ class WorkflowController extends Controller
             'steps.*.role' => 'nullable|string|max:100',
             'steps.*.instructions' => 'nullable|string',
             'steps.*.actions' => 'nullable|array',
-            'steps.*.permissions' => 'array',
             'is_active' => 'sometimes|boolean',
         ]);
 
@@ -127,28 +110,11 @@ class WorkflowController extends Controller
             ]);
 
             if (isset($validated['steps'])) {
-                // Simpan existing permissions sebelum delete step
-                $existingSteps = $workflow->steps()->with('permissions')->get();
-                $permissionsMap = [];
-                foreach ($existingSteps as $oldStep) {
-                    $key = $oldStep->step_order . '_' . $oldStep->division_id;
-                    $permissionsMap[$key] = $oldStep->permissions->map(function($perm) {
-                        return [
-                            'subdivision_id' => $perm->subdivision_id,
-                            'can_view' => $perm->can_view,
-                            'can_approve' => $perm->can_approve,
-                            'can_reject' => $perm->can_reject,
-                            'can_request_next' => $perm->can_request_next,
-                        ];
-                    })->toArray();
-                }
-
-                // Delete existing steps (permissions will cascade)
+                // Delete existing steps
                 $workflow->steps()->delete();
 
                 foreach ($validated['steps'] as $index => $stepData) {
-                    $step = WorkflowStep::create([
-                        'workflow_id' => $workflow->id,
+                    $step = $workflow->steps()->create([
                         'division_id' => $stepData['division_id'],
                         'step_order' => $index + 1,
                         'role' => $stepData['role'] ?? null,
@@ -157,29 +123,7 @@ class WorkflowController extends Controller
                         'actions' => isset($stepData['actions']) && is_array($stepData['actions']) ? $stepData['actions'] : [],
                     ]);
 
-                    // Restore permissions dari step lama jika step_order dan division_id sama
-                    $key = $step->step_order . '_' . $step->division_id;
-                    $permissionsToRestore = $permissionsMap[$key] ?? [];
-
-                    // Jika ada permissions dari request, gunakan itu, jika tidak gunakan yang tersimpan
-                    $permissions = !empty($stepData['permissions']) ? $stepData['permissions'] : $permissionsToRestore;
-
-                    if (!empty($permissions)) {
-                        foreach ($permissions as $perm) {
-                            WorkflowStepPermission::updateOrCreate(
-                                [
-                                    'workflow_step_id' => $step->id,
-                                    'subdivision_id' => $perm['subdivision_id'],
-                                ],
-                                [
-                                    'can_view' => $perm['can_view'] ?? false,
-                                    'can_approve' => $perm['can_approve'] ?? false,
-                                    'can_reject' => $perm['can_reject'] ?? false,
-                                    'can_request_next' => $perm['can_request_next'] ?? false,
-                                ]
-                            );
-                        }
-                    }
+                    // Legacy per-step permissions diabaikan (deprecated)
                 }
             }
         });

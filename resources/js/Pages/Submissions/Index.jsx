@@ -20,6 +20,8 @@ import {
 } from "@/Components/ui/dropdown-menu";
 import { Eye, MoreVertical, Pencil, Trash2, Search } from "lucide-react";
 import PrimaryButton from "@/Components/PrimaryButton";
+import { Separator } from "@/Components/ui/separator";
+import Footer from "@/Components/Footer";
 
 export default function Index({ auth, submissions, userDivision }) {
     const [filter, setFilter] = useState("");
@@ -48,6 +50,9 @@ export default function Index({ auth, submissions, userDivision }) {
                 <div className="w-full p-8">
                     <div className=" mx-auto bg-card shadow-sm rounded-2xl p-8 border border-border/50 backdrop-blur-sm">
                         <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-3">
+                            <h1 className="md:text-2xl text-sm mt-5 font-semibold text-gray-800">
+                                📁 Daftar Pengajuan Keluar
+                            </h1>
                             <div className="relative w-full md:w-1/3">
                                 <Search className="absolute left-3 top-2.5 w-4 h-4 text-muted-foreground" />
                                 <Input
@@ -66,7 +71,7 @@ export default function Index({ auth, submissions, userDivision }) {
                                             style={{
                                                 borderRadius: "15px",
                                             }}
-                                            className="w-full bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm sm:text-xs text-xs font-semibold transition-all"
+                                            className="w-full bg-primary tracking-wide hover:bg-primary/90 text-primary-foreground shadow-sm sm:text-xs text-xs font-semibold transition-all"
                                         >
                                             + Buat Pengajuan
                                         </Button>
@@ -100,17 +105,23 @@ export default function Index({ auth, submissions, userDivision }) {
                                             Status
                                         </th>
                                         <th className="py-3 px-6 text-left">
-                                            Tanggal
+                                            Tanggal Dibuat
                                         </th>
                                         {!String(
                                             submissions.data?.[0]?.status || ""
                                         )
                                             .toLowerCase()
-                                            .includes("approved") && (
-                                            <th className="py-3 px-6 text-center">
-                                                Aksi
-                                            </th>
-                                        )}
+                                            .includes("approved") &&
+                                            !String(
+                                                submissions.data?.[0]?.status ||
+                                                    ""
+                                            )
+                                                .toLowerCase()
+                                                .includes("rejected") && (
+                                                <th className="py-3 px-6 text-center">
+                                                    Aksi
+                                                </th>
+                                            )}
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-border/40">
@@ -141,15 +152,15 @@ export default function Index({ auth, submissions, userDivision }) {
                                                 {submission.series_code || "-"}
                                             </td>
                                             <td className="py-2 px-6 hover:underline">
-                                                {submission.workflow?.name ||
-                                                    "-"}
+                                                {submission.workflow?.document
+                                                    ?.name || "-"}
                                             </td>
                                             {auth.user.role === "manager" && (
                                                 <td className="py-2 px-6 hover:underline">
                                                     {submission.user.name}
                                                 </td>
                                             )}
-                                            <td className="py-2 px-6 ">
+                                            <td className="py-2 px-6 flex ">
                                                 <span
                                                     className={`px-3 py-1 rounded-full text-[0.8em] sm:text-xs font-medium ${
                                                         submission.status ===
@@ -161,23 +172,24 @@ export default function Index({ auth, submissions, userDivision }) {
                                                             : "bg-amber-100 text-amber-700"
                                                     }`}
                                                 >
-                                                    {submission.status ===
-                                                    "pending"
-                                                        ? "Pending"
-                                                        : submission.status ===
-                                                          "Approved by Direktur"
-                                                        ? "Approved"
-                                                        : submission.status ===
-                                                          "rejected"
-                                                        ? "rejected"
-                                                        : submission.status ||
-                                                          "Waiting"}
+                                                    {(() => {
+                                                        const raw = String(submission.status || '').toLowerCase();
+                                                        const step = submission.current_workflow_step || null;
+                                                        const who = step?.division?.name || step?.role || null;
+                                                        if (raw === 'pending' || raw.includes('waiting')) {
+                                                            return `Waiting confirmation${who ? ` to ${who}` : ''}`;
+                                                        }
+                                                        if (raw.includes('approved')) return 'Approved';
+                                                        if (raw.includes('rejected') || raw === 'rejected') return 'Rejected';
+                                                        return submission.status || 'Waiting';
+                                                    })()}
                                                 </span>
+
                                                 {String(submission.status)
                                                     .toLowerCase()
                                                     .includes("approved") && (
                                                     <span
-                                                        className="ml-2 text-[11px] rounded-full px-2 py-0.5 bg-gray-100 text-gray-700"
+                                                        className="ml-2 text-[11px] rounded px-2 py-0.5 bg-gray-100 text-gray-700"
                                                         title="Dokumen final – aksi edit/delete dinonaktifkan."
                                                     >
                                                         Final
@@ -191,131 +203,154 @@ export default function Index({ auth, submissions, userDivision }) {
                                             </td>
                                             {!String(submission.status)
                                                 .toLowerCase()
-                                                .includes("approved") && (
-                                                <td
-                                                    className="py-2 px-6 text-center"
-                                                    onClick={(e) =>
-                                                        e.stopPropagation()
-                                                    }
-                                                >
-                                                    <DropdownMenu>
-                                                        <DropdownMenuTrigger
-                                                            asChild
-                                                        >
-                                                            <Button
-                                                                variant="ghost"
-                                                                size="icon"
-                                                                className="rounded-full hover:bg-muted/60"
-                                                                onClick={(e) =>
-                                                                    e.stopPropagation()
-                                                                }
+                                                .includes("approved") &&
+                                                !String(submission.status)
+                                                    .toLowerCase()
+                                                    .includes("rejected") && (
+                                                    <td
+                                                        className="py-2 px-6 text-center"
+                                                        onClick={(e) =>
+                                                            e.stopPropagation()
+                                                        }
+                                                    >
+                                                        <DropdownMenu>
+                                                            <DropdownMenuTrigger
+                                                                asChild
                                                             >
-                                                                <MoreVertical className="w-4 h-4 text-muted-foreground" />
-                                                            </Button>
-                                                        </DropdownMenuTrigger>
-                                                        <DropdownMenuContent
-                                                            align="end"
-                                                            className="w-36 shadow-lg border border-border/40"
-                                                        >
-                                                            {(() => {
-                                                                const isApproved =
-                                                                    String(
-                                                                        submission.status
-                                                                    )
-                                                                        .toLowerCase()
-                                                                        .includes(
-                                                                            "approved"
-                                                                        );
-                                                                const isOwner =
-                                                                    auth.user
-                                                                        .id ===
-                                                                    submission.user_id;
-                                                                const sameDivision =
-                                                                    userDivision?.id &&
-                                                                    submission.division_id ===
-                                                                        userDivision.id;
-                                                                const canEditGlobal =
-                                                                    !!submission
-                                                                        .permission_for_me
-                                                                        ?.can_edit;
-                                                                const showEdit =
-                                                                    !isApproved &&
-                                                                    (isOwner ||
-                                                                        (sameDivision &&
-                                                                            canEditGlobal));
-                                                                return showEdit;
-                                                            })() && (
-                                                                <DropdownMenuItem
-                                                                    asChild
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="icon"
+                                                                    className="rounded-full hover:bg-muted/60"
                                                                     onClick={(
                                                                         e
                                                                     ) =>
                                                                         e.stopPropagation()
                                                                     }
                                                                 >
-                                                                    <Link
-                                                                        href={route(
-                                                                            "submissions.edit",
-                                                                            submission.id
-                                                                        )}
-                                                                        className="flex items-center gap-2"
-                                                                    >
-                                                                        <Pencil className="w-4 h-4" />{" "}
-                                                                        Edit
-                                                                    </Link>
-                                                                </DropdownMenuItem>
-                                                            )}
-
-                                                            {(() => {
-                                                                const isApproved =
-                                                                    String(
-                                                                        submission.status
-                                                                    )
-                                                                        .toLowerCase()
-                                                                        .includes(
+                                                                    <MoreVertical className="w-4 h-4 text-muted-foreground" />
+                                                                </Button>
+                                                            </DropdownMenuTrigger>
+                                                            <DropdownMenuContent
+                                                                align="end"
+                                                                className="w-36 shadow-lg border border-border/40"
+                                                            >
+                                                                {(() => {
+                                                                    const status =
+                                                                        String(
+                                                                            submission.status
+                                                                        ).toLowerCase();
+                                                                    const isApproved =
+                                                                        status.includes(
                                                                             "approved"
                                                                         );
-                                                                const isOwner =
-                                                                    auth.user
-                                                                        .id ===
-                                                                    submission.user_id;
-                                                                const sameDivision =
-                                                                    userDivision?.id &&
-                                                                    submission.division_id ===
-                                                                        userDivision.id;
-                                                                const canDeleteGlobal =
-                                                                    !!submission
-                                                                        .permission_for_me
-                                                                        ?.can_delete;
-                                                                const showDelete =
-                                                                    !isApproved &&
-                                                                    (isOwner ||
-                                                                        (sameDivision &&
-                                                                            canDeleteGlobal));
-                                                                return showDelete;
-                                                            })() && (
-                                                                <DropdownMenuItem
-                                                                    onClick={(
-                                                                        e
-                                                                    ) => {
-                                                                        e.stopPropagation();
-                                                                        setToDeleteId(
-                                                                            submission.id
+                                                                    const isRejected =
+                                                                        status.includes(
+                                                                            "rejected"
                                                                         );
-                                                                        setConfirmOpen(
-                                                                            true
+
+                                                                    const isOwner =
+                                                                        auth
+                                                                            .user
+                                                                            .id ===
+                                                                        submission.user_id;
+                                                                    const sameDivision =
+                                                                        userDivision?.id &&
+                                                                        submission.division_id ===
+                                                                            userDivision.id;
+                                                                    const canEditGlobal =
+                                                                        !!submission
+                                                                            .permission_for_me
+                                                                            ?.can_edit;
+
+                                                                    const showEdit =
+                                                                        !isApproved &&
+                                                                        !isRejected &&
+                                                                        (isOwner ||
+                                                                            (sameDivision &&
+                                                                                canEditGlobal));
+
+                                                                    return showEdit;
+                                                                })() && (
+                                                                    <DropdownMenuItem
+                                                                        asChild
+                                                                        onClick={(
+                                                                            e
+                                                                        ) =>
+                                                                            e.stopPropagation()
+                                                                        }
+                                                                    >
+                                                                        <Link
+                                                                            href={route(
+                                                                                "submissions.edit",
+                                                                                submission.id
+                                                                            )}
+                                                                            className="flex items-center gap-2"
+                                                                        >
+                                                                            <Pencil className="w-4 h-4" />{" "}
+                                                                            Edit
+                                                                        </Link>
+                                                                    </DropdownMenuItem>
+                                                                )}
+
+                                                                {(() => {
+                                                                    const status =
+                                                                        String(
+                                                                            submission.status
+                                                                        ).toLowerCase();
+                                                                    const isApproved =
+                                                                        status.includes(
+                                                                            "approved"
                                                                         );
-                                                                    }}
-                                                                    className="flex items-center gap-2 text-red-600"
-                                                                >
-                                                                    <Trash2 className="w-4 h-4" />{" "}
-                                                                    Hapus
-                                                                </DropdownMenuItem>
-                                                            )}
-                                                        </DropdownMenuContent>
-                                                    </DropdownMenu>
-                                                </td>
-                                            )}
+                                                                    const isRejected =
+                                                                        status.includes(
+                                                                            "rejected"
+                                                                        );
+
+                                                                    const isOwner =
+                                                                        auth
+                                                                            .user
+                                                                            .id ===
+                                                                        submission.user_id;
+                                                                    const sameDivision =
+                                                                        userDivision?.id &&
+                                                                        submission.division_id ===
+                                                                            userDivision.id;
+                                                                    const canDeleteGlobal =
+                                                                        !!submission
+                                                                            .permission_for_me
+                                                                            ?.can_delete;
+
+                                                                    const showDelete =
+                                                                        !isApproved &&
+                                                                        !isRejected &&
+                                                                        (isOwner ||
+                                                                            (sameDivision &&
+                                                                                canDeleteGlobal));
+
+                                                                    return showDelete;
+                                                                })() && (
+                                                                    <DropdownMenuItem
+                                                                        onClick={(
+                                                                            e
+                                                                        ) => {
+                                                                            e.stopPropagation();
+                                                                            setToDeleteId(
+                                                                                submission.id
+                                                                            );
+                                                                            setConfirmOpen(
+                                                                                true
+                                                                            );
+                                                                        }}
+                                                                        className="flex items-center gap-2 text-red-600"
+                                                                    >
+                                                                        <Trash2 className="w-4 h-4" />{" "}
+                                                                        Hapus
+                                                                    </DropdownMenuItem>
+                                                                )}
+                                                            </DropdownMenuContent>
+                                                        </DropdownMenu>
+                                                    </td>
+                                                )}
                                         </tr>
                                     ))}
                                 </tbody>
@@ -342,26 +377,29 @@ export default function Index({ auth, submissions, userDivision }) {
                     </div>
                 </div>
             </div>
+            <Separator className="my-10" />
+            {/* Footer */}
+            <Footer />
 
             <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
-                <DialogContent className="rounded-xl">
+                <DialogContent style={{ borderRadius: "15px" }}>
                     <DialogHeader>
                         <DialogTitle>Hapus Pengajuan?</DialogTitle>
                         <DialogDescription>
                             Tindakan ini tidak dapat dibatalkan.
                         </DialogDescription>
                     </DialogHeader>
-                    <DialogFooter>
+                    <DialogFooter className="space-x-2 flex gap-2">
                         <Button
-                            variant="secondary"
                             onClick={() => setConfirmOpen(false)}
                             className="rounded-md"
+                            style={{ borderRadius: "15px" }}
                         >
                             Batal
                         </Button>
                         <Button
-                            variant="destructive"
                             className="rounded-md"
+                            style={{ borderRadius: "15px" }}
                             onClick={() => {
                                 if (toDeleteId) {
                                     router.delete(

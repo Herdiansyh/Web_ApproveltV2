@@ -341,6 +341,9 @@ export default function Index({
                     </div>
                 </div>
             </div>
+            <Separator className="my-10" />
+            {/* Footer */}
+            <Footer />
             {/* Modal Create/Edit */}
             {showModal && (
                 <ModalCreate
@@ -361,9 +364,6 @@ export default function Index({
                     reset={reset}
                 />
             )}{" "}
-            <Separator className="my-10" />
-            {/* Footer */}
-            <Footer />
         </AuthenticatedLayout>
     );
 }

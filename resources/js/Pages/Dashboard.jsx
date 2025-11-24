@@ -14,7 +14,7 @@ import { ChartPie, CheckCircle, Clock, Bell, ArrowRight } from "lucide-react";
 import Header from "@/Components/Header";
 import Footer from "@/Components/Footer";
 
-export default function Dashboard({ auth, stats }) {
+export default function Dashboard({ auth, stats, canApprove, pendingItems = [] }) {
     return (
         <AuthenticatedLayout
             header={
@@ -53,8 +53,8 @@ export default function Dashboard({ auth, stats }) {
                         </div>
                     </div>
 
-                    {/* Alert Section */}
-                    {stats?.waiting > 0 && (
+                    {/* Alert Section - only for users who can approve and have items to review */}
+                    {canApprove && (pendingItems?.length || 0) > 0 && (
                         <Card
                             className="relative overflow-hidden border-border bg-card shadow-sm"
                             style={{ borderRadius: "15px" }}
@@ -70,7 +70,7 @@ export default function Dashboard({ auth, stats }) {
                                     </div>
                                     <div>
                                         <CardTitle className="text-lg text-foreground">
-                                            Ada {stats.waiting} pengajuan
+                                            Ada {(pendingItems?.length || 0)} pengajuan
                                             menunggumu 🚀
                                         </CardTitle>
                                         <CardDescription className="text-sm text-muted-foreground">
@@ -101,8 +101,8 @@ export default function Dashboard({ auth, stats }) {
                     {/* Stats Section */}
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {/* Total Pengajuan */}
-                        {auth.user.role === "employee" && (
+                        {/* Total Pengajuan - tampilkan untuk semua role kecuali direktur */}
+                        {auth.user.role !== "direktur" && (
                             <Card
                                 style={{ borderRadius: "15px" }}
                                 className="border border-border shadow-md hover:shadow-lg transition"
@@ -182,7 +182,7 @@ export default function Dashboard({ auth, stats }) {
                             </CardHeader>
                             <CardContent>
                                 <div className="text-4xl font-bold text-red-600">
-                                    {stats.approved}
+                                    {stats.rejected}
                                 </div>
                                 <p className="text-xs text-muted-foreground mt-1">
                                     Dokumen yang sudah{" "}

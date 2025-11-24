@@ -13,6 +13,8 @@ import {
     DropdownMenuTrigger,
 } from "@/Components/ui/dropdown-menu";
 import { Download, Printer } from "lucide-react";
+import { Separator } from "@/Components/ui/separator";
+import Footer from "@/Components/Footer";
 
 export default function Show({
     auth,
@@ -21,6 +23,7 @@ export default function Show({
     canApprove = false,
     currentStep = null,
     currentSubmissionStep = null,
+    workflowSteps = [],
     documentFields = [],
     permissionForMe = null,
     userDivisionId = null,
@@ -177,6 +180,25 @@ export default function Show({
     const canDeleteNow =
         !isApprovedFinal && (isOwner || (sameDivision && canDeleteGlobal));
 
+    // Ambil catatan penolakan dari workflowSteps (step terakhir yang rejected dan punya note)
+    const rejectedNote = useMemo(() => {
+        if (!Array.isArray(workflowSteps)) return null;
+        const rejected = workflowSteps.filter(
+            (ws) =>
+                String(ws.status || "").toLowerCase() === "rejected" &&
+                ws.note &&
+                String(ws.note).trim() !== ""
+        );
+        if (rejected.length === 0) return null;
+        rejected.sort((a, b) => {
+            const ta = new Date(a.approved_at || a.updated_at || 0).getTime();
+            const tb = new Date(b.approved_at || b.updated_at || 0).getTime();
+            return tb - ta;
+        });
+        const last = rejected[0];
+        return { note: last.note };
+    }, [workflowSteps]);
+
     return (
         <AuthenticatedLayout
             user={auth.user}
@@ -193,10 +215,12 @@ export default function Show({
                     <div className=" mx-auto">
                         <Card className="p-8 rounded-2xl border border-border/50 shadow-sm backdrop-blur-md bg-card/80">
                             {(isApprovedFinal ||
-                                (!canEditNow && !canDeleteNow)) && (
+                                (!canEditNow &&
+                                    !canDeleteNow &&
+                                    !canApprove)) && (
                                 <div
                                     style={{ borderRadius: "15px" }}
-                                    className="mb-4 text-sm border border-blue-200 bg-blue-50 text-blue-800 px-3 py-2"
+                                    className="mb-4 sm:text-sm text-xs  border border-blue-200 bg-blue-50 text-blue-800 px-3 py-2"
                                 >
                                     {isApprovedFinal
                                         ? "Pengajuan ini sudah disetujui dan tidak bisa diubah."
@@ -207,11 +231,11 @@ export default function Show({
                                 <div className="space-y-2">
                                     <div className="flex flex-col sm:flex-row sm:items-center w-full justify-between gap-1 sm:gap-2">
                                         <div>
-                                            {seriesPattern && (
+                                            {/* {seriesPattern && (
                                                 <p className="text-xs font-mono text-muted-foreground mb-0.5">
                                                     {seriesPattern}
                                                 </p>
-                                            )}
+                                            )} */}
 
                                             <div className="flex items-center">
                                                 <h3 className="text-md sm:text-2xl font-bold text-foreground/90">
@@ -220,13 +244,13 @@ export default function Show({
                                                 <span
                                                     className={`px-3 py-1  rounded-full text-xs sm:text-sm font-bold ${statusColor}`}
                                                 >
-                                                    {submission.status ===
-                                                    "Approved by Direktur"
-                                                        ? "• Disetujui"
-                                                        : submission.status ===
-                                                          "• rejected"
-                                                        ? "Ditolak"
-                                                        : "• Menunggu Persetujuan"}
+                                                    {(() => {
+                                                        const raw = String(submission.status || '').toLowerCase();
+                                                        const who = currentStep?.division?.name || currentStep?.role || null;
+                                                        if (raw.includes('approved')) return '• Disetujui';
+                                                        if (raw === 'rejected' || raw.includes('rejected')) return '• Ditolak';
+                                                        return `• Waiting confirmation${who ? ` to ${who}` : ''}`;
+                                                    })()}
                                                 </span>
                                                 {isApprovedFinal && (
                                                     <span
@@ -239,11 +263,15 @@ export default function Show({
                                             </div>
                                         </div>
                                     </div>
-                                    {submission.description && (
-                                        <p className="text-sm text-muted-foreground">
-                                            Deskripsi: {submission.description}
-                                        </p>
-                                    )}
+                                    {/* Document Type */}
+                                    <div className="mt-2 text-xs sm:text-sm text-muted-foreground">
+                                        <span className="font-semibold">
+                                            Jenis Dokumen:
+                                        </span>{" "}
+                                        {submission?.workflow?.document?.name ||
+                                            "-"}
+                                    </div>
+
                                     <p className="sm:text-sm text-xs text-muted-foreground ">
                                         <span className="font-semibold ">
                                             Diajukan oleh:
@@ -251,11 +279,21 @@ export default function Show({
                                         {submission.user.name} (
                                         {submission.user.division?.name ?? "-"})
                                     </p>
-
-                                    {submission.approval_note && (
-                                        <p className="text-sm text-muted-foreground mt-1">
-                                            📝 {submission.approval_note}
+                                    {submission.description && (
+                                        <p className="text-sm text-muted-foreground">
+                                            <span className="font-semibold">
+                                                Deskripsi:
+                                            </span>{" "}
+                                            {submission.description}
                                         </p>
+                                    )}
+                                    {rejectedNote?.note && (
+                                        <div className="text-sm mt-1 rounded-md border border-rose-200 bg-rose-50 text-rose-800 px-3 py-2">
+                                            <span className="font-semibold">
+                                                Alasan Penolakan:
+                                            </span>{" "}
+                                            {rejectedNote.note}
+                                        </div>
                                     )}
                                 </div>
 
@@ -274,16 +312,27 @@ export default function Show({
                                     )}
 
                                     {Array.isArray(documentFields) &&
-                                        documentFields.length > 0 && (
+                                        documentFields.length > 0 &&
+                                        (isApprovedFinal ? (
                                             <button
                                                 type="button"
                                                 onClick={handlePrint}
                                                 className="border border-gray-200 mb-3 inline-flex items-center justify-center p-1 md:p-2 text-sm font-medium rounded-[8px] bg-muted text-foreground hover:bg-muted/70 active:scale-[0.97] transition-all shadow-sm"
                                                 aria-label="Print"
+                                                title="Cetak dokumen"
                                             >
                                                 <Printer className="w-5 md:w-7" />
                                             </button>
-                                        )}
+                                        ) : (
+                                            <span
+                                                style={{ borderRadius: "10px" }}
+                                                className="mb-3 inline-flex items-center px-2 py-1 text-[11px]  bg-slate-100 text-slate-600 border border-slate-200"
+                                                title="Cetak tersedia setelah pengajuan disetujui di tahap terakhir"
+                                            >
+                                                Cetak tersedia setelah final
+                                                approval
+                                            </span>
+                                        ))}
 
                                     {(submission.status === "pending" ||
                                         submission.status
@@ -454,7 +503,9 @@ export default function Show({
                     </div>
                 </div>
             </div>
-
+            <Separator className="my-10" />
+            {/* Footer */}
+            <Footer />
             {/* Modal Approve */}
             {showApproveModal && (
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4">
@@ -462,23 +513,17 @@ export default function Show({
                         <h3 className="text-lg font-semibold mb-3">
                             Setujui Pengajuan
                         </h3>
-                        <Textarea
-                            placeholder="Catatan (opsional)"
-                            value={data.approval_note}
-                            onChange={(e) =>
-                                setData("approval_note", e.target.value)
-                            }
-                            rows={3}
-                            className="mb-4"
-                        />
+
                         <div className="flex justify-end gap-2">
                             <Button
+                                style={{ borderRadius: "15px" }}
                                 variant="outline"
                                 onClick={() => setShowApproveModal(false)}
                             >
                                 Batal
                             </Button>
                             <Button
+                                style={{ borderRadius: "15px" }}
                                 onClick={handleApprove}
                                 disabled={processing}
                             >
@@ -508,12 +553,14 @@ export default function Show({
                         />
                         <div className="flex justify-end gap-2">
                             <Button
+                                style={{ borderRadius: "15px" }}
                                 variant="outline"
                                 onClick={() => setShowRejectModal(false)}
                             >
                                 Batal
                             </Button>
                             <Button
+                                style={{ borderRadius: "15px" }}
                                 variant="destructive"
                                 onClick={handleReject}
                                 disabled={processing}

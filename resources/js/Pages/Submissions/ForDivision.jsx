@@ -19,6 +19,8 @@ import {
     DropdownMenuTrigger,
 } from "@/Components/ui/dropdown-menu";
 import { MoreVertical, Pencil, Trash2, Search } from "lucide-react";
+import { Separator } from "@/Components/ui/separator";
+import Footer from "@/Components/Footer";
 
 export default function ForDivision({ auth, submissions, userDivision }) {
     const [filter, setFilter] = useState("");
@@ -46,8 +48,8 @@ export default function ForDivision({ auth, submissions, userDivision }) {
                 <div className="w-full p-8">
                     <div className=" mx-auto bg-card shadow-sm rounded-2xl p-8 border border-border/50 backdrop-blur-sm">
                         <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-3">
-                            <div className="text-lg font-medium">
-                                Lihat Daftar Pengajuan
+                            <div className="text-lg text-center font-medium">
+                                📁 Daftar Pengajuan Masuk
                             </div>
                             <div className="relative w-full md:w-1/3">
                                 <Search className="absolute left-3 top-2.5 w-4 h-4 text-muted-foreground" />
@@ -76,10 +78,13 @@ export default function ForDivision({ auth, submissions, userDivision }) {
                                             Pengirim
                                         </th>
                                         <th className="py-3 px-6 text-left">
+                                            Jenis Dokumen
+                                        </th>
+                                        <th className="py-3 px-6 text-left">
                                             Status
                                         </th>
                                         <th className="py-3 px-6 text-left">
-                                            Tanggal
+                                            Tanggal Diajukan
                                         </th>
                                         <th className="py-3 px-6 text-center">
                                             Aksi
@@ -117,29 +122,36 @@ export default function ForDivision({ auth, submissions, userDivision }) {
                                                     <td className="py-3 px-6 hover:underline">
                                                         {submission.user.name}
                                                     </td>
+                                                    <td className="py-3 px-6 hover:underline">
+                                                        {submission.workflow
+                                                            ?.document?.name ||
+                                                            "-"}
+                                                    </td>
                                                     <td className="py-3 px-6 flex">
                                                         <span
                                                             className={`px-3 py-1 rounded-full text-xs font-medium ${
-                                                                submission.status ===
-                                                                "approved"
-                                                                    ? "bg-emerald-100 text-emerald-700"
-                                                                    : submission.status ===
-                                                                      "rejected"
-                                                                    ? "bg-rose-100 text-rose-700"
-                                                                    : "bg-amber-100 text-amber-700"
+                                                                String(submission.status || '')
+                                                                    .toLowerCase()
+                                                                    .includes('approved')
+                                                                    ? 'bg-emerald-100 text-emerald-700'
+                                                                    : String(submission.status || '')
+                                                                          .toLowerCase()
+                                                                          .includes('rejected')
+                                                                    ? 'bg-rose-100 text-rose-700'
+                                                                    : 'bg-amber-100 text-amber-700'
                                                             }`}
                                                         >
-                                                            {submission.status ===
-                                                            "pending"
-                                                                ? "Waiting confirmation"
-                                                                : submission.status ===
-                                                                  "approved"
-                                                                ? "Disetujui"
-                                                                : submission.status ===
-                                                                  "rejected"
-                                                                ? "Ditolak"
-                                                                : submission.status ||
-                                                                  "Pending"}
+                                                            {(() => {
+                                                                const raw = String(submission.status || '').toLowerCase();
+                                                                const step = submission.current_workflow_step || null;
+                                                                const who = step?.division?.name || step?.role || null;
+                                                                if (raw === 'pending' || raw.includes('waiting')) {
+                                                                    return `Waiting confirmation${who ? ` to ${who}` : ''}`;
+                                                                }
+                                                                if (raw === 'approved' || raw.includes('approved')) return 'Disetujui';
+                                                                if (raw === 'rejected' || raw.includes('rejected')) return 'Ditolak';
+                                                                return submission.status || 'Pending';
+                                                            })()}
                                                         </span>
                                                         {String(
                                                             submission.status
@@ -324,7 +336,9 @@ export default function ForDivision({ auth, submissions, userDivision }) {
                     </div>
                 </div>
             </div>
-
+            <Separator className="my-10" />
+            {/* Footer */}
+            <Footer />
             <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
                 <DialogContent className="rounded-xl">
                     <DialogHeader>

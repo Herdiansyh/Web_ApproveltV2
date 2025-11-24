@@ -58,10 +58,7 @@ class WorkflowStep extends Model
     {
         return $this->belongsTo(Division::class);
     }
-    public function permissions()
-{
-    return $this->hasMany(WorkflowStepPermission::class);
-}
+
 
 
 }

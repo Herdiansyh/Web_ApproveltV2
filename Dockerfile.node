@@ -1,0 +1,22 @@
+# Dockerfile untuk Node.js + Vite + React
+# Base image: node:18-alpine
+# Container: node
+# Untuk development (npm run dev) dan production build (npm run build)
+
+FROM node:18-alpine
+
+WORKDIR /var/www/html
+
+# Install dependencies
+COPY package*.json ./
+RUN npm ci --silent
+
+# Copy project files
+COPY . .
+
+# Expose Vite dev server port (http://localhost:5173)
+EXPOSE 5173
+
+# Default command: run Vite dev server
+# Untuk production build gunakan: npm run build
+CMD ["npm", "run", "dev"]

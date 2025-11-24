@@ -7,7 +7,7 @@ use App\Http\Controllers\SubdivisionController;
 use App\Http\Controllers\SubmissionController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\WorkflowController;
-use App\Http\Controllers\WorkflowStepPermissionController;
+// use App\Http\Controllers\WorkflowStepPermissionController; // deprecated
 use App\Http\Controllers\GlobalPermissionController;
 use App\Http\Controllers\VerificationController;
 use App\Models\Document;
@@ -19,6 +19,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use App\Models\SubdivisionPermission;
+use Illuminate\Support\Facades\Cache;
 
 // Login page
 Route::get('/', function () {
@@ -58,40 +59,54 @@ Route::get('/dashboard', function () {
     $user = Auth::user();
 
     // Statistik spesifik untuk user yang login
-    // 1) Total pengajuan yang dibuat oleh user ini
-    $totalSubmission = Submission::where('user_id', $user->id)->count();
+    $role = strtolower((string) $user->role);
 
-    // 2) Menunggu persetujuan oleh user/divisi ini (pakai permission global)
+    // Permission global untuk banner alert (tetap)
     $canApproveGlobal = $user->role === 'admin' ? true : ($user->subdivision_id
         ? (bool) SubdivisionPermission::where('subdivision_id', $user->subdivision_id)->value('can_approve')
         : false);
 
-    $waitingApproval = 0;
-    if ($canApproveGlobal) {
-        $waitingApprovalQuery = Submission::query()
+    if ($role === 'direktur') {
+        // Direktur: hitung yang menunggu action Direktur pada step saat ini
+        $totalSubmission = 0; // tidak ditampilkan untuk direktur
+        $waitingApproval = Submission::query()
             ->whereNotNull('workflow_id')
             ->whereHas('workflow.steps', function ($q) use ($user) {
-                $q->whereColumn('workflow_steps.step_order', 'submissions.current_step');
-                if ($user->role !== 'admin') {
-                    $q->where('workflow_steps.division_id', $user->division_id);
-                }
+                $q->whereColumn('workflow_steps.step_order', 'submissions.current_step')
+                  ->where(function ($w) use ($user) {
+                      $w->where('workflow_steps.division_id', $user->division_id)
+                        ->orWhereRaw('LOWER(workflow_steps.role) LIKE ?', ['%direktur%']);
+                  });
             })
             ->whereHas('workflowSteps', function ($q) {
                 $q->whereColumn('submission_workflow_steps.step_order', 'submissions.current_step')
                   ->where('submission_workflow_steps.status', 'pending');
-            });
-        $waitingApproval = $waitingApprovalQuery->count();
+            })
+            ->count();
+
+        // Direktur: total yang ia setujui/ditolak berdasarkan aksi pribadi
+        $approvedSubmissions = SubmissionWorkflowStep::where('approver_id', $user->id)
+            ->where('status', 'approved')
+            ->count();
+        $rejectedSubmissions = SubmissionWorkflowStep::where('approver_id', $user->id)
+            ->where('status', 'rejected')
+            ->count();
+    } else {
+        // User biasa: statistik hanya dari pengajuan yang ia buat
+        $totalSubmission = Submission::where('user_id', $user->id)->count();
+        $waitingApproval = Submission::where('user_id', $user->id)
+            ->where(function ($q) {
+                $q->whereRaw('LOWER(status) NOT LIKE ?', ['%approved%'])
+                  ->whereRaw('LOWER(status) NOT LIKE ?', ['%rejected%']);
+            })
+            ->count();
+        $approvedSubmissions = Submission::where('user_id', $user->id)
+            ->whereRaw('LOWER(status) LIKE ?', ['%approved%'])
+            ->count();
+        $rejectedSubmissions = Submission::where('user_id', $user->id)
+            ->whereRaw('LOWER(status) LIKE ?', ['%rejected%'])
+            ->count();
     }
-
-    // 3) Total disetujui oleh user ini (berdasarkan step yang ia approve)
-    $approvedSubmissions = SubmissionWorkflowStep::where('approver_id', $user->id)
-        ->where('status', 'approved')
-        ->count();
-
-    // 4) Total ditolak oleh user ini
-    $rejectedSubmissions = SubmissionWorkflowStep::where('approver_id', $user->id)
-        ->where('status', 'rejected')
-        ->count();
 
     // Preview 5 item yang menunggu persetujuan (untuk alert/notification)
     $pendingItems = collect();
@@ -127,6 +142,7 @@ Route::get('/dashboard', function () {
             'rejected' => $rejectedSubmissions,
         ],
         'pendingItems' => $pendingItems,
+        'canApprove' => $canApproveGlobal,
     ]);
 })->middleware(['auth', 'verified'])->name('dashboard');
 
@@ -157,6 +173,137 @@ Route::middleware(['auth'])->group(function () {
     Route::post('submissions/{submission}/request', [SubmissionController::class, 'request'])->name('submissions.request');
     Route::post('submissions/{submission}/request-next', [SubmissionController::class, 'requestNext'])
     ->name('submissions.requestNext');
+
+    // Notifications endpoint for header bell popover (supports limit & since)
+    Route::get('/notifications', function () {
+        $user = Auth::user();
+        $limit = (int) request('limit', 10);
+        $since = request('since'); // ISO string or null
+
+        // Server-side last read & clear markers in cache (per user)
+        $cacheKeyRead = 'notif:last_read:' . $user->id;
+        $cacheKeyClear = 'notif:clear_until:' . $user->id;
+        $lastReadAt = Cache::get($cacheKeyRead); // string|Carbon|null
+        $clearUntil = Cache::get($cacheKeyClear); // string|Carbon|null
+
+        // Normalize cached values to Carbon for reliable DB comparisons
+        if (is_string($lastReadAt)) {
+            try { $lastReadAt = \Carbon\Carbon::parse($lastReadAt); } catch (\Exception $e) { $lastReadAt = null; }
+        }
+        if (is_string($clearUntil)) {
+            try { $clearUntil = \Carbon\Carbon::parse($clearUntil); } catch (\Exception $e) { $clearUntil = null; }
+        }
+
+        $sinceTime = null;
+        try { if ($since) { $sinceTime = \Carbon\Carbon::parse($since); } } catch (\Exception $e) { $sinceTime = null; }
+
+        $items = collect();
+
+        // 1) Tasks awaiting user's action (approver for current step)
+        $pendingForMeBase = Submission::query()
+            ->select(['id', 'title', 'status', 'updated_at'])
+            ->whereNotNull('workflow_id')
+            ->whereHas('workflow.steps', function ($q) use ($user) {
+                $q->whereColumn('workflow_steps.step_order', 'submissions.current_step');
+                if ($user->role !== 'admin') {
+                    $q->where(function ($w) use ($user) {
+                        $w->where('workflow_steps.division_id', $user->division_id)
+                          ->orWhereRaw('LOWER(workflow_steps.role) LIKE ?', ['%direktur%']);
+                    });
+                }
+            })
+            ->whereHas('workflowSteps', function ($q) {
+                $q->whereColumn('submission_workflow_steps.step_order', 'submissions.current_step')
+                  ->where('submission_workflow_steps.status', 'pending');
+            })
+            ->when($clearUntil, fn($q) => $q->where('updated_at', '>', $clearUntil))
+            ->when($sinceTime, fn($q) => $q->where('updated_at', '>', $sinceTime))
+            ->with(['user:id,name'])
+            ->latest();
+
+        $pendingForMe = $pendingForMeBase->get()->map(function ($s) {
+            $by = $s->user?->name ? (' dari ' . $s->user->name) : '';
+            return [
+                'icon' => '⏳',
+                'message' => 'Pengajuan ' . ($s->title ?: 'Tanpa Judul') . $by . ' menunggu persetujuan Anda.',
+                'timestamp' => optional($s->updated_at)->toIso8601String(),
+                'relative' => optional($s->updated_at)->diffForHumans(),
+            ];
+        });
+
+        $items = $items->concat($pendingForMe);
+
+        // 2) Status updates for user's own submissions (approved/rejected)
+        $myStatusBase = Submission::query()
+            ->where('user_id', $user->id)
+            ->where(function ($q) {
+                $q->whereRaw('LOWER(status) LIKE ?', ['%approved%'])
+                  ->orWhereRaw('LOWER(status) LIKE ?', ['%rejected%']);
+            })
+            ->when($clearUntil, fn($q) => $q->where('updated_at', '>', $clearUntil))
+            ->when($sinceTime, fn($q) => $q->where('updated_at', '>', $sinceTime))
+            ->select(['id', 'title', 'status', 'updated_at'])
+            ->latest('updated_at');
+
+        $myStatus = $myStatusBase->get()->map(function ($s) {
+            $status = strtolower((string) $s->status);
+            if (str_contains($status, 'approved')) {
+                $icon = '✔️';
+                $msg = 'Pengajuan Anda disetujui' . (str_contains($s->status, 'Approved by') ? (' ' . $s->status) : '.');
+            } else {
+                $icon = '❌';
+                $msg = 'Pengajuan ditolak.';
+            }
+            return [
+                'icon' => $icon,
+                'message' => $msg,
+                'timestamp' => optional($s->updated_at)->toIso8601String(),
+                'relative' => optional($s->updated_at)->diffForHumans(),
+            ];
+        });
+
+        $items = $items->concat($myStatus)->sortByDesc('timestamp')->values();
+
+        $totalCount = $items->count();
+
+        // Compute new_count vs lastReadAt (server-side)
+        $lastRead = $lastReadAt instanceof \Carbon\Carbon ? $lastReadAt : ($lastReadAt ? \Carbon\Carbon::parse($lastReadAt) : null);
+        $newCount = $lastRead
+            ? $items->filter(fn($i) => \Carbon\Carbon::parse($i['timestamp'])->gt($lastRead))->count()
+            : $totalCount;
+
+        // Apply limit for dropdown
+        if ($limit > 0) {
+            $items = $items->take($limit)->values();
+        }
+
+        return response()->json([
+            'items' => $items,
+            'total_count' => $totalCount,
+            'new_count' => $newCount,
+            'server_time' => now()->toIso8601String(),
+        ]);
+    })->name('notifications.index');
+
+    // Mark notifications as read (update last_read in cache)
+    Route::post('/notifications/read', function () {
+        $user = Auth::user();
+        $ts = request('ts') ?: now();
+        try { $tsC = is_string($ts) ? \Carbon\Carbon::parse($ts) : $ts; } catch (\Exception $e) { $tsC = now(); }
+        Cache::put('notif:last_read:' . $user->id, $tsC, now()->addDays(7));
+        return response()->json(['ok' => true]);
+    })->name('notifications.read');
+
+    // Clear notifications (suppress old items by setting clear_until)
+    Route::post('/notifications/clear', function () {
+        $user = Auth::user();
+        $ts = request('ts') ?: now();
+        try { $tsC = is_string($ts) ? \Carbon\Carbon::parse($ts) : $ts; } catch (\Exception $e) { $tsC = now(); }
+        Cache::put('notif:clear_until:' . $user->id, $tsC, now()->addDays(7));
+        // Also mark as read
+        Cache::put('notif:last_read:' . $user->id, $tsC, now()->addDays(7));
+        return response()->json(['ok' => true]);
+    })->name('notifications.clear');
 
     // Manager-only routes
         Route::post('submissions/{submission}/approve', [SubmissionController::class, 'approve'])->name('submissions.approve');
@@ -218,13 +365,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/global-permissions', [GlobalPermissionController::class, 'index'])->name('global-permissions.index');
         Route::post('/global-permissions', [GlobalPermissionController::class, 'store'])->name('global-permissions.store');
 
-       // Workflow Step Permission Routes
-Route::prefix('workflows/{workflow}')->group(function () {
-    Route::get('/permissions', [WorkflowStepPermissionController::class, 'index'])
-        ->name('workflow-steps.permissions.index');
-    Route::post('/permissions', [WorkflowStepPermissionController::class, 'store'])
-        ->name('workflow-steps.permissions.store');
-});
+       // Deprecated Workflow Step Permission routes removed
 
     });
 }); 

@@ -68,16 +68,14 @@ export default function Sidebar({ open }) {
                       active: route().current("submissions.forDivision"),
                       icon: <ListCheck className="h-5 w-5" />,
                   },
-                  ...(user.role === "employee"
-                      ? [
+                  
                             {
                                 label: "Lihat Pengajuan",
                                 href: route("submissions.index"),
                                 active: route().current("submissions.index"),
                                 icon: <FileTextIcon className="h-5 w-5" />,
                             },
-                        ]
-                      : []),
+                     
 
                   {
                       label: "Riwayat Pengajuan",

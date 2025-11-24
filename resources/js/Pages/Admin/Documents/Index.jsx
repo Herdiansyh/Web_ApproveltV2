@@ -26,6 +26,8 @@ import Header from "@/Components/Header.jsx";
 import { Textarea } from "@/Components/ui/textarea.jsx";
 import FieldsModal from "./FieldsModal.jsx";
 import CardFormDocument from "./CardFormDocument.jsx";
+import { Separator } from "@/Components/ui/separator.jsx";
+import Footer from "@/Components/Footer.jsx";
 
 export default function Index({ auth, documents }) {
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -263,7 +265,9 @@ export default function Index({ auth, documents }) {
                     </div>
                 </div>
             </div>
-
+            <Separator className="my-10" />
+            {/* Footer */}
+            <Footer />
             {/* Modal Add/Edit Document */}
             <DocumentModal
                 isOpen={isModalOpen}
