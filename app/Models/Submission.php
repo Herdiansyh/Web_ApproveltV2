@@ -78,7 +78,7 @@ class Submission extends Model
 
     public function stamped(): HasOne
     {
-        return $this->hasOne(StampedFile::class);
+        return $this->hasOne(StampedFile::class)->latestOfMany('stamped_generated_at');
     }
 
     public function approvals(): HasMany

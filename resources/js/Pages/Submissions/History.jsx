@@ -79,6 +79,9 @@ export default function History({ auth, submissions }) {
                                 <thead>
                                     <tr className="bg-muted/40 text-muted-foreground uppercase text-xs tracking-wider">
                                         <th className="py-3 px-6 text-left">
+                                            No.
+                                        </th>
+                                        <th className="py-3 px-6 text-left">
                                             Judul Pengajuan
                                         </th>
                                         <th className="py-3 px-6 text-left">
@@ -106,7 +109,7 @@ export default function History({ auth, submissions }) {
                                     {rows.length === 0 && (
                                         <tr>
                                             <td
-                                                colSpan={7}
+                                                colSpan={8}
                                                 className="text-center py-8 text-muted-foreground"
                                             >
                                                 Belum ada riwayat 😕
@@ -114,9 +117,7 @@ export default function History({ auth, submissions }) {
                                         </tr>
                                     )}
 
-                                    {rows.map((s) => {
-                                        const doc = s?.workflow?.document;
-
+                                    {rows.map((s, index) => {
                                         const status = s?.status ?? "-";
                                         const myStep = s?.my_history_step;
                                         const stepInfo = myStep
@@ -135,6 +136,9 @@ export default function History({ auth, submissions }) {
                                                 onClick={() => onRowClick(s.id)}
                                             >
                                                 <td className="py-3 px-6">
+                                                    {index + 1}
+                                                </td>
+                                                <td className="py-3 px-6">
                                                     {s?.title || "-"}
                                                 </td>
                                                 <td className="py-3 px-6">
@@ -152,7 +156,6 @@ export default function History({ auth, submissions }) {
                                                 <td className="py-3 px-6">
                                                     {s?.user?.name ?? "-"}
                                                 </td>
-
                                                 <td className="py-3 px-6 flex">
                                                     <span
                                                         className="px-2 py-1 rounded-full text-xs bg-gray-100 text-gray-700"

@@ -462,6 +462,7 @@ class SubmissionController extends Controller
             'workflow.document.nameSeries',
             'workflowSteps.division',
             'workflow.steps.division',
+            'stamped',
         ]);
 
 
@@ -549,6 +550,11 @@ class SubmissionController extends Controller
             'can_approve' => $canApprove,
         ]);
 
+        $hasStamped = false;
+        if ($submission->stamped && $submission->stamped->stamped_pdf_path && Storage::disk('private')->exists($submission->stamped->stamped_pdf_path)) {
+            $hasStamped = true;
+        }
+
         return Inertia::render('Submissions/Show', [
             'submission' => $submission,
             'workflowSteps' => $submission->workflowSteps()->orderBy('step_order')->get(),
@@ -560,6 +566,7 @@ class SubmissionController extends Controller
             'documentFields' => $submission->workflow?->document?->fields ?? [],
             'permissionForMe' => $user->subdivision_id ? SubdivisionPermission::where('subdivision_id', $user->subdivision_id)->first() : null,
             'userDivisionId' => $user->division_id,
+            'hasStamped' => $hasStamped,
         ]);
     }
 
@@ -740,19 +747,15 @@ class SubmissionController extends Controller
         $submission->save();
 
         if ($isFinal) {
-            dispatch(new StampPdfOnDecision($submission->id, 'approved', $user->name, now()->toDateTimeString()));
+            // Proses stamping secara sinkron agar file stamped tersedia segera setelah approve
+            StampPdfOnDecision::dispatchSync($submission->id, 'approved', $user->name, now()->toDateTimeString());
         }
-    $submission->save();
 
-    if ($isFinal) {
-        dispatch(new StampPdfOnDecision($submission->id, 'approved', $user->name, now()->toDateTimeString()));
+        if (!Auth::user()->can('view', $submission)) {
+            return redirect()->route('submissions.forDivision')->with('success', 'Dokumen berhasil disetujui.');
+        }
+        return back()->with('success', 'Dokumen berhasil disetujui.');
     }
-
-    if (!Auth::user()->can('view', $submission)) {
-        return redirect()->route('submissions.forDivision')->with('success', 'Dokumen berhasil disetujui.');
-    }
-    return back()->with('success', 'Dokumen berhasil disetujui.');
-}
 
 /** ------------------------
  *  REQUEST TO NEXT (tanpa approve)

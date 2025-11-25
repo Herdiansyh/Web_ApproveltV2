@@ -9,6 +9,7 @@ use App\Models\DocumentNameSeries;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Illuminate\Validation\ValidationException;
 
 class DocumentController extends Controller
 {
@@ -114,19 +115,24 @@ class DocumentController extends Controller
     }
 
     public function destroy(Document $document)
-    {
-        $this->authorize('delete', $document);
+{
+    $this->authorize('delete', $document);
 
-        $usedBySubmissions = $document->submissions()->exists();
-        $usedByWorkflows = Workflow::where('document_id', $document->id)->exists();
+    $usedBySubmissions = $document->submissions()->exists();
+    $usedByWorkflows = Workflow::where('document_id', $document->id)->exists();
 
-        if ($usedBySubmissions || $usedByWorkflows) {
-            return back()->with('error', 'Dokumen tidak dapat dihapus karena sudah digunakan. Non-aktifkan dokumen jika tidak ingin digunakan lagi.');
-        }
-
-        $document->delete();
-        return back()->with('success', 'Dokumen berhasil dihapus.');
+      if ($usedBySubmissions || $usedByWorkflows) {
+        throw ValidationException::withMessages([
+            'error' => 'Dokumen tidak dapat dihapus karena sudah digunakan. Non-aktifkan dokumen jika tidak ingin digunakan lagi.'
+        ]);
     }
+
+    $document->delete();
+
+      return redirect()->back()->with('success', 'Dokumen berhasil dihapus.');
+
+}
+
 
     // ------------------------------
     // Document Type Fields Endpoints

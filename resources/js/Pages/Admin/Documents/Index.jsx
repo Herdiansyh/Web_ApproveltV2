@@ -216,13 +216,18 @@ export default function Index({ auth, documents }) {
         }).then((result) => {
             if (result.isConfirmed) {
                 router.delete(route("documents.destroy", docId), {
-                    onSuccess: () => {
-                        Swal.fire("Deleted!", "Document deleted.", "success");
-                    },
-                    onError: () => {
+                    onSuccess: (page) => {
                         Swal.fire(
-                            "Error",
-                            "Failed to delete document.",
+                            "Deleted!",
+                            page.props.flash?.message || "Document deleted.",
+                            "success"
+                        );
+                    },
+                    onError: (errors) => {
+                        Swal.fire(
+                            "Tidak bisa dihapus",
+                            errors.message ||
+                                "Dokumen tidak dapat dihapus karena sudah digunakan.",
                             "error"
                         );
                     },

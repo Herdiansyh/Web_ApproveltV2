@@ -27,6 +27,7 @@ export default function Show({
     documentFields = [],
     permissionForMe = null,
     userDivisionId = null,
+    hasStamped = false,
 }) {
     const [showApproveModal, setShowApproveModal] = useState(false);
     const [showRejectModal, setShowRejectModal] = useState(false);
@@ -260,6 +261,14 @@ export default function Show({
                                                         Final
                                                     </span>
                                                 )}
+                                                {hasStamped && (
+                                                    <span
+                                                        className="ml-2 text-[11px] rounded px-2 py-0.5 bg-emerald-100 text-emerald-700"
+                                                        title="File final sudah distempel"
+                                                    >
+                                                        Stamped
+                                                    </span>
+                                                )}
                                             </div>
                                         </div>
                                     </div>
@@ -298,17 +307,25 @@ export default function Show({
                                 </div>
 
                                 <div className="flex gap-2">
-                                    {submission.file_path && (
+                                    {isApprovedFinal && submission.file_path ? (
                                         <a
                                             href={route(
                                                 "submissions.download",
                                                 submission.id
                                             )}
                                             className="inline-flex items-center justify-center mb-2 py-1 px-2 text-sm font-medium rounded-full bg-blue-600 text-white hover:bg-blue-700 active:scale-[0.97] transition-all shadow-sm"
+                                            title="Unduh dokumen final yang sudah distempel"
                                         >
-                                            <Download className="mr-2 h-4 w-4" />{" "}
-                                            Unduh Dokumen
+                                            <Download className="mr-2 h-4 w-4" /> Unduh Dokumen
                                         </a>
+                                    ) : (
+                                        <span
+                                            style={{ borderRadius: "10px" }}
+                                            className="mb-2 inline-flex items-center px-2 py-1 text-[11px] bg-slate-100 text-slate-600 border border-slate-200"
+                                            title="Unduh tersedia setelah pengajuan disetujui di tahap terakhir"
+                                        >
+                                            Unduh tersedia setelah final approval
+                                        </span>
                                     )}
 
                                     {Array.isArray(documentFields) &&

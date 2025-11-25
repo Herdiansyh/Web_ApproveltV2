@@ -398,7 +398,9 @@ export default function Create({ auth, userDivision, workflows }) {
                                             </div>
 
                                             <div>
-                                                <Label>Deskripsi</Label>
+                                                <Label>
+                                                    Deskripsi Pengajuan
+                                                </Label>
                                                 <Textarea
                                                     style={{
                                                         borderRadius: "10px",
@@ -406,7 +408,7 @@ export default function Create({ auth, userDivision, workflows }) {
                                                     value={data.description}
                                                     onChange={(e) => {
                                                         setData(
-                                                            "description",
+                                                            "description Pengajuan",
                                                             e.target.value
                                                         );
                                                         setIsSaved(false);

@@ -35,4 +35,8 @@ return [
         ],
     ],
 
+    'qpdf' => [
+        'path' => env('QPDF_PATH'), // Full path to qpdf executable, e.g. C:\\Program Files\\qpdf\\bin\\qpdf.exe
+    ],
+
 ];
