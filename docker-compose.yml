@@ -1,4 +1,4 @@
-version: '3.8'
+version: "3.8"
 
 services:
   # PHP-FPM Application Server
@@ -42,7 +42,8 @@ services:
     depends_on:
       - app
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/"]
+      test:
+        ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/"]
       interval: 10s
       timeout: 5s
       retries: 3
@@ -76,7 +77,7 @@ services:
       MYSQL_DATABASE: approveit
       MYSQL_USER: approveit
       MYSQL_PASSWORD: secret
-      MYSQL_ROOT_HOST: '%'
+      MYSQL_ROOT_HOST: "%"
     ports:
       - "3306:3306"
     volumes:
@@ -97,4 +98,3 @@ volumes:
 networks:
   approveit:
     driver: bridge
-

@@ -3,6 +3,7 @@ import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
 import { Head, Link, router } from "@inertiajs/react";
 import { Input } from "@/Components/ui/input";
 import { Button } from "@/Components/ui/button";
+import Swal from "sweetalert2";
 import {
     Dialog,
     DialogContent,
@@ -360,18 +361,78 @@ export default function ForDivision({ auth, submissions, userDivision }) {
                             className="rounded-md"
                             onClick={() => {
                                 if (toDeleteId) {
-                                    router.delete(
-                                        route(
-                                            "submissions.destroy",
-                                            toDeleteId
-                                        ),
-                                        {
-                                            onFinish: () => {
-                                                setConfirmOpen(false);
-                                                setToDeleteId(null);
-                                            },
+                                    // Show loading alert
+                                    Swal.fire({
+                                        title: "Menghapus...",
+                                        text: "Sedang menghapus pengajuan.",
+                                        allowOutsideClick: false,
+                                        allowEscapeKey: false,
+                                        didOpen: () => {
+                                            Swal.showLoading();
                                         }
-                                    );
+                                    });
+                                    
+                                    // Manual fetch request
+                                    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+                                    if (!csrfToken) {
+                                        Swal.fire({
+                                            icon: "error",
+                                            title: "Error!",
+                                            text: "CSRF token tidak ditemukan. Silakan refresh halaman.",
+                                            confirmButtonText: "OK",
+                                        });
+                                        return;
+                                    }
+                                    
+                                    fetch(route("submissions.destroy", toDeleteId), {
+                                        method: 'DELETE',
+                                        headers: {
+                                            'Content-Type': 'application/json',
+                                            'X-CSRF-TOKEN': csrfToken,
+                                            'Accept': 'application/json',
+                                            'X-Requested-With': 'XMLHttpRequest',
+                                        },
+                                        body: JSON.stringify({})
+                                    })
+                                    .then(response => {
+                                        if (!response.ok) {
+                                            if (response.status === 419) {
+                                                throw new Error('CSRF token mismatch. Silakan refresh halaman.');
+                                            } else {
+                                                throw new Error(`Server error: ${response.status}`);
+                                            }
+                                        }
+                                        return response.json();
+                                    })
+                                    .then(responseData => {
+                                        if (responseData.success) {
+                                            setConfirmOpen(false);
+                                            setToDeleteId(null);
+                                            Swal.fire({
+                                                icon: "success",
+                                                title: "Dihapus!",
+                                                text: "Pengajuan berhasil dihapus.",
+                                                timer: 2000,
+                                                showConfirmButton: false,
+                                            }).then(() => window.location.reload());
+                                        } else {
+                                            Swal.fire({
+                                                icon: "error",
+                                                title: "Gagal!",
+                                                text: responseData.message || "Gagal menghapus pengajuan.",
+                                                confirmButtonText: "OK",
+                                            });
+                                        }
+                                    })
+                                    .catch(error => {
+                                        console.error("Delete error:", error);
+                                        Swal.fire({
+                                            icon: "error",
+                                            title: "Error!",
+                                            text: error.message || "Terjadi kesalahan jaringan. Silakan coba lagi.",
+                                            confirmButtonText: "OK",
+                                        });
+                                    });
                                 }
                             }}
                         >

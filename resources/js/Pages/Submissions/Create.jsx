@@ -1,6 +1,6 @@
 import React, { useMemo, useEffect, useState } from "react";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
-import { Head, useForm } from "@inertiajs/react";
+import { Head, useForm, router } from "@inertiajs/react";
 import { Card } from "@/Components/ui/card";
 import { Button } from "@/Components/ui/button";
 import { Input } from "@/Components/ui/input";
@@ -17,15 +17,156 @@ import {
 import Header from "@/Components/Header";
 
 export default function Create({ auth, userDivision, workflows }) {
-    const { data, setData, post, processing, errors, reset } = useForm({
+    const { data, setData, post, processing, errors, setError, reset } = useForm({
         workflow_id: "",
         title: "",
         description: "",
         file: null,
         data: {},
+        useTableData: false,
+        tableData: [
+            { id: 1, item: "", jumlah: "", keterangan: "" },
+            { id: 2, item: "", jumlah: "", keterangan: "" },
+            { id: 3, item: "", jumlah: "", keterangan: "" },
+        ],
+        tableColumns: [
+            { id: 1, name: "Item", key: "item" },
+            { id: 2, name: "Jumlah", key: "jumlah" },
+            { id: 3, name: "Keterangan", key: "keterangan" },
+        ],
     });
 
+    // Use form data instead of local state for table
+    const [nextId, setNextId] = useState(4);
+    const [nextColumnId, setNextColumnId] = useState(4);
+    const [newColumnName, setNewColumnName] = useState("");
+    const [editingColumn, setEditingColumn] = useState(null);
     const [isSaved, setIsSaved] = useState(false);
+
+    // Fungsi untuk menyimpan data ke localStorage
+    const handleSaveLocal = () => {
+        try {
+            // Include table data in saved data
+            const dataToSave = {
+                ...data,
+                tableData: data.tableData,
+                tableColumns: data.tableColumns,
+            };
+            localStorage.setItem("createFormData", JSON.stringify(dataToSave));
+            setIsSaved(true);
+            Swal.fire({
+                icon: "success",
+                title: "Tersimpan!",
+                text: "Data berhasil disimpan secara lokal.",
+                timer: 1500,
+                showConfirmButton: false,
+            });
+        } catch (err) {
+            Swal.fire({
+                icon: "error",
+                title: "Gagal Menyimpan",
+                text: "Terjadi kesalahan saat menyimpan data lokal.",
+            });
+        }
+    };
+
+    // Table functions
+    const addRow = () => {
+        const newRow = { id: nextId };
+        data.tableColumns.forEach((col) => {
+            newRow[col.key] = "";
+        });
+        setData('tableData', [...data.tableData, newRow]);
+        setNextId(nextId + 1);
+        setIsSaved(false);
+    };
+
+    const deleteRow = (id) => {
+        if (data.tableData.length > 1) {
+            setData('tableData', data.tableData.filter((row) => row.id !== id));
+            setIsSaved(false);
+        }
+    };
+
+    const addColumn = () => {
+        if (newColumnName.trim()) {
+            const newKey = newColumnName.toLowerCase().replace(/\s+/g, "_");
+            const newColumn = {
+                id: nextColumnId,
+                name: newColumnName,
+                key: newKey,
+            };
+            
+            
+            setData('tableColumns', [...data.tableColumns, newColumn]);
+
+            // Add new column data to existing rows
+            const updatedData = data.tableData.map((row) => ({
+                ...row,
+                [newKey]: "",
+            }));
+            setData('tableData', updatedData);
+            
+
+            setNewColumnName("");
+            setNextColumnId(nextColumnId + 1);
+            setIsSaved(false);
+        }
+    };
+
+    const deleteColumn = (columnId) => {
+        if (data.tableColumns.length > 1) {
+            const columnToDelete = data.tableColumns.find(
+                (col) => col.id === columnId
+            );
+            const updatedColumns = data.tableColumns.filter(
+                (col) => col.id !== columnId
+            );
+            
+            
+            setData('tableColumns', updatedColumns);
+
+            // Remove column data from all rows
+            const updatedData = data.tableData.map((row) => {
+                const { [columnToDelete.key]: removed, ...rest } = row;
+                return rest;
+            });
+            setData('tableData', updatedData);
+            
+            
+            setIsSaved(false);
+        }
+    };
+
+    const updateCellData = (rowId, columnKey, value) => {
+        setData('tableData', 
+            data.tableData.map((row) =>
+                row.id === rowId ? { ...row, [columnKey]: value } : row
+            )
+        );
+        setIsSaved(false);
+    };
+
+    const updateColumnName = (columnId, newName) => {
+        const column = data.tableColumns.find((col) => col.id === columnId);
+        const newKey = newName.toLowerCase().replace(/\s+/g, "_");
+        const oldKey = column.key;
+
+        // Update column name and key
+        const updatedColumns = data.tableColumns.map((col) =>
+            col.id === columnId ? { ...col, name: newName, key: newKey } : col
+        );
+        setData('tableColumns', updatedColumns);
+
+        // Update all row data with new key
+        const updatedData = data.tableData.map((row) => {
+            const { [oldKey]: oldValue, ...rest } = row;
+            return { ...rest, [newKey]: oldValue };
+        });
+        setData('tableData', updatedData);
+        setEditingColumn(null);
+        setIsSaved(false);
+    };
 
     const selectedWorkflow = useMemo(
         () =>
@@ -81,6 +222,19 @@ export default function Create({ auth, userDivision, workflows }) {
             try {
                 const parsed = JSON.parse(savedData);
                 setData(parsed);
+
+                // Load table data if exists
+                if (parsed.tableData) {
+                    setNextId(
+                        Math.max(...parsed.tableData.map((r) => r.id)) + 1
+                    );
+                }
+                if (parsed.tableColumns) {
+                    setNextColumnId(
+                        Math.max(...parsed.tableColumns.map((c) => c.id)) + 1
+                    );
+                }
+
                 setIsSaved(true);
             } catch (e) {
                 console.error("Gagal memuat data dari localStorage:", e);
@@ -89,25 +243,10 @@ export default function Create({ auth, userDivision, workflows }) {
     }, []);
 
     // 🔹 Simpan ke localStorage
-    const handleSaveLocal = () => {
-        try {
-            localStorage.setItem("createFormData", JSON.stringify(data));
-            setIsSaved(true);
-            Swal.fire({
-                icon: "success",
-                title: "Tersimpan!",
-                text: "Data berhasil disimpan secara lokal.",
-                timer: 1500,
-                showConfirmButton: false,
-            });
-        } catch (err) {
-            Swal.fire({
-                icon: "error",
-                title: "Gagal Menyimpan",
-                text: "Terjadi kesalahan saat menyimpan data lokal.",
-            });
-        }
-    };
+    useEffect(() => {
+        // Auto-save functionality disabled for now
+        // Can be re-enabled later if needed
+    }, [data]);
 
     // 🔹 Auto-calc lama_cuti
     useEffect(() => {
@@ -161,10 +300,59 @@ export default function Create({ auth, userDivision, workflows }) {
         if (!data.workflow_id) {
             Swal.fire({
                 icon: "warning",
-                title: "Pilih workflow terlebih dahulu",
+                title: "Validation Error",
+                text: "Document Type wajib dipilih sebelum mengirim pengajuan.",
             });
             return;
         }
+
+        if (!data.title || data.title.trim() === '') {
+            Swal.fire({
+                icon: "warning", 
+                title: "Validation Error",
+                text: "Judul wajib diisi sebelum mengirim pengajuan.",
+            });
+            return;
+        }
+
+        // Validate required dynamic fields
+        const requiredFields = documentFields.filter(field => field.required && field.type !== 'label');
+        const missingFields = [];
+        
+        for (const field of requiredFields) {
+            const value = data.data?.[field.name];
+            if (!value || (typeof value === 'string' && value.trim() === '')) {
+                missingFields.push(field.label);
+            }
+        }
+        
+        if (missingFields.length > 0) {
+            Swal.fire({
+                icon: "warning",
+                title: "Validation Error",
+                text: `Field berikut wajib diisi: ${missingFields.join(', ')}`,
+            });
+            return;
+        }
+
+
+        // Include table data in form submission only if useTableData is true
+        let tableDataFiltered = [];
+        if (data.useTableData && data.tableData && data.tableData.length > 0) {
+            tableDataFiltered = data.tableData.map((row) => {
+                // Convert all values to strings to ensure proper serialization
+                const cleanedRow = {};
+                Object.keys(row).forEach(key => {
+                    if (key === 'id') {
+                        cleanedRow[key] = row[key];
+                    } else {
+                        cleanedRow[key] = String(row[key] || "");
+                    }
+                });
+                return cleanedRow;
+            });
+        }
+
 
         Swal.fire({
             title: "Kirim Pengajuan?",
@@ -175,21 +363,135 @@ export default function Create({ auth, userDivision, workflows }) {
             cancelButtonText: "Batal",
         }).then((result) => {
             if (result.isConfirmed) {
-                post(route("submissions.store"), {
-                    forceFormData: true,
-                    onSuccess: () => {
-                        reset();
-                        localStorage.removeItem("createFormData");
-                        setIsSaved(false);
+                
+                // Test data dengan table information
+                const testData = {
+                    workflow_id: data.workflow_id,
+                    title: data.title,
+                    description: data.description,
+                    file: data.file,
+                    data: data.data,
+                };
+                
+                // Add table data only if useTableData is true and data exists
+                if (data.useTableData && tableDataFiltered && tableDataFiltered.length > 0) {
+                    testData.tableData = tableDataFiltered;
+                }
+                if (data.useTableData && data.tableColumns && data.tableColumns.length > 0) {
+                    testData.tableColumns = data.tableColumns;
+                }
+                
+                
+                try {
+                    
+                    // Show loading alert
+                    Swal.fire({
+                        title: "Mengirim...",
+                        text: "Sedang mengirim pengajuan Anda.",
+                        allowOutsideClick: false,
+                        allowEscapeKey: false,
+                        didOpen: () => {
+                            Swal.showLoading();
+                        }
+                    });
+                    
+                    // Manual fetch request
+                    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+                    if (!csrfToken) {
+                        console.error("Create.jsx - CSRF token not found!");
                         Swal.fire({
-                            icon: "success",
-                            title: "Berhasil!",
-                            text: "Pengajuan berhasil dikirim.",
-                            timer: 2000,
-                            showConfirmButton: false,
+                            icon: "error",
+                            title: "Error!",
+                            text: "CSRF token tidak ditemukan. Silakan refresh halaman.",
+                            confirmButtonText: "OK",
                         });
-                    },
-                });
+                        return;
+                    }
+                    
+                    fetch(route("submissions.store"), {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': csrfToken,
+                            'Accept': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest',
+                        },
+                        body: JSON.stringify(testData)
+                    })
+                    .then(response => {
+                        
+                        if (!response.ok) {
+                            // Handle HTTP errors
+                            if (response.status === 422) {
+                                return response.json().then(data => {
+                                    // Set validation errors from server
+                                    if (data.errors) {
+                                        // Use Inertia's setError to display field errors
+                                        Object.keys(data.errors).forEach(key => {
+                                            setError(key, data.errors[key][0] || data.errors[key]);
+                                        });
+                                    }
+                                    throw new Error(data.message || 'Validation failed');
+                                });
+                            } else if (response.status === 419) {
+                                throw new Error('CSRF token mismatch. Silakan refresh halaman.');
+                            } else {
+                                throw new Error(`Server error: ${response.status}`);
+                            }
+                        }
+                        
+                        return response.json();
+                    })
+                    .then(data => {
+                        
+                        if (data.success) {
+                            // Success alert
+                            Swal.fire({
+                                icon: "success",
+                                title: "Berhasil!",
+                                text: "Pengajuan berhasil dikirim.",
+                                timer: 2000,
+                                showConfirmButton: false,
+                            }).then(() => {
+                                // Redirect ke fordivision menggunakan URL dari response
+                                const redirectUrl = data.redirect_url || route('submissions.forDivision');
+                                window.location.href = redirectUrl;
+                            });
+                        } else {
+                            // Error alert - check if it's a validation error
+                            if (data.errors && Object.keys(data.errors).length > 0) {
+                                // Validation errors are already set on fields, show general message
+                                Swal.fire({
+                                    icon: "warning",
+                                    title: "Validation Error",
+                                    text: data.message || "Mohon periksa kembali field yang wajib diisi.",
+                                    confirmButtonText: "OK",
+                                });
+                            } else {
+                                // General error
+                                Swal.fire({
+                                    icon: "error",
+                                    title: "Gagal!",
+                                    text: data.message || "Terjadi kesalahan saat mengirim pengajuan.",
+                                    confirmButtonText: "OK",
+                                });
+                            }
+                        }
+                    })
+                    .catch(error => {
+                        console.error("Create.jsx - fetch error:", error);
+                        Swal.fire({
+                            icon: "error",
+                            title: "Error!",
+                            text: "Terjadi kesalahan jaringan. Silakan coba lagi.",
+                            confirmButtonText: "OK",
+                        });
+                    });
+                    
+                } catch (error) {
+                    console.error("Create.jsx - error during manual post:", error);
+                    alert("Terjadi kesalahan saat mengirim pengajuan: " + error.message);
+                }
             }
         });
     };
@@ -209,7 +511,7 @@ export default function Create({ auth, userDivision, workflows }) {
                 <div className="p-5 w-full">
                     <div className="mx-auto sm:px-6 lg:px-8">
                         {/* Header */}
-                        <div className="flex  items-center justify-between mb-6">
+                        <div className="flex items-center justify-between mb-6">
                             <h1 className="md:text-2xl ml-2 text-sm mt-5 font-semibold text-gray-800">
                                 New Pengajuan
                             </h1>
@@ -224,6 +526,7 @@ export default function Create({ auth, userDivision, workflows }) {
                                     • {isSaved ? "Saved" : "Not Saved"}
                                 </span>
                                 <Button
+                                    type="button"
                                     onClick={handleSaveLocal}
                                     disabled={processing}
                                     style={{ borderRadius: "10px" }}
@@ -238,99 +541,106 @@ export default function Create({ auth, userDivision, workflows }) {
                             className="p-8 shadow-sm "
                             style={{ borderRadius: "15px" }}
                         >
-                            <form
-                                onSubmit={submit}
-                                encType="multipart/form-data"
-                            >
-                                <div className="space-y-6">
-                                    {/* Grid 2 kolom utama */}
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                        {/* Kiri */}
-                                        <div className="space-y-6">
-                                            <div
-                                                style={{ borderRadius: "15px" }}
-                                            >
-                                                <Label>Series</Label>
-                                                <Input
-                                                    style={{
-                                                        borderRadius: "10px",
-                                                    }}
-                                                    value={
-                                                        selectedSeriesPattern ||
-                                                        "yyyy-mm-####"
-                                                    }
-                                                    disabled
-                                                    className="mt-1 bg-gray-50"
-                                                />
-                                            </div>
-
-                                            <div>
-                                                <Label>Employee Name</Label>
-                                                <Input
-                                                    style={{
-                                                        borderRadius: "10px",
-                                                    }}
-                                                    value={
-                                                        auth.user?.name || ""
-                                                    }
-                                                    disabled
-                                                    className="mt-1 bg-gray-50"
-                                                />
-                                            </div>
-
-                                            <div>
-                                                <Label>Department</Label>
-                                                <Input
-                                                    style={{
-                                                        borderRadius: "10px",
-                                                    }}
-                                                    value={
-                                                        userDivision?.name ||
-                                                        "-"
-                                                    }
-                                                    disabled
-                                                    className="mt-1 bg-gray-50"
-                                                />
-                                            </div>
+                        <form
+                            onSubmit={submit}
+                            encType="multipart/form-data"
+                        >
+                            <div className="space-y-6">
+                                {/* Grid 2 kolom utama */}
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    {/* Kiri */}
+                                    <div className="space-y-6">
+                                        <div
+                                            style={{ borderRadius: "15px" }}
+                                        >
+                                            <Label>Series</Label>
+                                            <Input
+                                                style={{
+                                                    borderRadius: "10px",
+                                                }}
+                                                value={
+                                                    selectedSeriesPattern ||
+                                                    "yyyy-mm-####"
+                                                }
+                                                disabled
+                                                className="mt-1 bg-gray-50"
+                                            />
                                         </div>
 
-                                        {/* Kanan */}
-                                        <div className="space-y-6">
-                                            <div>
-                                                <Label>Posting Date</Label>
-                                                <Input
-                                                    style={{
-                                                        borderRadius: "10px",
-                                                    }}
-                                                    type="date"
-                                                    value={
-                                                        new Date()
-                                                            .toISOString()
-                                                            .split("T")[0]
-                                                    }
-                                                    disabled
-                                                    className="mt-1 bg-gray-50"
-                                                />
-                                            </div>
+                                        <div>
+                                            <Label>Employee Name</Label>
+                                            <Input
+                                                style={{
+                                                    borderRadius: "10px",
+                                                }}
+                                                value={
+                                                    auth.user?.name || ""
+                                                }
+                                                disabled
+                                                className="mt-1 bg-gray-50"
+                                            />
+                                        </div>
 
-                                            <div>
-                                                <Label>Document Type *</Label>
-                                                <Select
-                                                    value={data.workflow_id}
-                                                    onValueChange={(value) => {
-                                                        setData(
-                                                            "workflow_id",
-                                                            value
-                                                        );
-                                                        setIsSaved(false);
-                                                    }}
-                                                >
+                                        <div>
+                                            <Label>Department</Label>
+                                            <Input
+                                                style={{
+                                                    borderRadius: "10px",
+                                                }}
+                                                value={
+                                                    userDivision?.name ||
+                                                    "-"
+                                                }
+                                                disabled
+                                                className="mt-1 bg-gray-50"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    {/* Kanan */}
+                                    <div className="space-y-6">
+                                        <div>
+                                            <Label>Posting Date</Label>
+                                            <Input
+                                                style={{
+                                                    borderRadius: "10px",
+                                                }}
+                                                type="date"
+                                                value={
+                                                    new Date()
+                                                        .toISOString()
+                                                        .split("T")[0]
+                                                }
+                                                disabled
+                                                className="mt-1 bg-gray-50"
+                                            />
+                                        </div>
+
+                                        <div>
+                                            <Label>
+                                                Document Type{" "}
+                                                <span className="text-red-500">*</span>
+                                            </Label>
+                                            <Select
+                                                value={data.workflow_id}
+                                                onValueChange={(value) => {
+                                                    setData(
+                                                        "workflow_id",
+                                                        value
+                                                    );
+                                                    setIsSaved(false);
+                                                }}
+                                            >
                                                     <SelectTrigger
                                                         style={{
                                                             borderRadius:
                                                                 "10px",
                                                         }}
-                                                        className="w-full mt-1"
+                                                        className={`w-full mt-1 ${
+                                                            !data.workflow_id && errors.workflow_id
+                                                                ? "border-red-500"
+                                                                : ""
+                                                        }`}
                                                     >
                                                         <SelectValue placeholder="-- Pilih Jenis --" />
                                                     </SelectTrigger>
@@ -375,6 +685,11 @@ export default function Create({ auth, userDivision, workflows }) {
                                                         )}
                                                     </SelectContent>
                                                 </Select>
+                                                {errors.workflow_id && (
+                                                    <p className="text-red-500 text-sm mt-1">
+                                                        {errors.workflow_id}
+                                                    </p>
+                                                )}
                                             </div>
 
                                             <div>
@@ -408,7 +723,7 @@ export default function Create({ auth, userDivision, workflows }) {
                                                     value={data.description}
                                                     onChange={(e) => {
                                                         setData(
-                                                            "description Pengajuan",
+                                                            "description",
                                                             e.target.value
                                                         );
                                                         setIsSaved(false);
@@ -538,8 +853,19 @@ export default function Create({ auth, userDivision, workflows }) {
                                                         >
                                                             <Label>
                                                                 {f.label}
+                                                                {f.required && (
+                                                                    <span className="text-red-500 ml-1">
+                                                                        *
+                                                                    </span>
+                                                                )}
                                                             </Label>
-                                                            {type ===
+                                                            {type === "label" ? (
+                                                                <div className="mt-1">
+                                                                    <div className="font-bold text-lg text-gray-800 py-2 border-b-2 border-gray-200">
+                                                                        {f.label}
+                                                                    </div>
+                                                                </div>
+                                                            ) : type ===
                                                             "textarea" ? (
                                                                 <Textarea
                                                                     style={{
@@ -559,7 +885,13 @@ export default function Create({ auth, userDivision, workflows }) {
                                                                         )
                                                                     }
                                                                     rows={3}
-                                                                    className="mt-1"
+                                                                    className={`mt-1 ${
+                                                                        f.required &&
+                                                                        (!value || value.trim() === '') &&
+                                                                        errors[`data.${f.name}`]
+                                                                            ? "border-red-500"
+                                                                            : ""
+                                                                    }`}
                                                                 />
                                                             ) : type ===
                                                               "date" ? (
@@ -581,7 +913,13 @@ export default function Create({ auth, userDivision, workflows }) {
                                                                                 .value
                                                                         )
                                                                     }
-                                                                    className="mt-1"
+                                                                    className={`mt-1 ${
+                                                                        f.required &&
+                                                                        !value &&
+                                                                        errors[`data.${f.name}`]
+                                                                            ? "border-red-500"
+                                                                            : ""
+                                                                    }`}
                                                                 />
                                                             ) : type ===
                                                               "select" ? (
@@ -607,7 +945,13 @@ export default function Create({ auth, userDivision, workflows }) {
                                                                             borderRadius:
                                                                                 "10px",
                                                                         }}
-                                                                        className="w-full mt-1"
+                                                                        className={`w-full mt-1 ${
+                                                                            f.required &&
+                                                                            (!value || value === '') &&
+                                                                            errors[`data.${f.name}`]
+                                                                                ? "border-red-500"
+                                                                                : ""
+                                                                        }`}
                                                                     >
                                                                         <SelectValue
                                                                             placeholder={`Pilih ${f.label}`}
@@ -642,7 +986,13 @@ export default function Create({ auth, userDivision, workflows }) {
                                                                                 .value
                                                                         )
                                                                     }
-                                                                    className="mt-1"
+                                                                    className={`mt-1 ${
+                                                                        f.required &&
+                                                                        (!value || value.trim() === '') &&
+                                                                        errors[`data.${f.name}`]
+                                                                            ? "border-red-500"
+                                                                            : ""
+                                                                    }`}
                                                                 />
                                                             ) : type ===
                                                               "file" ? (
@@ -668,7 +1018,13 @@ export default function Create({ auth, userDivision, workflows }) {
                                                                                 : ""
                                                                         );
                                                                     }}
-                                                                    className="mt-1"
+                                                                    className={`mt-1 ${
+                                                                        f.required &&
+                                                                        (!value || value.trim() === '') &&
+                                                                        errors[`data.${f.name}`]
+                                                                            ? "border-red-500"
+                                                                            : ""
+                                                                    }`}
                                                                 />
                                                             ) : (
                                                                 <Input
@@ -688,8 +1044,19 @@ export default function Create({ auth, userDivision, workflows }) {
                                                                                 .value
                                                                         )
                                                                     }
-                                                                    className="mt-1"
+                                                                    className={`mt-1 ${
+                                                                        f.required &&
+                                                                        (!value || value.trim() === '') &&
+                                                                        errors[`data.${f.name}`]
+                                                                            ? "border-red-500"
+                                                                            : ""
+                                                                    }`}
                                                                 />
+                                                            )}
+                                                            {f.required && errors[`data.${f.name}`] && (
+                                                                <p className="text-red-500 text-sm mt-1">
+                                                                    {errors[`data.${f.name}`]}
+                                                                </p>
                                                             )}
                                                         </div>
                                                     );
@@ -697,6 +1064,261 @@ export default function Create({ auth, userDivision, workflows }) {
                                             </div>
                                         </div>
                                     )}
+                                    {/* Dynamic Excel-like Table */}
+                                    <div className="mt-10">
+                                        <div className="flex items-center justify-between mb-4">
+                                            <h3 className="text-lg font-semibold">
+                                                Data Tambahan (Tabel Dinamis)
+                                            </h3>
+                                            <div className="flex items-center gap-2">
+                                                <input
+                                                    type="checkbox"
+                                                    id="useTableData"
+                                                    checked={data.useTableData}
+                                                    onChange={(e) => {
+                                                        setData('useTableData', e.target.checked);
+                                                        setIsSaved(false);
+                                                    }}
+                                                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                                />
+                                                <Label htmlFor="useTableData" className="text-sm font-medium text-gray-700">
+                                                    Gunakan Data Table
+                                                </Label>
+                                            </div>
+                                        </div>
+
+                                        <p className="text-sm text-gray-600 mb-4">
+                                            Centang "Gunakan Data Table" jika ingin menyertakan data tabel dalam pengajuan ini.
+                                        </p>
+
+                                        {data.useTableData && (
+                                        <>
+                                        {/* Column Management */}
+                                        <div className="mb-4 p-4 bg-gray-50 rounded-lg">
+                                            <div className="flex items-center gap-2 mb-3">
+                                                <Input
+                                                    placeholder="Nama kolom baru..."
+                                                    value={newColumnName}
+                                                    onChange={(e) =>
+                                                        setNewColumnName(
+                                                            e.target.value
+                                                        )
+                                                    }
+                                                    style={{
+                                                        borderRadius: "8px",
+                                                        width: "200px",
+                                                    }}
+                                                />
+                                                <Button
+                                                    type="button"
+                                                    onClick={addColumn}
+                                                    style={{
+                                                        borderRadius: "8px",
+                                                    }}
+                                                    className="bg-green-600 hover:bg-green-700 text-white px-4"
+                                                >
+                                                    + Tambah Kolom
+                                                </Button>
+                                            </div>
+
+                                            <div className="flex flex-wrap gap-2">
+                                                {data.tableColumns.map((column) => (
+                                                    <div
+                                                        key={column.id}
+                                                        className="flex items-center gap-1 bg-white px-2 py-1 rounded border"
+                                                    >
+                                                        {editingColumn ===
+                                                        column.id ? (
+                                                            <Input
+                                                                value={
+                                                                    column.name
+                                                                }
+                                                                onChange={(e) =>
+                                                                    updateColumnName(
+                                                                        column.id,
+                                                                        e.target
+                                                                            .value
+                                                                    )
+                                                                }
+                                                                onBlur={() =>
+                                                                    setEditingColumn(
+                                                                        null
+                                                                    )
+                                                                }
+                                                                onKeyPress={(
+                                                                    e
+                                                                ) =>
+                                                                    e.key ===
+                                                                        "Enter" &&
+                                                                    setEditingColumn(
+                                                                        null
+                                                                    )
+                                                                }
+                                                                style={{
+                                                                    borderRadius:
+                                                                        "4px",
+                                                                    width: "120px",
+                                                                    height: "24px",
+                                                                }}
+                                                                autoFocus
+                                                            />
+                                                        ) : (
+                                                            <span
+                                                                onClick={() =>
+                                                                    setEditingColumn(
+                                                                        column.id
+                                                                    )
+                                                                }
+                                                                className="cursor-pointer hover:text-blue-600 text-sm"
+                                                            >
+                                                                {column.name}
+                                                            </span>
+                                                        )}
+                                                        {data.tableColumns.length >
+                                                            1 && (
+                                                            <Button
+                                                                type="button"
+                                                                onClick={() =>
+                                                                    deleteColumn(
+                                                                        column.id
+                                                                    )
+                                                                }
+                                                                style={{
+                                                                    borderRadius:
+                                                                        "4px",
+                                                                }}
+                                                                className="bg-red-500 hover:bg-red-600 text-white p-1 h-6 w-6"
+                                                            >
+                                                                ×
+                                                            </Button>
+                                                        )}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+
+                                        <div className="overflow-x-auto border rounded-lg">
+                                            <table className="w-full border-collapse">
+                                                <thead className="bg-gray-100">
+                                                    <tr>
+                                                        {data.tableColumns.map(
+                                                            (column) => (
+                                                                <th
+                                                                    key={
+                                                                        column.id
+                                                                    }
+                                                                    className="border p-2 text-left min-w-[120px]"
+                                                                >
+                                                                    {
+                                                                        column.name
+                                                                    }
+                                                                </th>
+                                                            )
+                                                        )}
+                                                        <th className="border p-2 text-center w-20">
+                                                            Aksi
+                                                        </th>
+                                                    </tr>
+                                                </thead>
+
+                                                <tbody>
+                                                    {data.tableData.map(
+                                                        (row, rowIndex) => (
+                                                            <tr key={row.id}>
+                                                                {data.tableColumns.map(
+                                                                    (
+                                                                        column
+                                                                    ) => (
+                                                                        <td
+                                                                            key={
+                                                                                column.id
+                                                                            }
+                                                                            className="border p-2"
+                                                                        >
+                                                                            <Input
+                                                                                value={
+                                                                                    row[
+                                                                                        column
+                                                                                            .key
+                                                                                    ] ||
+                                                                                    ""
+                                                                                }
+                                                                                onChange={(
+                                                                                    e
+                                                                                ) =>
+                                                                                    updateCellData(
+                                                                                        row.id,
+                                                                                        column.key,
+                                                                                        e
+                                                                                            .target
+                                                                                            .value
+                                                                                    )
+                                                                                }
+                                                                                placeholder={`Isi ${column.name.toLowerCase()}...`}
+                                                                                style={{
+                                                                                    borderRadius:
+                                                                                        "8px",
+                                                                                }}
+                                                                                type={
+                                                                                    column.key.includes(
+                                                                                        "jumlah"
+                                                                                    ) ||
+                                                                                    column.key.includes(
+                                                                                        "qty"
+                                                                                    ) ||
+                                                                                    column.key.includes(
+                                                                                        "number"
+                                                                                    )
+                                                                                        ? "number"
+                                                                                        : "text"
+                                                                                }
+                                                                            />
+                                                                        </td>
+                                                                    )
+                                                                )}
+                                                                <td className="border p-2 text-center">
+                                                                    {data.tableData.length >
+                                                                        1 && (
+                                                                        <Button
+                                                                            onClick={() =>
+                                                                                deleteRow(
+                                                                                    row.id
+                                                                                )
+                                                                            }
+                                                                            style={{
+                                                                                borderRadius:
+                                                                                    "8px",
+                                                                            }}
+                                                                            className="bg-red-500 hover:bg-red-600 text-white p-2 h-8 w-8"
+                                                                        >
+                                                                            ×
+                                                                        </Button>
+                                                                    )}
+                                                                </td>
+                                                            </tr>
+                                                        )
+                                                    )}
+                                                </tbody>
+                                            </table>
+                                        </div>
+
+                                        {/* Row Management */}
+                                        <div className="mt-4 flex justify-between items-center">
+                                            <div className="text-sm text-gray-600">
+                                                Total {data.tableData.length} baris
+                                            </div>
+                                            <Button
+                                                type="button"
+                                                onClick={addRow}
+                                                style={{ borderRadius: "8px" }}
+                                                className="bg-blue-600 hover:bg-blue-700 text-white px-4"
+                                            >
+                                                + Tambah Baris
+                                            </Button>
+                                        </div>
+                                        </>
+                                        )}
+                                    </div>
 
                                     {/* Submit */}
                                     <div className="flex items-center justify-end gap-4 mt-4">

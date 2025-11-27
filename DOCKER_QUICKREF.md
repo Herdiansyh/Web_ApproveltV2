@@ -59,10 +59,10 @@ docker-compose exec db mysql -u approveit -p approveit
 
 ## Ports
 
-- **80** → Nginx Web Server → http://localhost
-- **5173** → Vite Dev Server → http://localhost:5173
-- **3306** → MySQL Database (internal)
-- **9000** → PHP-FPM (internal)
+-   **80** → Nginx Web Server → http://localhost
+-   **5173** → Vite Dev Server → http://localhost:5173
+-   **3306** → MySQL Database (internal)
+-   **9000** → PHP-FPM (internal)
 
 ## Architecture
 
@@ -85,13 +85,13 @@ Browser
 
 ## Troubleshooting
 
-| Issue | Solution |
-|-------|----------|
-| "Connection refused" | `docker-compose logs db` - tunggu DB ready |
-| Permission denied | `docker-compose exec app chmod -R 0775 storage` |
-| Assets not loading | `docker-compose exec node npm run build` |
-| Port already in use | Ubah port di docker-compose.yml |
-| Database password salah | Cek .env vs docker-compose.yml |
+| Issue                   | Solution                                        |
+| ----------------------- | ----------------------------------------------- |
+| "Connection refused"    | `docker-compose logs db` - tunggu DB ready      |
+| Permission denied       | `docker-compose exec app chmod -R 0775 storage` |
+| Assets not loading      | `docker-compose exec node npm run build`        |
+| Port already in use     | Ubah port di docker-compose.yml                 |
+| Database password salah | Cek .env vs docker-compose.yml                  |
 
 ## Volume Mapping
 
@@ -120,6 +120,7 @@ docker-compose up -d
 ## Network
 
 Internal network: `approveit`
-- app dapat diakses dari nginx di `app:9000`
-- db dapat diakses dari app di `db:3306`
-- node dapat diakses dari nginx di `node:5173` (untuk HMR)
+
+-   app dapat diakses dari nginx di `app:9000`
+-   db dapat diakses dari app di `db:3306`
+-   node dapat diakses dari nginx di `node:5173` (untuk HMR)

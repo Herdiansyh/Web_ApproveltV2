@@ -393,6 +393,7 @@ class SubmissionController extends Controller
             'data' => 'nullable|array',
         ]);
 
+
         $user = Auth::user();
 
         $workflow = Workflow::with(['steps', 'steps.division', 'document.fields'])
@@ -408,8 +409,58 @@ class SubmissionController extends Controller
         // Validate required dynamic fields from Document Type
         $docFields = $workflow->document?->fields ?? collect();
         $dataPayload = $validated['data'] ?? [];
+        
+        // Process table data from direct request fields (Inertia sends them separately)
+        $tableData = $request->input('tableData');
+        $tableColumns = $request->input('tableColumns');
+        
+        if (!empty($tableData) && is_array($tableData)) {
+            $dataPayload['tableData'] = $tableData;
+        }
+        
+        if (!empty($tableColumns) && is_array($tableColumns)) {
+            $dataPayload['tableColumns'] = $tableColumns;
+        }
+        
+        // Also try to process JSON strings within data object (fallback)
+        if (!empty($dataPayload['tableDataJson'])) {
+            try {
+                $tableDataFromJson = json_decode($dataPayload['tableDataJson'], true);
+                if (json_last_error() === JSON_ERROR_NONE && is_array($tableDataFromJson)) {
+                    $dataPayload['tableData'] = $tableDataFromJson;
+                }
+            } catch (\Exception $e) {
+                // Error decoding tableDataJson
+            }
+        }
+        
+        if (!empty($dataPayload['tableColumnsJson'])) {
+            try {
+                $tableColumnsFromJson = json_decode($dataPayload['tableColumnsJson'], true);
+                if (json_last_error() === JSON_ERROR_NONE && is_array($tableColumnsFromJson)) {
+                    $dataPayload['tableColumns'] = $tableColumnsFromJson;
+                }
+            } catch (\Exception $e) {
+                // Error decoding tableColumnsJson
+            }
+        }
+        
+        // Remove the JSON strings after processing
+        unset($dataPayload['tableDataJson']);
+        unset($dataPayload['tableColumnsJson']);
+        
+        
         foreach ($docFields as $df) {
             if ($df->required && (!array_key_exists($df->name, $dataPayload) || $dataPayload[$df->name] === null || $dataPayload[$df->name] === '')) {
+                // Check if this is an API request
+                if ($request->wantsJson() || $request->header('Accept') === 'application/json') {
+                    return response()->json([
+                        'success' => false,
+                        'message' => $df->label . ' wajib diisi',
+                        'errors' => ["data.{$df->name}" => $df->label . ' wajib diisi']
+                    ], 422);
+                }
+                
                 return back()->withErrors(["data.{$df->name}" => $df->label . ' wajib diisi'])->withInput();
             }
         }
@@ -431,6 +482,7 @@ class SubmissionController extends Controller
             'data_json' => $dataPayload ?: null,
         ]);
 
+
         // Generate series_code saat dibuat agar nomor dokumen tersedia sejak awal
         $this->generateSeriesCode($submission);
         // Generate token verifikasi & QR code
@@ -446,7 +498,17 @@ class SubmissionController extends Controller
             ]);
         }
 
-        return redirect()->route('submissions.index')->with('success', 'Pengajuan berhasil dibuat.');
+        // Check if this is an API request (from fetch)
+        if ($request->wantsJson() || $request->header('Accept') === 'application/json') {
+            return response()->json([
+                'success' => true,
+                'message' => 'Pengajuan berhasil dibuat.',
+                'submission_id' => $submission->id,
+                'redirect_url' => route('submissions.forDivision')
+            ]);
+        }
+
+        return redirect()->route('submissions.forDivision')->with('success', 'Pengajuan berhasil dibuat.');
     }
 
     /** ------------------------
@@ -464,7 +526,6 @@ class SubmissionController extends Controller
             'workflow.steps.division',
             'stamped',
         ]);
-
 
         $user = Auth::user();
 
@@ -752,8 +813,26 @@ class SubmissionController extends Controller
         }
 
         if (!Auth::user()->can('view', $submission)) {
+            // Check if this is an API request
+            if ($request->wantsJson() || $request->header('Accept') === 'application/json') {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Dokumen berhasil disetujui.',
+                    'redirect_url' => route('submissions.forDivision')
+                ]);
+            }
             return redirect()->route('submissions.forDivision')->with('success', 'Dokumen berhasil disetujui.');
         }
+        
+        // Check if this is an API request
+        if ($request->wantsJson() || $request->header('Accept') === 'application/json') {
+            return response()->json([
+                'success' => true,
+                'message' => 'Dokumen berhasil disetujui.',
+                'redirect_url' => route('submissions.show', $submission->id)
+            ]);
+        }
+        
         return back()->with('success', 'Dokumen berhasil disetujui.');
     }
 
@@ -810,9 +889,27 @@ public function requestNext(Request $request, Submission $submission)
     $submission->save();
 
     if (!Auth::user()->can('view', $submission)) {
-        return redirect()->route('submissions.forDivision')->with('success', 'Permintaan ke langkah berikutnya berhasil.');
-    }
-    return back()->with('success', 'Permintaan ke langkah berikutnya berhasil.');
+            // Check if this is an API request
+            if ($request->wantsJson() || $request->header('Accept') === 'application/json') {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Permintaan ke langkah berikutnya berhasil.',
+                    'redirect_url' => route('submissions.forDivision')
+                ]);
+            }
+            return redirect()->route('submissions.forDivision')->with('success', 'Permintaan ke langkah berikutnya berhasil.');
+        }
+        
+        // Check if this is an API request
+        if ($request->wantsJson() || $request->header('Accept') === 'application/json') {
+            return response()->json([
+                'success' => true,
+                'message' => 'Permintaan ke langkah berikutnya berhasil.',
+                'redirect_url' => route('submissions.show', $submission->id)
+            ]);
+        }
+        
+        return back()->with('success', 'Permintaan ke langkah berikutnya berhasil.');
 }
 
 /** ------------------------
@@ -861,9 +958,27 @@ public function reject(Request $request, Submission $submission)
     dispatch(new StampPdfOnDecision($submission->id, 'rejected', $user->name, now()->toDateTimeString()));
 
     if (!Auth::user()->can('view', $submission)) {
-        return redirect()->route('submissions.forDivision')->with('success', 'Dokumen telah ditolak.');
-    }
-    return back()->with('success', 'Dokumen telah ditolak.');
+            // Check if this is an API request
+            if ($request->wantsJson() || $request->header('Accept') === 'application/json') {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Dokumen telah ditolak.',
+                    'redirect_url' => route('submissions.forDivision')
+                ]);
+            }
+            return redirect()->route('submissions.forDivision')->with('success', 'Dokumen telah ditolak.');
+        }
+        
+        // Check if this is an API request
+        if ($request->wantsJson() || $request->header('Accept') === 'application/json') {
+            return response()->json([
+                'success' => true,
+                'message' => 'Dokumen telah ditolak.',
+                'redirect_url' => route('submissions.show', $submission->id)
+            ]);
+        }
+        
+        return back()->with('success', 'Dokumen telah ditolak.');
 }
 
 /** ------------------------
@@ -893,21 +1008,67 @@ public function edit(Submission $submission)
  *  ------------------------ */
 public function update(Request $request, Submission $submission)
 {
-    $this->authorize('update', $submission);
+    // Check if this is an API request and handle authorization errors
+    if ($request->wantsJson() || $request->header('Accept') === 'application/json') {
+        try {
+            $this->authorize('update', $submission);
+        } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Anda tidak memiliki izin untuk mengubah pengajuan ini.',
+                'errors' => ['authorization' => 'Unauthorized']
+            ], 403);
+        }
+    } else {
+        $this->authorize('update', $submission);
+    }
 
-    $validated = $request->validate([
-        'title' => 'required|string|max:255',
-        'description' => 'nullable|string',
-        'file' => 'nullable|file|max:10240',
-        'data' => 'nullable|array',
-    ]);
+    // Check if this is an API request and handle validation errors
+    if ($request->wantsJson() || $request->header('Accept') === 'application/json') {
+        try {
+            $validated = $request->validate([
+                'title' => 'required|string|max:255',
+                'description' => 'nullable|string',
+                'file' => 'nullable|file|max:10240',
+                'data' => 'nullable|string', // Allow string for FormData JSON
+            ]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed',
+                'errors' => $e->errors()
+            ], 422);
+        }
+    } else {
+        $validated = $request->validate([
+            'title' => 'required|string|max:255',
+            'description' => 'nullable|string',
+            'file' => 'nullable|file|max:10240',
+            'data' => 'nullable|array', // Array for normal form requests
+        ]);
+    }
 
     $submission->load(['workflow.document.fields']);
 
     $docFields = $submission->workflow?->document?->fields ?? collect();
+    
+    // Handle data from FormData (JSON string)
     $dataPayload = $validated['data'] ?? ($submission->data_json ?? []);
+    if (is_string($dataPayload)) {
+        $dataPayload = json_decode($dataPayload, true) ?? [];
+    }
+    
     foreach ($docFields as $df) {
         if ($df->required && (!array_key_exists($df->name, $dataPayload) || $dataPayload[$df->name] === null || $dataPayload[$df->name] === '')) {
+            // Check if this is an API request
+            if ($request->wantsJson() || $request->header('Accept') === 'application/json') {
+                return response()->json([
+                    'success' => false,
+                    'message' => $df->label . ' wajib diisi',
+                    'errors' => ["data.{$df->name}" => $df->label . ' wajib diisi']
+                ], 422);
+            }
+            
             return back()->withErrors(["data.{$df->name}" => $df->label . ' wajib diisi'])->withInput();
         }
     }
@@ -926,13 +1087,22 @@ public function update(Request $request, Submission $submission)
     $submission->data_json = $dataPayload ?: null;
     $submission->save();
 
+    // Check if this is an API request
+    if ($request->wantsJson() || $request->header('Accept') === 'application/json') {
+        return response()->json([
+            'success' => true,
+            'message' => 'Pengajuan berhasil diperbarui.',
+            'redirect_url' => route('submissions.index')
+        ]);
+    }
+
     return redirect()->route('submissions.index')->with('success', 'Pengajuan berhasil diperbarui.');
 }
 
 /** ------------------------
  *  HAPUS PENGAJUAN
  *  ------------------------ */
-public function destroy(Submission $submission)
+public function destroy(Request $request, Submission $submission)
 {
     $this->authorize('delete', $submission);
 
@@ -942,6 +1112,15 @@ public function destroy(Submission $submission)
     }
 
     $submission->delete();
+
+    // Check if this is an API request
+    if ($request->wantsJson() || $request->header('Accept') === 'application/json') {
+        return response()->json([
+            'success' => true,
+            'message' => 'Pengajuan berhasil dihapus.',
+            'redirect_url' => route('submissions.index')
+        ]);
+    }
 
     return redirect()->route('submissions.index')->with('success', 'Pengajuan berhasil dihapus.');
 }

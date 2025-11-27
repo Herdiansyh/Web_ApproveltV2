@@ -91,8 +91,15 @@ export default function Index({ auth, documents }) {
     const saveField = () => {
         if (!fieldDoc) return;
         const docId = fieldDoc.id;
+        
+        // For label type, generate automatic name if not provided
+        let fieldName = fieldForm.name;
+        if (fieldForm.type === 'label' && !fieldName) {
+            fieldName = 'label_' + Date.now();
+        }
+        
         const payload = {
-            name: fieldForm.name,
+            name: fieldName,
             label: fieldForm.label,
             type: fieldForm.type,
             required: !!fieldForm.required,

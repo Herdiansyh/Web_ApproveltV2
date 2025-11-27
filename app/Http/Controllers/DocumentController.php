@@ -144,7 +144,7 @@ class DocumentController extends Controller
         $data = $request->validate([
             'name' => 'required|string|max:100',
             'label' => 'required|string|max:255',
-            'type' => 'required|string|in:text,textarea,number,date,select',
+            'type' => 'required|string|in:text,textarea,number,date,select,label',
             'required' => 'boolean',
             'order' => 'nullable|integer|min:0',
             'options' => 'nullable|array', // for select
@@ -155,7 +155,7 @@ class DocumentController extends Controller
             'name' => $data['name'],
             'label' => $data['label'],
             'type' => $data['type'],
-            'required' => (bool)($data['required'] ?? false),
+            'required' => $data['type'] === 'label' ? false : (bool)($data['required'] ?? false),
             'order' => $data['order'] ?? 0,
             'options_json' => isset($data['options']) ? json_encode(array_values($data['options'])) : null,
         ]);
@@ -171,7 +171,7 @@ class DocumentController extends Controller
 
         $data = $request->validate([
             'label' => 'sometimes|string|max:255',
-            'type' => 'sometimes|string|in:text,textarea,number,date,select',
+            'type' => 'sometimes|string|in:text,textarea,number,date,select,label',
             'required' => 'sometimes|boolean',
             'order' => 'sometimes|integer|min:0',
             'options' => 'nullable|array',
@@ -181,7 +181,7 @@ class DocumentController extends Controller
         $field->fill([
             'label' => $data['label'] ?? $field->label,
             'type' => $data['type'] ?? $field->type,
-            'required' => array_key_exists('required', $data) ? (bool)$data['required'] : $field->required,
+            'required' => ($data['type'] ?? $field->type) === 'label' ? false : (array_key_exists('required', $data) ? (bool)$data['required'] : $field->required),
             'order' => $data['order'] ?? $field->order,
             'options_json' => array_key_exists('options', $data) ? json_encode(array_values($data['options'] ?? [])) : $field->options_json,
         ])->save();

@@ -68,18 +68,80 @@ export default function Show({
 
     const handleApprove = () => {
         if (!canApprove) return handleNoAccess();
-        post(route("submissions.approve", submission.id), {
-            data: { approval_note: data.approval_note || "" },
-            onSuccess: () => {
+        
+        // Show loading alert
+        Swal.fire({
+            title: "Memproses...",
+            text: "Sedang menyetujui pengajuan.",
+            allowOutsideClick: false,
+            allowEscapeKey: false,
+            didOpen: () => {
+                Swal.showLoading();
+            }
+        });
+        
+        // Manual fetch request
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+        if (!csrfToken) {
+            Swal.fire({
+                icon: "error",
+                title: "Error!",
+                text: "CSRF token tidak ditemukan. Silakan refresh halaman.",
+                confirmButtonText: "OK",
+            });
+            return;
+        }
+        
+        fetch(route("submissions.approve", submission.id), {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': csrfToken,
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+            body: JSON.stringify({
+                approval_note: data.approval_note || ""
+            })
+        })
+        .then(response => {
+            if (!response.ok) {
+                if (response.status === 419) {
+                    throw new Error('CSRF token mismatch. Silakan refresh halaman.');
+                } else {
+                    throw new Error(`Server error: ${response.status}`);
+                }
+            }
+            return response.json();
+        })
+        .then(responseData => {
+            if (responseData.success) {
                 setShowApproveModal(false);
                 reset();
                 Swal.fire({
                     icon: "success",
                     title: "Disetujui!",
                     text: "Pengajuan berhasil disetujui.",
-                    confirmButtonText: "OK",
+                    timer: 2000,
+                    showConfirmButton: false,
                 }).then(() => window.location.reload());
-            },
+            } else {
+                Swal.fire({
+                    icon: "error",
+                    title: "Gagal!",
+                    text: responseData.message || "Gagal menyetujui pengajuan.",
+                    confirmButtonText: "OK",
+                });
+            }
+        })
+        .catch(error => {
+            console.error("Approve error:", error);
+            Swal.fire({
+                icon: "error",
+                title: "Error!",
+                text: error.message || "Terjadi kesalahan jaringan. Silakan coba lagi.",
+                confirmButtonText: "OK",
+            });
         });
     };
 
@@ -105,18 +167,79 @@ export default function Show({
             cancelButtonText: "Batal",
         }).then((result) => {
             if (result.isConfirmed) {
-                post(route("submissions.reject", submission.id), {
-                    data: { approval_note: data.approval_note },
-                    onSuccess: () => {
+                // Show loading alert
+                Swal.fire({
+                    title: "Memproses...",
+                    text: "Sedang menolak pengajuan.",
+                    allowOutsideClick: false,
+                    allowEscapeKey: false,
+                    didOpen: () => {
+                        Swal.showLoading();
+                    }
+                });
+                
+                // Manual fetch request
+                const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+                if (!csrfToken) {
+                    Swal.fire({
+                        icon: "error",
+                        title: "Error!",
+                        text: "CSRF token tidak ditemukan. Silakan refresh halaman.",
+                        confirmButtonText: "OK",
+                    });
+                    return;
+                }
+                
+                fetch(route("submissions.reject", submission.id), {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': csrfToken,
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                    body: JSON.stringify({
+                        approval_note: data.approval_note
+                    })
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        if (response.status === 419) {
+                            throw new Error('CSRF token mismatch. Silakan refresh halaman.');
+                        } else {
+                            throw new Error(`Server error: ${response.status}`);
+                        }
+                    }
+                    return response.json();
+                })
+                .then(responseData => {
+                    if (responseData.success) {
                         setShowRejectModal(false);
                         reset();
                         Swal.fire({
                             icon: "success",
                             title: "Ditolak",
                             text: "Pengajuan telah ditolak.",
-                            confirmButtonText: "OK",
+                            timer: 2000,
+                            showConfirmButton: false,
                         }).then(() => window.location.reload());
-                    },
+                    } else {
+                        Swal.fire({
+                            icon: "error",
+                            title: "Gagal!",
+                            text: responseData.message || "Gagal menolak pengajuan.",
+                            confirmButtonText: "OK",
+                        });
+                    }
+                })
+                .catch(error => {
+                    console.error("Reject error:", error);
+                    Swal.fire({
+                        icon: "error",
+                        title: "Error!",
+                        text: error.message || "Terjadi kesalahan jaringan. Silakan coba lagi.",
+                        confirmButtonText: "OK",
+                    });
                 });
             }
         });
@@ -124,6 +247,7 @@ export default function Show({
 
     const handleRequestNext = () => {
         if (!canApprove) return handleNoAccess();
+        
         Swal.fire({
             title: "Teruskan ke langkah berikutnya?",
             icon: "question",
@@ -132,15 +256,75 @@ export default function Show({
             cancelButtonText: "Batal",
         }).then((result) => {
             if (result.isConfirmed) {
-                post(route("submissions.requestNext", submission.id), {
-                    onSuccess: () => {
+                // Show loading alert
+                Swal.fire({
+                    title: "Memproses...",
+                    text: "Sedang meneruskan pengajuan.",
+                    allowOutsideClick: false,
+                    allowEscapeKey: false,
+                    didOpen: () => {
+                        Swal.showLoading();
+                    }
+                });
+                
+                // Manual fetch request
+                const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+                if (!csrfToken) {
+                    Swal.fire({
+                        icon: "error",
+                        title: "Error!",
+                        text: "CSRF token tidak ditemukan. Silakan refresh halaman.",
+                        confirmButtonText: "OK",
+                    });
+                    return;
+                }
+                
+                fetch(route("submissions.requestNext", submission.id), {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': csrfToken,
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                    body: JSON.stringify({})
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        if (response.status === 419) {
+                            throw new Error('CSRF token mismatch. Silakan refresh halaman.');
+                        } else {
+                            throw new Error(`Server error: ${response.status}`);
+                        }
+                    }
+                    return response.json();
+                })
+                .then(responseData => {
+                    if (responseData.success) {
                         Swal.fire({
                             icon: "success",
                             title: "Berhasil",
                             text: "Pengajuan diteruskan ke langkah berikutnya.",
-                            confirmButtonText: "OK",
+                            timer: 2000,
+                            showConfirmButton: false,
                         }).then(() => window.location.reload());
-                    },
+                    } else {
+                        Swal.fire({
+                            icon: "error",
+                            title: "Gagal!",
+                            text: responseData.message || "Gagal meneruskan pengajuan.",
+                            confirmButtonText: "OK",
+                        });
+                    }
+                })
+                .catch(error => {
+                    console.error("Request next error:", error);
+                    Swal.fire({
+                        icon: "error",
+                        title: "Error!",
+                        text: error.message || "Terjadi kesalahan jaringan. Silakan coba lagi.",
+                        confirmButtonText: "OK",
+                    });
                 });
             }
         });
@@ -153,7 +337,16 @@ export default function Show({
             ? " text-rose-700"
             : " text-amber-500";
 
-    const dataMap = useMemo(() => submission?.data_json || {}, [submission]);
+    const dataMap = useMemo(() => {
+            const data = submission?.data_json || {};
+            console.log('Show.jsx - dataMap:', data);
+            console.log('Show.jsx - has tableData:', !!data.tableData);
+            console.log('Show.jsx - has tableColumns:', !!data.tableColumns);
+            if (data.tableData) {
+                console.log('Show.jsx - tableData length:', data.tableData.length);
+            }
+            return data;
+        }, [submission]);
 
     // Pattern series dari Document Type (Name Series) untuk tampilan saja
     const seriesPattern = useMemo(() => {
@@ -246,11 +439,35 @@ export default function Show({
                                                     className={`px-3 py-1  rounded-full text-xs sm:text-sm font-bold ${statusColor}`}
                                                 >
                                                     {(() => {
-                                                        const raw = String(submission.status || '').toLowerCase();
-                                                        const who = currentStep?.division?.name || currentStep?.role || null;
-                                                        if (raw.includes('approved')) return '• Disetujui';
-                                                        if (raw === 'rejected' || raw.includes('rejected')) return '• Ditolak';
-                                                        return `• Waiting confirmation${who ? ` to ${who}` : ''}`;
+                                                        const raw = String(
+                                                            submission.status ||
+                                                                ""
+                                                        ).toLowerCase();
+                                                        const who =
+                                                            currentStep
+                                                                ?.division
+                                                                ?.name ||
+                                                            currentStep?.role ||
+                                                            null;
+                                                        if (
+                                                            raw.includes(
+                                                                "approved"
+                                                            )
+                                                        )
+                                                            return "• Disetujui";
+                                                        if (
+                                                            raw ===
+                                                                "rejected" ||
+                                                            raw.includes(
+                                                                "rejected"
+                                                            )
+                                                        )
+                                                            return "• Ditolak";
+                                                        return `• Waiting confirmation${
+                                                            who
+                                                                ? ` to ${who}`
+                                                                : ""
+                                                        }`;
                                                     })()}
                                                 </span>
                                                 {isApprovedFinal && (
@@ -316,7 +533,8 @@ export default function Show({
                                             className="inline-flex items-center justify-center mb-2 py-1 px-2 text-sm font-medium rounded-full bg-blue-600 text-white hover:bg-blue-700 active:scale-[0.97] transition-all shadow-sm"
                                             title="Unduh dokumen final yang sudah distempel"
                                         >
-                                            <Download className="mr-2 h-4 w-4" /> Unduh Dokumen
+                                            <Download className="mr-2 h-4 w-4" />{" "}
+                                            Unduh Dokumen
                                         </a>
                                     ) : (
                                         <span
@@ -324,7 +542,8 @@ export default function Show({
                                             className="mb-2 inline-flex items-center px-2 py-1 text-[11px] bg-slate-100 text-slate-600 border border-slate-200"
                                             title="Unduh tersedia setelah pengajuan disetujui di tahap terakhir"
                                         >
-                                            Unduh tersedia setelah final approval
+                                            Unduh tersedia setelah final
+                                            approval
                                         </span>
                                     )}
 
@@ -478,6 +697,77 @@ export default function Show({
                                                     </span>
                                                 </div>
                                             ))}
+                                        </div>
+                                    </Card>
+                                )}
+
+                            {/* Dynamic Table Data */}
+                            {dataMap?.tableData &&
+                                dataMap?.tableColumns &&
+                                dataMap.tableData.length > 0 && (
+                                    <Card
+                                        className="p-5 mt-6 mb-6 border border-border shadow-sm bg-card"
+                                        style={{ borderRadius: "14px" }}
+                                    >
+                                        <h4 className="font-semibold mb-4 text-foreground text-lg">
+                                            Data Tabel
+                                        </h4>
+
+                                        <div className="overflow-x-auto">
+                                            <table className="w-full border-collapse border border-border">
+                                                <thead>
+                                                    <tr className="bg-muted/50">
+                                                        {dataMap.tableColumns.map(
+                                                            (column) => (
+                                                                <th
+                                                                    key={
+                                                                        column.id
+                                                                    }
+                                                                    className="border border-border px-4 py-2 text-left text-sm font-semibold text-foreground"
+                                                                >
+                                                                    {
+                                                                        column.name
+                                                                    }
+                                                                </th>
+                                                            )
+                                                        )}
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {dataMap.tableData.map(
+                                                        (row, rowIndex) => (
+                                                            <tr
+                                                                key={rowIndex}
+                                                                className="hover:bg-muted/30"
+                                                            >
+                                                                {dataMap.tableColumns.map(
+                                                                    (
+                                                                        column
+                                                                    ) => (
+                                                                        <td
+                                                                            key={
+                                                                                column.id
+                                                                            }
+                                                                            className="border border-border px-4 py-2 text-sm text-foreground"
+                                                                        >
+                                                                            {row[
+                                                                                column
+                                                                                    .key
+                                                                            ] ||
+                                                                                "-"}
+                                                                        </td>
+                                                                    )
+                                                                )}
+                                                            </tr>
+                                                        )
+                                                    )}
+                                                </tbody>
+                                            </table>
+                                        </div>
+
+                                        <div className="mt-3 text-xs text-muted-foreground">
+                                            Total {dataMap.tableData.length}{" "}
+                                            baris
                                         </div>
                                     </Card>
                                 )}

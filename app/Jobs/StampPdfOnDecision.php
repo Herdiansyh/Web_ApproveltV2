@@ -98,24 +98,76 @@ class StampPdfOnDecision implements ShouldQueue
             $pdf->AddPage($size['orientation'], [$size['width'], $size['height']]);
             $pdf->useTemplate($tplId);
 
-            // Status stamp text
-            $label = $this->status === 'approved' ? 'Approved by ' : 'Rejected by ';
-            $text = $label . $this->by . ' • ' . $this->at;
+            // Prepare stamp text matching HTML print view (1 baris)
+            $label = $this->status === 'approved' ? 'Approved by:' : 'Rejected by:';
+            $date = \Carbon\Carbon::parse($this->at)->format('d M Y, H:i');
+            $text = $label . ' ' . $this->by . ' • ' . $date;
 
-            // Default top-right; allow override from submission watermark_x/y
-            // Reserve ~160 width for text box; 20pt margin
-            $xDefault = max(5, $size['width'] - 160);
-            $x = $submission->watermark_x ?? data_get($pos, 'x', $xDefault);
-            $y = $submission->watermark_y ?? data_get($pos, 'y', 20);
-            $font = data_get($pos, 'font', 'Helvetica');
-            $sizePt = data_get($pos, 'size', 12);
-            $color = data_get($pos, 'color', $this->status === 'approved' ? '#0E9F6E' : '#DC2626');
-            [$r, $g, $b] = $this->hexToRgb($color);
+            // Stamp dengan teks dan hiasan (tanpa kotak)
+            $rightMargin = 10;
+            $bottomMargin = 10;
+            $fontSize = 9;
+            $smallFontSize = 6;
 
-            $pdf->SetFont($font, '', $sizePt);
-            $pdf->SetTextColor($r, $g, $b);
-            $pdf->SetXY($x, $y);
-            $pdf->Cell(150, 8, $text, 0, 0, 'L');
+            // Prepare stamp text
+            $label = $this->status === 'approved' ? 'APPROVED BY' : 'REJECTED BY';
+            $date = \Carbon\Carbon::parse($this->at)->format('d/m/Y H:i');
+            $approverText = strtoupper($this->by);
+
+            // Set font untuk kalkulasi width
+            $pdf->SetFont('Helvetica', 'B', $fontSize);
+            $labelWidth = $pdf->GetStringWidth($label);
+            $approverWidth = $pdf->GetStringWidth($approverText);
+            $maxWidth = max($labelWidth, $approverWidth) + 4;
+
+            $x = $submission->watermark_x ?? ($size['width'] - $maxWidth - $rightMargin);
+            $y = $submission->watermark_y ?? ($size['height'] - 25 - $bottomMargin);
+
+            // Warna stamp berdasarkan status
+            $textColor = $this->status === 'approved' ? [6, 95, 70] : [220, 38, 38]; // #065f46 / #dc2626
+            $accentColor = $this->status === 'approved' ? [34, 197, 94] : [239, 68, 68]; // #22c55e / #ef4444
+
+            // Draw decorative lines (hiasan untuk anti-kopi)
+            $pdf->SetDrawColor(...$accentColor);
+            $pdf->SetLineWidth(0.5);
+            
+            // Garis atas
+            $pdf->Line($x - 3, $y, $x + $maxWidth + 3, $y);
+            
+            // Garis bawah
+            $pdf->Line($x - 3, $y + 18, $x + $maxWidth + 3, $y + 18);
+
+            // Draw small decorative corners (sudut dekoratif)
+            $cornerSize = 2;
+            // Kiri atas
+            $pdf->Line($x - 3, $y, $x - 3 + $cornerSize, $y);
+            $pdf->Line($x - 3, $y, $x - 3, $y + $cornerSize);
+            // Kanan atas
+            $pdf->Line($x + $maxWidth + 3, $y, $x + $maxWidth + 3 - $cornerSize, $y);
+            $pdf->Line($x + $maxWidth + 3, $y, $x + $maxWidth + 3, $y + $cornerSize);
+            // Kiri bawah
+            $pdf->Line($x - 3, $y + 18, $x - 3 + $cornerSize, $y + 18);
+            $pdf->Line($x - 3, $y + 18, $x - 3, $y + 18 - $cornerSize);
+            // Kanan bawah
+            $pdf->Line($x + $maxWidth + 3, $y + 18, $x + $maxWidth + 3 - $cornerSize, $y + 18);
+            $pdf->Line($x + $maxWidth + 3, $y + 18, $x + $maxWidth + 3, $y + 18 - $cornerSize);
+
+            // Tulis label (APPROVED BY / REJECTED BY)
+            $pdf->SetFont('Helvetica', 'B', $fontSize);
+            $pdf->SetTextColor(...$textColor);
+            $pdf->SetXY($x, $y + 2);
+            $pdf->Cell($maxWidth, 4, $label, 0, 1, 'C', false);
+
+            // Tulis nama approver
+            $pdf->SetFont('Helvetica', 'B', $fontSize + 1);
+            $pdf->SetXY($x, $y + 6);
+            $pdf->Cell($maxWidth, 5, $approverText, 0, 1, 'C', false);
+
+            // Tulis tanggal/waktu dengan font kecil
+            $pdf->SetFont('Helvetica', '', $smallFontSize);
+            $pdf->SetTextColor(100, 100, 100); // abu-abu
+            $pdf->SetXY($x, $y + 12);
+            $pdf->Cell($maxWidth, 3, $date, 0, 1, 'C', false);
         }
 
         try {

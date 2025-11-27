@@ -28,27 +28,29 @@ Panduan lengkap untuk menjalankan aplikasi E-Approval di Docker dengan PHP-FPM, 
 ## Persiapan Awal
 
 1. **Copy `.env` untuk development:**
-   ```bash
-   cp .env.example .env
-   ```
+
+    ```bash
+    cp .env.example .env
+    ```
 
 2. **Update variable di `.env`:**
-   ```bash
-   APP_ENV=local
-   APP_DEBUG=true
-   APP_URL=http://localhost
 
-   DB_CONNECTION=mysql
-   DB_HOST=db
-   DB_PORT=3306
-   DB_DATABASE=approveit
-   DB_USERNAME=approveit
-   DB_PASSWORD=secret
+    ```bash
+    APP_ENV=local
+    APP_DEBUG=true
+    APP_URL=http://localhost
 
-   CACHE_STORE=database
-   SESSION_DRIVER=database
-   QUEUE_CONNECTION=database
-   ```
+    DB_CONNECTION=mysql
+    DB_HOST=db
+    DB_PORT=3306
+    DB_DATABASE=approveit
+    DB_USERNAME=approveit
+    DB_PASSWORD=secret
+
+    CACHE_STORE=database
+    SESSION_DRIVER=database
+    QUEUE_CONNECTION=database
+    ```
 
 ## Build & Start Containers
 
@@ -98,10 +100,10 @@ docker-compose exec app php artisan db:seed
 
 ## Akses Aplikasi
 
-- **Web Application:** http://localhost
-- **Vite Dev Server:** http://localhost:5173
-  - Assets akan di-serve otomatis dari `http://localhost` (Nginx menghandle HMR)
-  - Port 5173 tersedia untuk debugging langsung Vite jika diperlukan
+-   **Web Application:** http://localhost
+-   **Vite Dev Server:** http://localhost:5173
+    -   Assets akan di-serve otomatis dari `http://localhost` (Nginx menghandle HMR)
+    -   Port 5173 tersedia untuk debugging langsung Vite jika diperlukan
 
 ## Development Workflow
 
@@ -259,43 +261,48 @@ docker-compose exec app ls -la public/build/
 Jika port 80, 3306, atau 5173 sudah digunakan:
 
 **docker-compose.yml:** Ubah port mapping (contoh):
+
 ```yaml
 ports:
-  - "8080:80"      # Nginx
-  - "3307:3306"    # MySQL
-  - "5174:5173"    # Vite
+    - "8080:80" # Nginx
+    - "3307:3306" # MySQL
+    - "5174:5173" # Vite
 ```
 
 Kemudian update `APP_URL` di `.env`:
+
 ```
 APP_URL=http://localhost:8080
 ```
 
 ## File-file Docker
 
-- **Dockerfile** - PHP-FPM image
-- **Dockerfile.node** - Node.js image untuk Vite
-- **docker/nginx.conf** - Konfigurasi Nginx
-- **docker-compose.yml** - Services configuration
-- **.dockerignore** - Files untuk exclude dari build context
+-   **Dockerfile** - PHP-FPM image
+-   **Dockerfile.node** - Node.js image untuk Vite
+-   **docker/nginx.conf** - Konfigurasi Nginx
+-   **docker-compose.yml** - Services configuration
+-   **.dockerignore** - Files untuk exclude dari build context
 
 ## Performance Tips
 
 1. **Cache Layer:**
-   - Gunakan `CACHE_STORE=redis` jika perlu performance lebih baik
-   - Tambahkan service `redis` di docker-compose.yml jika diperlukan
+
+    - Gunakan `CACHE_STORE=redis` jika perlu performance lebih baik
+    - Tambahkan service `redis` di docker-compose.yml jika diperlukan
 
 2. **Database:**
-   - Jangan lupa jalankan migration dengan indexes
-   - Gunakan database backups
+
+    - Jangan lupa jalankan migration dengan indexes
+    - Gunakan database backups
 
 3. **Assets:**
-   - Production build (npm run build) akan menghasilkan assets yang optimal
-   - Nginx sudah configured dengan gzip compression
+
+    - Production build (npm run build) akan menghasilkan assets yang optimal
+    - Nginx sudah configured dengan gzip compression
 
 4. **Logs:**
-   - Monitor logs untuk debugging: `docker-compose logs -f`
-   - Customize log level di `.env` dengan `LOG_LEVEL`
+    - Monitor logs untuk debugging: `docker-compose logs -f`
+    - Customize log level di `.env` dengan `LOG_LEVEL`
 
 ## Production Deployment
 
@@ -311,4 +318,3 @@ Untuk production:
 ---
 
 Untuk pertanyaan atau issue, cek logs dengan `docker-compose logs -f [service-name]`
-

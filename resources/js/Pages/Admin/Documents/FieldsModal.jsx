@@ -107,7 +107,7 @@ export default function FieldsModal({
                             {fieldForm.id ? "Edit Field" : "Add Field"}
                         </h4>
                         <div className="space-y-2">
-                            {!fieldForm.id && (
+                            {!fieldForm.id && fieldForm.type !== 'label' && (
                                 <div>
                                     <label className="text-sm">Name</label>
                                     <Input
@@ -121,6 +121,35 @@ export default function FieldsModal({
                                         }
                                         placeholder="e.g. tanggal_mulai"
                                     />
+                                </div>
+                            )}
+                            {!fieldForm.id && fieldForm.type === 'label' && (
+                                <div>
+                                    <label className="text-sm">Name</label>
+                                    <Input
+                                        style={{ borderRadius: "15px" }}
+                                        value={fieldForm.name}
+                                        disabled
+                                        placeholder="Auto-generated (label_1234567890)"
+                                        className="bg-gray-100"
+                                    />
+                                    <p className="text-xs text-gray-500 mt-1">
+                                        Name akan di-generate otomatis untuk label
+                                    </p>
+                                </div>
+                            )}
+                            {fieldForm.id && (
+                                <div>
+                                    <label className="text-sm">Name</label>
+                                    <Input
+                                        style={{ borderRadius: "15px" }}
+                                        value={fieldForm.name}
+                                        disabled
+                                        className="bg-gray-100"
+                                    />
+                                    <p className="text-xs text-gray-500 mt-1">
+                                        Name tidak dapat diubah setelah dibuat
+                                    </p>
                                 </div>
                             )}
                             <div>
@@ -155,6 +184,7 @@ export default function FieldsModal({
                                     <option value="number">number</option>
                                     <option value="date">date</option>
                                     <option value="select">select</option>
+                                    <option value="label">label (pemisah)</option>
                                 </select>
                             </div>
                             <div>
@@ -171,6 +201,7 @@ export default function FieldsModal({
                                     }
                                 />
                             </div>
+                            {fieldForm.type !== "label" && (
                             <div className="flex items-center gap-2">
                                 <input
                                     id="req"
@@ -187,6 +218,7 @@ export default function FieldsModal({
                                     Required
                                 </label>
                             </div>
+                            )}
                             {fieldForm.type === "select" && (
                                 <div>
                                     <label className="text-sm">

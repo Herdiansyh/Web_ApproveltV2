@@ -34,36 +34,112 @@ export default function Edit({ auth, submission, documentFields = [] }) {
             });
             return;
         }
-        // Prepare payload using transform to ensure _method and trimmed title are sent
-        transform((payload) => ({
-            ...payload,
-            _method: "put",
-            title: (payload.title || "").trim(),
-        }));
-        post(route("submissions.update", submission.id), {
-            forceFormData: true,
-            preserveScroll: true,
-            onSuccess: () => {
+        // Show loading alert
+        Swal.fire({
+            title: "Memperbarui...",
+            text: "Sedang memperbarui pengajuan.",
+            allowOutsideClick: false,
+            allowEscapeKey: false,
+            didOpen: () => {
+                Swal.showLoading();
+            }
+        });
+        
+        // Manual fetch request
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+        if (!csrfToken) {
+            Swal.fire({
+                icon: "error",
+                title: "Error!",
+                text: "CSRF token tidak ditemukan. Silakan refresh halaman.",
+                confirmButtonText: "OK",
+            });
+            return;
+        }
+        
+        // Create FormData for file upload
+        const formData = new FormData();
+        formData.append('_method', 'PUT');
+        formData.append('title', (data.title || "").trim());
+        formData.append('description', data.description || '');
+        
+        if (data.file instanceof File) {
+            formData.append('file', data.file);
+        }
+        
+        // Add data object if it exists
+        if (data.data) {
+            console.log("Edit.jsx - data.data being sent:", data.data);
+            formData.append('data', JSON.stringify(data.data));
+        }
+        
+        console.log("Edit.jsx - FormData contents:");
+        for (let [key, value] of formData.entries()) {
+            console.log(`Edit.jsx - ${key}:`, value instanceof File ? `File: ${value.name}` : value);
+        }
+        
+        fetch(route("submissions.update", submission.id), {
+            method: 'POST',
+            headers: {
+                'X-CSRF-TOKEN': csrfToken,
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+            body: formData
+        })
+        .then(response => {
+            console.log("Edit.jsx - response status:", response.status);
+            console.log("Edit.jsx - response ok:", response.ok);
+            
+            if (!response.ok) {
+                // Handle HTTP errors
+                if (response.status === 422) {
+                    return response.json().then(data => {
+                        const errorMessage = data.message || 'Validation failed';
+                        const errors = data.errors || {};
+                        const errorText = Object.values(errors).join(', ') || errorMessage;
+                        throw new Error(errorText);
+                    });
+                } else if (response.status === 419) {
+                    throw new Error('CSRF token mismatch. Silakan refresh halaman.');
+                } else if (response.status === 403) {
+                    throw new Error('Anda tidak memiliki izin untuk mengubah pengajuan ini.');
+                } else {
+                    throw new Error(`Server error: ${response.status}`);
+                }
+            }
+            
+            return response.json();
+        })
+        .then(responseData => {
+            if (responseData.success) {
                 Swal.fire({
                     icon: "success",
                     title: "Berhasil",
                     text: "Pengajuan berhasil diperbarui.",
+                    timer: 2000,
+                    showConfirmButton: false,
                 }).then(() => {
                     // Redirect back to list
                     window.location.href = route("submissions.index");
                 });
-            },
-            onError: (errs) => {
+            } else {
                 Swal.fire({
                     icon: "error",
-                    title: "Gagal",
-                    text:
-                        errs?.title ||
-                        errs?.file ||
-                        errs?.description ||
-                        "Terjadi kesalahan. Periksa kembali isian Anda.",
+                    title: "Gagal!",
+                    text: responseData.message || "Gagal memperbarui pengajuan.",
+                    confirmButtonText: "OK",
                 });
-            },
+            }
+        })
+        .catch(error => {
+            console.error("Update error:", error);
+            Swal.fire({
+                icon: "error",
+                title: "Error!",
+                text: error.message || "Terjadi kesalahan jaringan. Silakan coba lagi.",
+                confirmButtonText: "OK",
+            });
         });
     };
 

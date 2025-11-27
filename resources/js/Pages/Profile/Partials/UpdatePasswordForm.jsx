@@ -3,6 +3,7 @@ import InputLabel from "@/Components/InputLabel";
 import PrimaryButton from "@/Components/PrimaryButton";
 import TextInput from "@/Components/TextInput";
 import { Input } from "@/Components/ui/input";
+import { Label } from "@/Components/ui/label";
 import { Transition } from "@headlessui/react";
 import { useForm } from "@inertiajs/react";
 import { useRef } from "react";
@@ -60,7 +61,7 @@ export default function UpdatePasswordForm({ className = "" }) {
 
             <form onSubmit={updatePassword} className="mt-6 space-y-6">
                 <div>
-                    <Label
+                    <Label  
                         htmlFor="current_password"
                         value="Current Password"
                     />

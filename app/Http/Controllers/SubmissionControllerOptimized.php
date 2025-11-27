@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Jobs\StampPdfOnDecision;
 use App\Models\Submission;
 use App\Services\SubmissionListService;
 use App\Services\PermissionCacheService;
@@ -244,7 +245,7 @@ class SubmissionControllerOptimized extends Controller
         ]);
 
         // Queue background job untuk PDF stamping (tidak block response)
-        dispatch(new \App\Jobs\StampPdfOnDecision($submission));
+        dispatch(new StampPdfOnDecision($submission));
 
         return back()->with('success', 'Submission approved');
     }
