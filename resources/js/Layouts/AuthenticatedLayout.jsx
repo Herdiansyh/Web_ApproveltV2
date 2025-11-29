@@ -2,9 +2,11 @@ import Dropdown from "@/Components/Dropdown";
 import { usePage } from "@inertiajs/react";
 import { Bell } from "lucide-react";
 import { useState, useEffect } from "react";
+import { useLoading } from "@/Components/GlobalLoading";
 
 export default function AuthenticatedLayout({ header, children }) {
     const user = usePage().props.auth.user;
+    const { showLoading, hideLoading } = useLoading();
     const [darkMode, setDarkMode] = useState(
         localStorage.getItem("theme") === "dark"
     );
@@ -202,7 +204,9 @@ export default function AuthenticatedLayout({ header, children }) {
                                     >
                                         <h4 className="font-semibold text-sm mb-2">Notifikasi</h4>
                                         {loadingNotif ? (
-                                            <div className="text-xs text-gray-600 dark:text-gray-300">Memuat...</div>
+                                            <div className="flex justify-center py-4">
+                                                <div className="text-xs text-gray-600 dark:text-gray-300">Memuat notifikasi...</div>
+                                            </div>
                                         ) : notifications.length === 0 ? (
                                             <div className="text-xs text-gray-600 dark:text-gray-300">Tidak ada notifikasi baru.</div>
                                         ) : (

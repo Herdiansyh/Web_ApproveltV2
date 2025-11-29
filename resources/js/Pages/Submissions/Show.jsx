@@ -15,6 +15,8 @@ import {
 import { Download, Printer } from "lucide-react";
 import { Separator } from "@/Components/ui/separator";
 import Footer from "@/Components/Footer";
+import { useLoading } from "@/Components/GlobalLoading";
+import DownloadLoading from "@/Components/DownloadLoading";
 
 export default function Show({
     auth,
@@ -29,8 +31,10 @@ export default function Show({
     userDivisionId = null,
     hasStamped = false,
 }) {
+    const { showLoading, hideLoading } = useLoading();
     const [showApproveModal, setShowApproveModal] = useState(false);
     const [showRejectModal, setShowRejectModal] = useState(false);
+    const [showDownloadLoading, setShowDownloadLoading] = useState(false);
     const printFrameRef = useRef(null);
     const { data, setData, post, processing, reset } = useForm({
         approval_note: "",
@@ -66,23 +70,82 @@ export default function Show({
         frame.src = `${url}?_=${Date.now()}`;
     };
 
+    const handleDownload = () => {
+        // Show download loading animation
+        setShowDownloadLoading(true);
+        
+        // The animation will trigger the download when complete
+        // We'll handle this in the onComplete callback
+    };
+
+    const handleDownloadComplete = () => {
+        // Start the download using fetch to stay on the same page
+        const downloadUrl = route("submissions.download", submission.id);
+        
+        fetch(downloadUrl, {
+            method: 'GET',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Accept': 'application/pdf,application/octet-stream'
+            }
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Download failed');
+            }
+            return response.blob();
+        })
+        .then(blob => {
+            // Create download link and trigger download
+            const url = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `document-${submission.id}.pdf`; // You can customize filename
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            window.URL.revokeObjectURL(url);
+            
+            // Hide loading animation and show success message
+            setTimeout(() => {
+                setShowDownloadLoading(false);
+                Swal.fire({
+                    icon: "success",
+                    title: "Download Berhasil!",
+                    text: "Dokumen berhasil diunduh.",
+                    timer: 2000,
+                    showConfirmButton: false,
+                });
+            }, 500);
+        })
+        .catch(error => {
+            console.error('Download error:', error);
+            // Fallback to window.open if fetch fails
+            window.open(downloadUrl, '_blank');
+            
+            setTimeout(() => {
+                setShowDownloadLoading(false);
+                Swal.fire({
+                    icon: "success",
+                    title: "Download Berhasil!",
+                    text: "Dokumen berhasil diunduh.",
+                    timer: 2000,
+                    showConfirmButton: false,
+                });
+            }, 500);
+        });
+    };
+
     const handleApprove = () => {
         if (!canApprove) return handleNoAccess();
         
-        // Show loading alert
-        Swal.fire({
-            title: "Memproses...",
-            text: "Sedang menyetujui pengajuan.",
-            allowOutsideClick: false,
-            allowEscapeKey: false,
-            didOpen: () => {
-                Swal.showLoading();
-            }
-        });
+        // Show custom loading animation
+        showLoading("Menyetujui pengajuan...");
         
         // Manual fetch request
         const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
         if (!csrfToken) {
+            hideLoading(false); // Hide loading animation on CSRF error
             Swal.fire({
                 icon: "error",
                 title: "Error!",
@@ -115,6 +178,7 @@ export default function Show({
             return response.json();
         })
         .then(responseData => {
+            hideLoading(responseData.success); // Hide loading animation with success status
             if (responseData.success) {
                 setShowApproveModal(false);
                 reset();
@@ -136,6 +200,7 @@ export default function Show({
         })
         .catch(error => {
             console.error("Approve error:", error);
+            hideLoading(false); // Hide loading animation on error
             Swal.fire({
                 icon: "error",
                 title: "Error!",
@@ -167,20 +232,13 @@ export default function Show({
             cancelButtonText: "Batal",
         }).then((result) => {
             if (result.isConfirmed) {
-                // Show loading alert
-                Swal.fire({
-                    title: "Memproses...",
-                    text: "Sedang menolak pengajuan.",
-                    allowOutsideClick: false,
-                    allowEscapeKey: false,
-                    didOpen: () => {
-                        Swal.showLoading();
-                    }
-                });
+                // Show custom loading animation
+                showLoading("Menolak pengajuan...");
                 
                 // Manual fetch request
                 const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
                 if (!csrfToken) {
+                    hideLoading(false); // Hide loading animation on CSRF error
                     Swal.fire({
                         icon: "error",
                         title: "Error!",
@@ -213,6 +271,7 @@ export default function Show({
                     return response.json();
                 })
                 .then(responseData => {
+                    hideLoading(responseData.success); // Hide loading animation with success status
                     if (responseData.success) {
                         setShowRejectModal(false);
                         reset();
@@ -234,6 +293,7 @@ export default function Show({
                 })
                 .catch(error => {
                     console.error("Reject error:", error);
+                    hideLoading(false); // Hide loading animation on error
                     Swal.fire({
                         icon: "error",
                         title: "Error!",
@@ -525,17 +585,14 @@ export default function Show({
 
                                 <div className="flex gap-2">
                                     {isApprovedFinal && submission.file_path ? (
-                                        <a
-                                            href={route(
-                                                "submissions.download",
-                                                submission.id
-                                            )}
+                                        <button
+                                            onClick={handleDownload}
                                             className="inline-flex items-center justify-center mb-2 py-1 px-2 text-sm font-medium rounded-full bg-blue-600 text-white hover:bg-blue-700 active:scale-[0.97] transition-all shadow-sm"
                                             title="Unduh dokumen final yang sudah distempel"
                                         >
                                             <Download className="mr-2 h-4 w-4" />{" "}
                                             Unduh Dokumen
-                                        </a>
+                                        </button>
                                     ) : (
                                         <span
                                             style={{ borderRadius: "10px" }}
@@ -677,26 +734,42 @@ export default function Show({
                                         </h4>
 
                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                            {documentFields.map((f) => (
-                                                <div
-                                                    key={f.id || f.name}
-                                                    style={{
-                                                        borderRadius: "15px",
-                                                    }}
-                                                    className="flex flex-col px-2 py-1 rounded-lg bg-muted/40 hover:bg-muted transition-colors border-b border-border/60"
-                                                >
-                                                    <span className="text-xs text-muted-foreground tracking-wide">
-                                                        {f.label}
-                                                    </span>
+                                            {documentFields.map((f) => {
+                                                const type = String(f.type || "text").toLowerCase();
+                                                
+                                                // Skip label type fields from showing as regular fields
+                                                if (type === "label") {
+                                                    return (
+                                                        <div key={f.id || f.name} className="col-span-full">
+                                                            <div className="border-t border-gray-300 dark:border-gray-600 my-4"></div>
+                                                            <h4 className="font-semibold text-lg text-gray-800 dark:text-gray-200 mt-2">
+                                                                {f.label}
+                                                            </h4>
+                                                        </div>
+                                                    );
+                                                }
+                                                
+                                                return (
+                                                    <div
+                                                        key={f.id || f.name}
+                                                        style={{
+                                                            borderRadius: "15px",
+                                                        }}
+                                                        className="flex flex-col px-2 py-1 rounded-lg bg-muted/40 hover:bg-muted transition-colors border-b border-border/60"
+                                                    >
+                                                        <span className="text-xs text-muted-foreground tracking-wide">
+                                                            {f.label}
+                                                        </span>
 
-                                                    <span className="font-medium text-sm leading-relaxed text-foreground">
-                                                        {String(
-                                                            dataMap?.[f.name] ??
-                                                                "-"
-                                                        )}
-                                                    </span>
-                                                </div>
-                                            ))}
+                                                        <span className="font-medium text-sm leading-relaxed text-foreground">
+                                                            {String(
+                                                                dataMap?.[f.name] ??
+                                                                    "-"
+                                                            )}
+                                                        </span>
+                                                    </div>
+                                                );
+                                            })}
                                         </div>
                                     </Card>
                                 )}
@@ -892,6 +965,9 @@ export default function Show({
                 }}
                 aria-hidden="true"
             />
+            
+            {/* Download Loading Animation */}
+            <DownloadLoading show={showDownloadLoading} onComplete={handleDownloadComplete} />
         </AuthenticatedLayout>
     );
 }

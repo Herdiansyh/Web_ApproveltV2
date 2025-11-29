@@ -51,7 +51,7 @@ export default function Index({ auth, submissions, userDivision }) {
                     <div className=" mx-auto bg-card shadow-sm rounded-2xl p-8 border border-border/50 backdrop-blur-sm">
                         <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-3">
                             <h1 className="md:text-2xl text-sm mt-5 font-semibold text-gray-800">
-                                📁 Daftar Pengajuan Keluar
+                                📁 Daftar Pengajuan Selesai
                             </h1>
                             <div className="relative w-full md:w-1/3">
                                 <Search className="absolute left-3 top-2.5 w-4 h-4 text-muted-foreground" />
@@ -173,15 +173,47 @@ export default function Index({ auth, submissions, userDivision }) {
                                                     }`}
                                                 >
                                                     {(() => {
-                                                        const raw = String(submission.status || '').toLowerCase();
-                                                        const step = submission.current_workflow_step || null;
-                                                        const who = step?.division?.name || step?.role || null;
-                                                        if (raw === 'pending' || raw.includes('waiting')) {
-                                                            return `Waiting confirmation${who ? ` to ${who}` : ''}`;
+                                                        const raw = String(
+                                                            submission.status ||
+                                                                ""
+                                                        ).toLowerCase();
+                                                        const step =
+                                                            submission.current_workflow_step ||
+                                                            null;
+                                                        const who =
+                                                            step?.division
+                                                                ?.name ||
+                                                            step?.role ||
+                                                            null;
+                                                        if (
+                                                            raw === "pending" ||
+                                                            raw.includes(
+                                                                "waiting"
+                                                            )
+                                                        ) {
+                                                            return `Waiting confirmation${
+                                                                who
+                                                                    ? ` to ${who}`
+                                                                    : ""
+                                                            }`;
                                                         }
-                                                        if (raw.includes('approved')) return 'Approved';
-                                                        if (raw.includes('rejected') || raw === 'rejected') return 'Rejected';
-                                                        return submission.status || 'Waiting';
+                                                        if (
+                                                            raw.includes(
+                                                                "approved"
+                                                            )
+                                                        )
+                                                            return "Approved";
+                                                        if (
+                                                            raw.includes(
+                                                                "rejected"
+                                                            ) ||
+                                                            raw === "rejected"
+                                                        )
+                                                            return "Rejected";
+                                                        return (
+                                                            submission.status ||
+                                                            "Waiting"
+                                                        );
                                                     })()}
                                                 </span>
 

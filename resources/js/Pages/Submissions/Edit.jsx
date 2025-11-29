@@ -8,8 +8,10 @@ import { Label } from "@/Components/ui/label";
 import { Textarea } from "@/Components/ui/textarea";
 import Header from "@/Components/Header";
 import Swal from "sweetalert2";
+import { useLoading } from "@/Components/GlobalLoading";
 
 export default function Edit({ auth, submission, documentFields = [] }) {
+    const { showLoading, hideLoading } = useLoading();
     const { data, setData, post, processing, errors, reset, transform } =
         useForm({
             title: submission.title || "",
@@ -34,20 +36,13 @@ export default function Edit({ auth, submission, documentFields = [] }) {
             });
             return;
         }
-        // Show loading alert
-        Swal.fire({
-            title: "Memperbarui...",
-            text: "Sedang memperbarui pengajuan.",
-            allowOutsideClick: false,
-            allowEscapeKey: false,
-            didOpen: () => {
-                Swal.showLoading();
-            }
-        });
+        // Show custom loading animation
+        showLoading("Memperbarui pengajuan...");
         
         // Manual fetch request
         const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
         if (!csrfToken) {
+            hideLoading(false); // Hide loading animation on CSRF error
             Swal.fire({
                 icon: "error",
                 title: "Error!",
@@ -112,6 +107,7 @@ export default function Edit({ auth, submission, documentFields = [] }) {
             return response.json();
         })
         .then(responseData => {
+            hideLoading(responseData.success); // Hide loading animation with success status
             if (responseData.success) {
                 Swal.fire({
                     icon: "success",
@@ -134,6 +130,7 @@ export default function Edit({ auth, submission, documentFields = [] }) {
         })
         .catch(error => {
             console.error("Update error:", error);
+            hideLoading(false); // Hide loading animation on error
             Swal.fire({
                 icon: "error",
                 title: "Error!",
@@ -276,11 +273,21 @@ export default function Edit({ auth, submission, documentFields = [] }) {
                                                                     f.name
                                                                 }
                                                             >
-                                                                <Label>
-                                                                    {f.label}
-                                                                </Label>
-                                                                {type ===
-                                                                "textarea" ? (
+                                                                {type === "label" ? (
+                                                                    // For label type, only show the label as a separator
+                                                                    <div className="col-span-full">
+                                                                        <div className="border-t border-gray-300 dark:border-gray-600 my-4"></div>
+                                                                        <h4 className="font-semibold text-lg text-gray-800 dark:text-gray-200 mt-2">
+                                                                            {f.label}
+                                                                        </h4>
+                                                                    </div>
+                                                                ) : (
+                                                                    <>
+                                                                        <Label>
+                                                                            {f.label}
+                                                                        </Label>
+                                                                        {type ===
+                                                                        "textarea" ? (
                                                                     <Textarea
                                                                         style={{
                                                                             borderRadius:
@@ -488,6 +495,8 @@ export default function Edit({ auth, submission, documentFields = [] }) {
                                                                         }
                                                                         className="mt-1"
                                                                     />
+                                                                )}
+                                                                    </>
                                                                 )}
                                                             </div>
                                                         );

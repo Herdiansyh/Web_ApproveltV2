@@ -34,6 +34,22 @@ export default function ForDivision({ auth, submissions, userDivision }) {
         s.title.toLowerCase().includes(filter.toLowerCase())
     );
 
+    // Helper function to check if user can see actions for a submission
+    const canShowActions = (submission) => {
+        const isApproved = String(submission.status).toLowerCase().includes("approved");
+        const isOwner = auth.user.id === submission.user_id;
+        const sameDivision = userDivision?.id && submission.division_id === userDivision.id;
+        const canEditGlobal = !!submission.permission_for_me?.can_edit;
+        const canDeleteGlobal = !!submission.permission_for_me?.can_delete;
+        
+        const showEdit = !isApproved && (isOwner || (sameDivision && canEditGlobal));
+        const showDelete = !isApproved && (isOwner || (sameDivision && canDeleteGlobal));
+        
+        return showEdit || showDelete;
+    };
+
+    const hasAnyActions = filteredSubmissions.some(submission => canShowActions(submission));
+
     return (
         <AuthenticatedLayout
             user={auth.user}
@@ -50,7 +66,7 @@ export default function ForDivision({ auth, submissions, userDivision }) {
                     <div className=" mx-auto bg-card shadow-sm rounded-2xl p-8 border border-border/50 backdrop-blur-sm">
                         <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-3">
                             <div className="text-lg text-center font-medium">
-                                📁 Daftar Pengajuan Masuk
+                                📁 Daftar Pengajuan Diproses
                             </div>
                             <div className="relative w-full md:w-1/3">
                                 <Search className="absolute left-3 top-2.5 w-4 h-4 text-muted-foreground" />
@@ -87,9 +103,11 @@ export default function ForDivision({ auth, submissions, userDivision }) {
                                         <th className="py-3 px-6 text-left">
                                             Tanggal Diajukan
                                         </th>
-                                        <th className="py-3 px-6 text-center">
-                                            Aksi
-                                        </th>
+                                        {hasAnyActions && (
+                                            <th className="py-3 px-6 text-center">
+                                                Aksi
+                                            </th>
+                                        )}
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-border/40">
@@ -131,27 +149,75 @@ export default function ForDivision({ auth, submissions, userDivision }) {
                                                     <td className="py-3 px-6 flex">
                                                         <span
                                                             className={`px-3 py-1 rounded-full text-xs font-medium ${
-                                                                String(submission.status || '')
+                                                                String(
+                                                                    submission.status ||
+                                                                        ""
+                                                                )
                                                                     .toLowerCase()
-                                                                    .includes('approved')
-                                                                    ? 'bg-emerald-100 text-emerald-700'
-                                                                    : String(submission.status || '')
+                                                                    .includes(
+                                                                        "approved"
+                                                                    )
+                                                                    ? "bg-emerald-100 text-emerald-700"
+                                                                    : String(
+                                                                          submission.status ||
+                                                                              ""
+                                                                      )
                                                                           .toLowerCase()
-                                                                          .includes('rejected')
-                                                                    ? 'bg-rose-100 text-rose-700'
-                                                                    : 'bg-amber-100 text-amber-700'
+                                                                          .includes(
+                                                                              "rejected"
+                                                                          )
+                                                                    ? "bg-rose-100 text-rose-700"
+                                                                    : "bg-amber-100 text-amber-700"
                                                             }`}
                                                         >
                                                             {(() => {
-                                                                const raw = String(submission.status || '').toLowerCase();
-                                                                const step = submission.current_workflow_step || null;
-                                                                const who = step?.division?.name || step?.role || null;
-                                                                if (raw === 'pending' || raw.includes('waiting')) {
-                                                                    return `Waiting confirmation${who ? ` to ${who}` : ''}`;
+                                                                const raw =
+                                                                    String(
+                                                                        submission.status ||
+                                                                            ""
+                                                                    ).toLowerCase();
+                                                                const step =
+                                                                    submission.current_workflow_step ||
+                                                                    null;
+                                                                const who =
+                                                                    step
+                                                                        ?.division
+                                                                        ?.name ||
+                                                                    step?.role ||
+                                                                    null;
+                                                                if (
+                                                                    raw ===
+                                                                        "pending" ||
+                                                                    raw.includes(
+                                                                        "waiting"
+                                                                    )
+                                                                ) {
+                                                                    return `Waiting confirmation${
+                                                                        who
+                                                                            ? ` to ${who}`
+                                                                            : ""
+                                                                    }`;
                                                                 }
-                                                                if (raw === 'approved' || raw.includes('approved')) return 'Disetujui';
-                                                                if (raw === 'rejected' || raw.includes('rejected')) return 'Ditolak';
-                                                                return submission.status || 'Pending';
+                                                                if (
+                                                                    raw ===
+                                                                        "approved" ||
+                                                                    raw.includes(
+                                                                        "approved"
+                                                                    )
+                                                                )
+                                                                    return "Disetujui";
+                                                                if (
+                                                                    raw ===
+                                                                        "rejected" ||
+                                                                    raw.includes(
+                                                                        "rejected"
+                                                                    )
+                                                                )
+                                                                    return "Ditolak";
+                                                                return (
+                                                                    submission.status ||
+                                                                    "Pending"
+                                                                );
                                                             })()}
                                                         </span>
                                                         {String(
@@ -176,13 +242,15 @@ export default function ForDivision({ auth, submissions, userDivision }) {
                                                             "id-ID"
                                                         )}
                                                     </td>
-                                                    <td
-                                                        className="py-3 px-6 text-center"
-                                                        onClick={(e) =>
-                                                            e.stopPropagation()
-                                                        }
-                                                    >
-                                                        <DropdownMenu>
+                                                    {hasAnyActions && (
+                                                        <td
+                                                            className="py-3 px-6 text-center"
+                                                            onClick={(e) =>
+                                                                e.stopPropagation()
+                                                            }
+                                                        >
+                                                            {canShowActions(submission) ? (
+                                                                <DropdownMenu>
                                                             <DropdownMenuTrigger
                                                                 asChild
                                                             >
@@ -299,14 +367,18 @@ export default function ForDivision({ auth, submissions, userDivision }) {
                                                                 )}
                                                             </DropdownMenuContent>
                                                         </DropdownMenu>
-                                                    </td>
+                                                            ) : (
+                                                                <span className="text-muted-foreground text-sm">-</span>
+                                                            )}
+                                                        </td>
+                                                    )}
                                                 </tr>
                                             )
                                         )
                                     ) : (
                                         <tr>
                                             <td
-                                                colSpan="5"
+                                                colSpan={hasAnyActions ? 6 : 5}
                                                 className="text-center py-8 text-muted-foreground"
                                             >
                                                 Tidak ada pengajuan ditemukan 😕
@@ -369,11 +441,15 @@ export default function ForDivision({ auth, submissions, userDivision }) {
                                         allowEscapeKey: false,
                                         didOpen: () => {
                                             Swal.showLoading();
-                                        }
+                                        },
                                     });
-                                    
+
                                     // Manual fetch request
-                                    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+                                    const csrfToken = document
+                                        .querySelector(
+                                            'meta[name="csrf-token"]'
+                                        )
+                                        ?.getAttribute("content");
                                     if (!csrfToken) {
                                         Swal.fire({
                                             icon: "error",
@@ -383,56 +459,77 @@ export default function ForDivision({ auth, submissions, userDivision }) {
                                         });
                                         return;
                                     }
-                                    
-                                    fetch(route("submissions.destroy", toDeleteId), {
-                                        method: 'DELETE',
-                                        headers: {
-                                            'Content-Type': 'application/json',
-                                            'X-CSRF-TOKEN': csrfToken,
-                                            'Accept': 'application/json',
-                                            'X-Requested-With': 'XMLHttpRequest',
-                                        },
-                                        body: JSON.stringify({})
-                                    })
-                                    .then(response => {
-                                        if (!response.ok) {
-                                            if (response.status === 419) {
-                                                throw new Error('CSRF token mismatch. Silakan refresh halaman.');
-                                            } else {
-                                                throw new Error(`Server error: ${response.status}`);
-                                            }
+
+                                    fetch(
+                                        route(
+                                            "submissions.destroy",
+                                            toDeleteId
+                                        ),
+                                        {
+                                            method: "DELETE",
+                                            headers: {
+                                                "Content-Type":
+                                                    "application/json",
+                                                "X-CSRF-TOKEN": csrfToken,
+                                                Accept: "application/json",
+                                                "X-Requested-With":
+                                                    "XMLHttpRequest",
+                                            },
+                                            body: JSON.stringify({}),
                                         }
-                                        return response.json();
-                                    })
-                                    .then(responseData => {
-                                        if (responseData.success) {
-                                            setConfirmOpen(false);
-                                            setToDeleteId(null);
-                                            Swal.fire({
-                                                icon: "success",
-                                                title: "Dihapus!",
-                                                text: "Pengajuan berhasil dihapus.",
-                                                timer: 2000,
-                                                showConfirmButton: false,
-                                            }).then(() => window.location.reload());
-                                        } else {
+                                    )
+                                        .then((response) => {
+                                            if (!response.ok) {
+                                                if (response.status === 419) {
+                                                    throw new Error(
+                                                        "CSRF token mismatch. Silakan refresh halaman."
+                                                    );
+                                                } else {
+                                                    throw new Error(
+                                                        `Server error: ${response.status}`
+                                                    );
+                                                }
+                                            }
+                                            return response.json();
+                                        })
+                                        .then((responseData) => {
+                                            if (responseData.success) {
+                                                setConfirmOpen(false);
+                                                setToDeleteId(null);
+                                                Swal.fire({
+                                                    icon: "success",
+                                                    title: "Dihapus!",
+                                                    text: "Pengajuan berhasil dihapus.",
+                                                    timer: 2000,
+                                                    showConfirmButton: false,
+                                                }).then(() =>
+                                                    window.location.reload()
+                                                );
+                                            } else {
+                                                Swal.fire({
+                                                    icon: "error",
+                                                    title: "Gagal!",
+                                                    text:
+                                                        responseData.message ||
+                                                        "Gagal menghapus pengajuan.",
+                                                    confirmButtonText: "OK",
+                                                });
+                                            }
+                                        })
+                                        .catch((error) => {
+                                            console.error(
+                                                "Delete error:",
+                                                error
+                                            );
                                             Swal.fire({
                                                 icon: "error",
-                                                title: "Gagal!",
-                                                text: responseData.message || "Gagal menghapus pengajuan.",
+                                                title: "Error!",
+                                                text:
+                                                    error.message ||
+                                                    "Terjadi kesalahan jaringan. Silakan coba lagi.",
                                                 confirmButtonText: "OK",
                                             });
-                                        }
-                                    })
-                                    .catch(error => {
-                                        console.error("Delete error:", error);
-                                        Swal.fire({
-                                            icon: "error",
-                                            title: "Error!",
-                                            text: error.message || "Terjadi kesalahan jaringan. Silakan coba lagi.",
-                                            confirmButtonText: "OK",
                                         });
-                                    });
                                 }
                             }}
                         >

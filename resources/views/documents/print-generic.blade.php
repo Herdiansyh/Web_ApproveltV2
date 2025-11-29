@@ -15,7 +15,7 @@
             font-family: DejaVu Sans, Helvetica, Arial, sans-serif;
             font-size: 11pt;
             color: #111827;
-            line-height: 1.45;
+            line-height: 1;
         }
 
         /* Header */
@@ -237,7 +237,8 @@
                 @if ($f->type === 'label')
                     <tr>
                         <td colspan="2" style="padding: 8pt 0;">
-                            <div style="font-size: 14pt; font-weight: 700; color: #1f2937; border-bottom: 2px solid #374151; padding-bottom: 4pt; margin-bottom: 8pt;">
+                            <div
+                                style="font-size: 14pt; font-weight: 700; color: #1f2937; border-bottom: 2px solid #374151; padding-bottom: 4pt; margin-bottom: 8pt;">
                                 {{ $f->label }}
                             </div>
                         </td>
@@ -256,12 +257,13 @@
     @if (!empty($data['tableData']) && !empty($data['tableColumns']) && count($data['tableData']) > 0)
         <div class="section">
             <div class="section-title">Data Tabel</div>
-            
+
             <table class="dynamic-table" style="width: 100%; border-collapse: collapse; margin-bottom: 20pt;">
                 <thead>
                     <tr style="background-color: #f3f4f6;">
                         @foreach ($data['tableColumns'] as $column)
-                            <th style="border: 1px solid #d1d5db; padding: 8pt; text-align: left; font-weight: 600; font-size: 10pt;">
+                            <th
+                                style="border: 1px solid #d1d5db; padding: 8pt; text-align: left; font-weight: 600; font-size: 10pt;">
                                 {{ $column['name'] }}
                             </th>
                         @endforeach
@@ -271,7 +273,8 @@
                     @foreach ($data['tableData'] as $row)
                         <tr>
                             @foreach ($data['tableColumns'] as $column)
-                                <td style="border: 1px solid #d1d5db; padding: 6pt; font-size: 9pt; vertical-align: top;">
+                                <td
+                                    style="border: 1px solid #d1d5db; padding: 6pt; font-size: 9pt; vertical-align: top;">
                                     {{ $row[$column['key']] ?? '-' }}
                                 </td>
                             @endforeach
@@ -279,7 +282,7 @@
                     @endforeach
                 </tbody>
             </table>
-            
+
             <div style="font-size: 8pt; color: #6b7280; margin-top: 4pt;">
                 Total {{ count($data['tableData']) }} baris
             </div>
