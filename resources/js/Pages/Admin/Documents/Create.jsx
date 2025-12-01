@@ -11,12 +11,18 @@ import { Input } from "@/Components/ui/input";
 import { Label } from "@/Components/ui/label";
 import { Button } from "@/Components/ui/button";
 import Swal from "sweetalert2";
+import DefaultColumnsManager from "@/Components/DefaultColumnsManager";
 
 export default function Create({ isOpen, onClose, document }) {
     const { data, setData, post, put, processing, errors, reset } = useForm({
         name: "",
         description: "",
         is_active: true,
+        default_columns: [
+            { name: "Item", key: "item" },
+            { name: "Jumlah", key: "jumlah" },
+            { name: "Keterangan", key: "keterangan" },
+        ],
     });
 
     useEffect(() => {
@@ -25,6 +31,11 @@ export default function Create({ isOpen, onClose, document }) {
                 name: document.name,
                 description: document.description || "",
                 is_active: typeof document.is_active === "boolean" ? document.is_active : true,
+                default_columns: document.default_columns || [
+                    { name: "Item", key: "item" },
+                    { name: "Jumlah", key: "jumlah" },
+                    { name: "Keterangan", key: "keterangan" },
+                ],
             });
         } else {
             reset();
@@ -67,14 +78,14 @@ export default function Create({ isOpen, onClose, document }) {
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="sm:max-w-md">
+            <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                     <DialogTitle>
                         {document ? "Edit Document" : "Create New Document"}
                     </DialogTitle>
                 </DialogHeader>
 
-                <form onSubmit={handleSubmit} className="space-y-4 mt-4">
+                <form onSubmit={handleSubmit} className="space-y-6 mt-4">
                     <div>
                         <Label htmlFor="name">Document Name</Label>
                         <Input
@@ -116,6 +127,11 @@ export default function Create({ isOpen, onClose, document }) {
                         />
                         <Label htmlFor="is_active">Active</Label>
                     </div>
+
+                    <DefaultColumnsManager
+                        defaultColumns={data.default_columns || []}
+                        onChange={(columns) => setData("default_columns", columns)}
+                    />
 
                     <DialogFooter className="flex justify-end gap-2">
                         <Button

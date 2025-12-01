@@ -29,11 +29,29 @@ return new class extends Migration
             }
         };
 
+        // Helper function untuk check existing indexes dengan SQLite compatibility
+        $getExistingIndexes = function ($tableName) {
+            try {
+                $dbDriver = DB::getDriverName();
+                
+                if ($dbDriver === 'sqlite') {
+                    // SQLite menggunakan pragma table_info
+                    return DB::select("PRAGMA index_list({$tableName})");
+                } else {
+                    // MySQL/MariaDB menggunakan SHOW INDEXES
+                    return DB::select("SHOW INDEXES FROM {$tableName} WHERE Key_name LIKE 'idx_%'");
+                }
+            } catch (\Exception $e) {
+                \Log::warning("Could not check indexes for table {$tableName}: " . $e->getMessage());
+                return [];
+            }
+        };
+
         // Submissions table indexes
-        Schema::table('submissions', function (Blueprint $table) {
-            // Check & add indexes jika belum ada
-            $indexes = DB::select("SHOW INDEXES FROM submissions WHERE Key_name LIKE 'idx_%'");
-            $existingIndexNames = array_column($indexes, 'Key_name');
+        $indexes = $getExistingIndexes('submissions');
+        $existingIndexNames = array_column($indexes, 'name'); // SQLite uses 'name' instead of 'Key_name'
+        
+        Schema::table('submissions', function (Blueprint $table) use ($existingIndexNames) {
 
             if (!in_array('idx_submissions_user_id', $existingIndexNames)) {
                 $table->index('user_id', 'idx_submissions_user_id');
@@ -71,9 +89,10 @@ return new class extends Migration
         });
 
         // Users table indexes
-        Schema::table('users', function (Blueprint $table) {
-            $indexes = DB::select("SHOW INDEXES FROM users WHERE Key_name LIKE 'idx_%'");
-            $existingIndexNames = array_column($indexes, 'Key_name');
+        $indexes = $getExistingIndexes('users');
+        $existingIndexNames = array_column($indexes, 'name');
+        
+        Schema::table('users', function (Blueprint $table) use ($existingIndexNames) {
 
             if (!in_array('idx_users_division_id', $existingIndexNames)) {
                 $table->index('division_id', 'idx_users_division_id');
@@ -87,9 +106,10 @@ return new class extends Migration
         });
 
         // Workflows table indexes
-        Schema::table('workflows', function (Blueprint $table) {
-            $indexes = DB::select("SHOW INDEXES FROM workflows WHERE Key_name LIKE 'idx_%'");
-            $existingIndexNames = array_column($indexes, 'Key_name');
+        $indexes = $getExistingIndexes('workflows');
+        $existingIndexNames = array_column($indexes, 'name');
+        
+        Schema::table('workflows', function (Blueprint $table) use ($existingIndexNames) {
 
             if (!in_array('idx_workflows_document_id', $existingIndexNames)) {
                 $table->index('document_id', 'idx_workflows_document_id');
@@ -103,9 +123,10 @@ return new class extends Migration
         });
 
         // WorkflowSteps table indexes
-        Schema::table('workflow_steps', function (Blueprint $table) {
-            $indexes = DB::select("SHOW INDEXES FROM workflow_steps WHERE Key_name LIKE 'idx_%'");
-            $existingIndexNames = array_column($indexes, 'Key_name');
+        $indexes = $getExistingIndexes('workflow_steps');
+        $existingIndexNames = array_column($indexes, 'name');
+        
+        Schema::table('workflow_steps', function (Blueprint $table) use ($existingIndexNames) {
 
             if (!in_array('idx_workflow_steps_workflow_id', $existingIndexNames)) {
                 $table->index('workflow_id', 'idx_workflow_steps_workflow_id');
@@ -119,9 +140,10 @@ return new class extends Migration
         });
 
         // SubmissionWorkflowSteps table indexes
-        Schema::table('submission_workflow_steps', function (Blueprint $table) {
-            $indexes = DB::select("SHOW INDEXES FROM submission_workflow_steps WHERE Key_name LIKE 'idx_%'");
-            $existingIndexNames = array_column($indexes, 'Key_name');
+        $indexes = $getExistingIndexes('submission_workflow_steps');
+        $existingIndexNames = array_column($indexes, 'name');
+        
+        Schema::table('submission_workflow_steps', function (Blueprint $table) use ($existingIndexNames) {
 
             if (!in_array('idx_subm_wf_steps_submission_id', $existingIndexNames)) {
                 $table->index('submission_id', 'idx_subm_wf_steps_submission_id');
@@ -144,9 +166,10 @@ return new class extends Migration
         });
 
         // SubdivisionPermissions table indexes
-        Schema::table('subdivision_permissions', function (Blueprint $table) {
-            $indexes = DB::select("SHOW INDEXES FROM subdivision_permissions WHERE Key_name LIKE 'idx_%'");
-            $existingIndexNames = array_column($indexes, 'Key_name');
+        $indexes = $getExistingIndexes('subdivision_permissions');
+        $existingIndexNames = array_column($indexes, 'name');
+        
+        Schema::table('subdivision_permissions', function (Blueprint $table) use ($existingIndexNames) {
 
             if (!in_array('idx_subdivision_permissions_subdivision_id', $existingIndexNames)) {
                 $table->index('subdivision_id', 'idx_subdivision_permissions_subdivision_id');
@@ -154,9 +177,10 @@ return new class extends Migration
         });
 
         // Documents table indexes
-        Schema::table('documents', function (Blueprint $table) {
-            $indexes = DB::select("SHOW INDEXES FROM documents WHERE Key_name LIKE 'idx_%'");
-            $existingIndexNames = array_column($indexes, 'Key_name');
+        $indexes = $getExistingIndexes('documents');
+        $existingIndexNames = array_column($indexes, 'name');
+        
+        Schema::table('documents', function (Blueprint $table) use ($existingIndexNames) {
 
             if (!in_array('idx_documents_is_active', $existingIndexNames)) {
                 $table->index('is_active', 'idx_documents_is_active');
@@ -164,9 +188,10 @@ return new class extends Migration
         });
 
         // Divisions table indexes
-        Schema::table('divisions', function (Blueprint $table) {
-            $indexes = DB::select("SHOW INDEXES FROM divisions WHERE Key_name LIKE 'idx_%'");
-            $existingIndexNames = array_column($indexes, 'Key_name');
+        $indexes = $getExistingIndexes('divisions');
+        $existingIndexNames = array_column($indexes, 'name');
+        
+        Schema::table('divisions', function (Blueprint $table) use ($existingIndexNames) {
 
             if (!in_array('idx_divisions_name', $existingIndexNames)) {
                 $table->index('name', 'idx_divisions_name');
@@ -174,9 +199,10 @@ return new class extends Migration
         });
 
         // Subdivisions table indexes
-        Schema::table('subdivisions', function (Blueprint $table) {
-            $indexes = DB::select("SHOW INDEXES FROM subdivisions WHERE Key_name LIKE 'idx_%'");
-            $existingIndexNames = array_column($indexes, 'Key_name');
+        $indexes = $getExistingIndexes('subdivisions');
+        $existingIndexNames = array_column($indexes, 'name');
+        
+        Schema::table('subdivisions', function (Blueprint $table) use ($existingIndexNames) {
 
             if (!in_array('idx_subdivisions_division_id', $existingIndexNames)) {
                 $table->index('division_id', 'idx_subdivisions_division_id');
@@ -187,9 +213,10 @@ return new class extends Migration
         });
 
         // Approvals table indexes
-        Schema::table('approvals', function (Blueprint $table) {
-            $indexes = DB::select("SHOW INDEXES FROM approvals WHERE Key_name LIKE 'idx_%'");
-            $existingIndexNames = array_column($indexes, 'Key_name');
+        $indexes = $getExistingIndexes('approvals');
+        $existingIndexNames = array_column($indexes, 'name');
+        
+        Schema::table('approvals', function (Blueprint $table) use ($existingIndexNames) {
 
             if (!in_array('idx_approvals_submission_id', $existingIndexNames)) {
                 $table->index('submission_id', 'idx_approvals_submission_id');
@@ -203,9 +230,10 @@ return new class extends Migration
         });
 
         // SubmissionFiles table indexes
-        Schema::table('submission_files', function (Blueprint $table) {
-            $indexes = DB::select("SHOW INDEXES FROM submission_files WHERE Key_name LIKE 'idx_%'");
-            $existingIndexNames = array_column($indexes, 'Key_name');
+        $indexes = $getExistingIndexes('submission_files');
+        $existingIndexNames = array_column($indexes, 'name');
+        
+        Schema::table('submission_files', function (Blueprint $table) use ($existingIndexNames) {
 
             if (!in_array('idx_submission_files_submission_id', $existingIndexNames)) {
                 $table->index('submission_id', 'idx_submission_files_submission_id');

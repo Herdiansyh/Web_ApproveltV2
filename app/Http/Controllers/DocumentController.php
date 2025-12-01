@@ -29,6 +29,9 @@ class DocumentController extends Controller
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
             'is_active' => 'sometimes|boolean',
+            'default_columns' => 'nullable|array',
+            'default_columns.*.name' => 'required|string|max:255',
+            'default_columns.*.key' => 'required|string|max:255',
 
             // optional name series config, can be filled from create/edit modal
             'series_pattern' => 'nullable|string|max:255',
@@ -41,6 +44,7 @@ class DocumentController extends Controller
             'name' => $data['name'],
             'description' => $data['description'] ?? null,
             'is_active' => array_key_exists('is_active', $data) ? (bool)$data['is_active'] : true,
+            'default_columns' => $data['default_columns'] ?? null,
         ]);
 
         // if name series is provided at creation time, configure it here
@@ -75,6 +79,9 @@ class DocumentController extends Controller
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
             'is_active' => 'sometimes|boolean',
+            'default_columns' => 'nullable|array',
+            'default_columns.*.name' => 'required|string|max:255',
+            'default_columns.*.key' => 'required|string|max:255',
 
             // optional name series config from modal
             'series_pattern' => 'nullable|string|max:255',
@@ -87,6 +94,7 @@ class DocumentController extends Controller
             'name' => $data['name'],
             'description' => $data['description'] ?? null,
             'is_active' => array_key_exists('is_active', $data) ? (bool)$data['is_active'] : $document->is_active,
+            'default_columns' => $data['default_columns'] ?? $document->default_columns,
         ]);
 
         // update name series if provided

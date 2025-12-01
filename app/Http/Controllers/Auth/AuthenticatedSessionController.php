@@ -33,13 +33,19 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerate();
 
-    $user = Auth::user();
+        $user = Auth::user();
 
-    // 🔹 Cek role untuk redirect berbeda
-    if ($user->role === 'admin') {
-        return redirect()->route('Admindashboard');
-    }
-return redirect()->route('dashboard');
+        // 🔹 Cek role untuk redirect berbeda
+        if ($user->role === 'admin') {
+            $redirect = redirect()->route('Admindashboard');
+        } else {
+            $redirect = redirect()->route('dashboard');
+        }
+
+        // Add new CSRF token to response headers
+        $redirect->header('X-CSRF-TOKEN', csrf_token());
+        
+        return $redirect;
     }
 
     /**

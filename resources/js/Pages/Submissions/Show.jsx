@@ -16,7 +16,8 @@ import { Download, Printer } from "lucide-react";
 import { Separator } from "@/Components/ui/separator";
 import Footer from "@/Components/Footer";
 import { useLoading } from "@/Components/GlobalLoading";
-import DownloadLoading from "@/Components/DownloadLoading";
+import OptimizedDownloadLoading from "@/Components/OptimizedDownloadLoading";
+import { fetchWithCsrf } from "@/utils/csrfToken";
 
 export default function Show({
     auth,
@@ -35,6 +36,7 @@ export default function Show({
     const [showApproveModal, setShowApproveModal] = useState(false);
     const [showRejectModal, setShowRejectModal] = useState(false);
     const [showDownloadLoading, setShowDownloadLoading] = useState(false);
+    const [downloadProgress, setDownloadProgress] = useState(null);
     const printFrameRef = useRef(null);
     const { data, setData, post, processing, reset } = useForm({
         approval_note: "",
@@ -71,16 +73,14 @@ export default function Show({
     };
 
     const handleDownload = () => {
-        // Show download loading animation
+        // Show download loading animation immediately
         setShowDownloadLoading(true);
         
-        // The animation will trigger the download when complete
-        // We'll handle this in the onComplete callback
-    };
-
-    const handleDownloadComplete = () => {
-        // Start the download using fetch to stay on the same page
+        // Start real download immediately with progress tracking
         const downloadUrl = route("submissions.download", submission.id);
+        
+        // Reset progress
+        setDownloadProgress(0);
         
         fetch(downloadUrl, {
             method: 'GET',
@@ -93,14 +93,44 @@ export default function Show({
             if (!response.ok) {
                 throw new Error('Download failed');
             }
-            return response.blob();
+            
+            const contentLength = response.headers.get('Content-Length');
+            const total = parseInt(contentLength, 10);
+            let loaded = 0;
+            
+            // Create reader to track progress
+            const reader = response.body.getReader();
+            
+            return new Response(
+                new ReadableStream({
+                    start(controller) {
+                        function pump() {
+                            return reader.read().then(({ done, value }) => {
+                                if (done) {
+                                    controller.close();
+                                    return;
+                                }
+                                
+                                loaded += value.byteLength;
+                                const progress = total > 0 ? (loaded / total) * 100 : Math.min(loaded / 100000, 100);
+                                setDownloadProgress(progress);
+                                
+                                controller.enqueue(value);
+                                return pump();
+                            });
+                        }
+                        return pump();
+                    }
+                })
+            );
         })
+        .then(response => response.blob())
         .then(blob => {
             // Create download link and trigger download
             const url = window.URL.createObjectURL(blob);
             const link = document.createElement('a');
             link.href = url;
-            link.download = `document-${submission.id}.pdf`; // You can customize filename
+            link.download = `document-${submission.id}.pdf`;
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
@@ -109,6 +139,7 @@ export default function Show({
             // Hide loading animation and show success message
             setTimeout(() => {
                 setShowDownloadLoading(false);
+                setDownloadProgress(null);
                 Swal.fire({
                     icon: "success",
                     title: "Download Berhasil!",
@@ -125,15 +156,23 @@ export default function Show({
             
             setTimeout(() => {
                 setShowDownloadLoading(false);
+                setDownloadProgress(null);
                 Swal.fire({
-                    icon: "success",
-                    title: "Download Berhasil!",
-                    text: "Dokumen berhasil diunduh.",
+                    icon: "error",
+                    title: "Download Gagal",
+                    text: "Terjadi kesalahan saat mengunduh dokumen.",
                     timer: 2000,
                     showConfirmButton: false,
                 });
             }, 500);
         });
+    };
+
+    const handleDownloadComplete = () => {
+        // This function is no longer needed - download starts immediately
+        // Just hide the animation if called
+        setShowDownloadLoading(false);
+        setDownloadProgress(null);
     };
 
     const handleApprove = () => {
@@ -142,42 +181,42 @@ export default function Show({
         // Show custom loading animation
         showLoading("Menyetujui pengajuan...");
         
-        // Manual fetch request
-        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-        if (!csrfToken) {
-            hideLoading(false); // Hide loading animation on CSRF error
-            Swal.fire({
-                icon: "error",
-                title: "Error!",
-                text: "CSRF token tidak ditemukan. Silakan refresh halaman.",
-                confirmButtonText: "OK",
-            });
-            return;
-        }
-        
-        fetch(route("submissions.approve", submission.id), {
+        fetchWithCsrf(route("submissions.approve", submission.id), {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': csrfToken,
-                'Accept': 'application/json',
-                'X-Requested-With': 'XMLHttpRequest',
-            },
             body: JSON.stringify({
                 approval_note: data.approval_note || ""
             })
         })
         .then(response => {
+            console.log('📊 Approve Response:', {
+                status: response.status,
+                statusText: response.statusText,
+                ok: response.ok,
+                contentType: response.headers.get('content-type')
+            });
+            
             if (!response.ok) {
-                if (response.status === 419) {
-                    throw new Error('CSRF token mismatch. Silakan refresh halaman.');
-                } else {
-                    throw new Error(`Server error: ${response.status}`);
+                // Check if response is HTML (error page)
+                const contentType = response.headers.get('content-type');
+                if (contentType && contentType.includes('text/html')) {
+                    throw new Error(`Server error: ${response.status} - Server mengembalikan halaman error`);
                 }
+                throw new Error(`Server error: ${response.status}`);
             }
             return response.json();
         })
+        .catch(error => {
+            console.error('❌ JSON Parsing Error:', error);
+            
+            // Check if this is a JSON parsing error
+            if (error.message.includes('Unexpected token')) {
+                throw new Error('Server mengembalikan HTML bukan JSON. Mungkin ada error di server.');
+            }
+            
+            throw error;
+        })
         .then(responseData => {
+            console.log('✅ Approve Response Data:', responseData);
             hideLoading(responseData.success); // Hide loading animation with success status
             if (responseData.success) {
                 setShowApproveModal(false);
@@ -235,38 +274,20 @@ export default function Show({
                 // Show custom loading animation
                 showLoading("Menolak pengajuan...");
                 
-                // Manual fetch request
-                const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-                if (!csrfToken) {
-                    hideLoading(false); // Hide loading animation on CSRF error
-                    Swal.fire({
-                        icon: "error",
-                        title: "Error!",
-                        text: "CSRF token tidak ditemukan. Silakan refresh halaman.",
-                        confirmButtonText: "OK",
-                    });
-                    return;
-                }
-                
-                fetch(route("submissions.reject", submission.id), {
+                fetchWithCsrf(route("submissions.reject", submission.id), {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': csrfToken,
-                        'Accept': 'application/json',
-                        'X-Requested-With': 'XMLHttpRequest',
-                    },
                     body: JSON.stringify({
                         approval_note: data.approval_note
                     })
                 })
                 .then(response => {
                     if (!response.ok) {
-                        if (response.status === 419) {
-                            throw new Error('CSRF token mismatch. Silakan refresh halaman.');
-                        } else {
-                            throw new Error(`Server error: ${response.status}`);
+                        // Check if response is HTML (error page)
+                        const contentType = response.headers.get('content-type');
+                        if (contentType && contentType.includes('text/html')) {
+                            throw new Error(`Server error: ${response.status} - Server mengembalikan halaman error`);
                         }
+                        throw new Error(`Server error: ${response.status}`);
                     }
                     return response.json();
                 })
@@ -327,35 +348,18 @@ export default function Show({
                     }
                 });
                 
-                // Manual fetch request
-                const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-                if (!csrfToken) {
-                    Swal.fire({
-                        icon: "error",
-                        title: "Error!",
-                        text: "CSRF token tidak ditemukan. Silakan refresh halaman.",
-                        confirmButtonText: "OK",
-                    });
-                    return;
-                }
-                
-                fetch(route("submissions.requestNext", submission.id), {
+                fetchWithCsrf(route("submissions.requestNext", submission.id), {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': csrfToken,
-                        'Accept': 'application/json',
-                        'X-Requested-With': 'XMLHttpRequest',
-                    },
                     body: JSON.stringify({})
                 })
                 .then(response => {
                     if (!response.ok) {
-                        if (response.status === 419) {
-                            throw new Error('CSRF token mismatch. Silakan refresh halaman.');
-                        } else {
-                            throw new Error(`Server error: ${response.status}`);
+                        // Check if response is HTML (error page)
+                        const contentType = response.headers.get('content-type');
+                        if (contentType && contentType.includes('text/html')) {
+                            throw new Error(`Server error: ${response.status} - Server mengembalikan halaman error`);
                         }
+                        throw new Error(`Server error: ${response.status}`);
                     }
                     return response.json();
                 })
@@ -604,9 +608,7 @@ export default function Show({
                                         </span>
                                     )}
 
-                                    {Array.isArray(documentFields) &&
-                                        documentFields.length > 0 &&
-                                        (isApprovedFinal ? (
+                                    {isApprovedFinal ? (
                                             <button
                                                 type="button"
                                                 onClick={handlePrint}
@@ -625,7 +627,7 @@ export default function Show({
                                                 Cetak tersedia setelah final
                                                 approval
                                             </span>
-                                        ))}
+                                        )}
 
                                     {(submission.status === "pending" ||
                                         submission.status
@@ -967,7 +969,7 @@ export default function Show({
             />
             
             {/* Download Loading Animation */}
-            <DownloadLoading show={showDownloadLoading} onComplete={handleDownloadComplete} />
+            <OptimizedDownloadLoading show={showDownloadLoading} realProgress={downloadProgress} />
         </AuthenticatedLayout>
     );
 }

@@ -13,6 +13,7 @@ import {
     DialogTitle,
 } from "@/Components/ui/dialog";
 import Header from "@/Components/Header";
+import { fetchWithCsrf } from "@/utils/csrfToken";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -444,51 +445,21 @@ export default function ForDivision({ auth, submissions, userDivision }) {
                                         },
                                     });
 
-                                    // Manual fetch request
-                                    const csrfToken = document
-                                        .querySelector(
-                                            'meta[name="csrf-token"]'
-                                        )
-                                        ?.getAttribute("content");
-                                    if (!csrfToken) {
-                                        Swal.fire({
-                                            icon: "error",
-                                            title: "Error!",
-                                            text: "CSRF token tidak ditemukan. Silakan refresh halaman.",
-                                            confirmButtonText: "OK",
-                                        });
-                                        return;
-                                    }
-
-                                    fetch(
+                                    fetchWithCsrf(
                                         route(
                                             "submissions.destroy",
                                             toDeleteId
                                         ),
                                         {
                                             method: "DELETE",
-                                            headers: {
-                                                "Content-Type":
-                                                    "application/json",
-                                                "X-CSRF-TOKEN": csrfToken,
-                                                Accept: "application/json",
-                                                "X-Requested-With":
-                                                    "XMLHttpRequest",
-                                            },
                                             body: JSON.stringify({}),
                                         }
                                     )
                                         .then((response) => {
                                             if (!response.ok) {
-                                                if (response.status === 419) {
-                                                    throw new Error(
-                                                        "CSRF token mismatch. Silakan refresh halaman."
-                                                    );
-                                                } else {
-                                                    throw new Error(
-                                                        `Server error: ${response.status}`
-                                                    );
-                                                }
+                                                throw new Error(
+                                                    `Server error: ${response.status}`
+                                                );
                                             }
                                             return response.json();
                                         })

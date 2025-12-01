@@ -9,6 +9,7 @@ import { Textarea } from "@/Components/ui/textarea";
 import Header from "@/Components/Header";
 import Swal from "sweetalert2";
 import { useLoading } from "@/Components/GlobalLoading";
+import { fetchWithCsrf } from "@/utils/csrfToken";
 
 export default function Edit({ auth, submission, documentFields = [] }) {
     const { showLoading, hideLoading } = useLoading();
@@ -39,19 +40,6 @@ export default function Edit({ auth, submission, documentFields = [] }) {
         // Show custom loading animation
         showLoading("Memperbarui pengajuan...");
         
-        // Manual fetch request
-        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-        if (!csrfToken) {
-            hideLoading(false); // Hide loading animation on CSRF error
-            Swal.fire({
-                icon: "error",
-                title: "Error!",
-                text: "CSRF token tidak ditemukan. Silakan refresh halaman.",
-                confirmButtonText: "OK",
-            });
-            return;
-        }
-        
         // Create FormData for file upload
         const formData = new FormData();
         formData.append('_method', 'PUT');
@@ -72,6 +60,9 @@ export default function Edit({ auth, submission, documentFields = [] }) {
         for (let [key, value] of formData.entries()) {
             console.log(`Edit.jsx - ${key}:`, value instanceof File ? `File: ${value.name}` : value);
         }
+        
+        // Get CSRF token and set up headers manually for FormData
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
         
         fetch(route("submissions.update", submission.id), {
             method: 'POST',

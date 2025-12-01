@@ -5,10 +5,11 @@ import { createInertiaApp } from "@inertiajs/react";
 import { resolvePageComponent } from "laravel-vite-plugin/inertia-helpers";
 import { createRoot } from "react-dom/client";
 import LoadingProvider from "@/Components/GlobalLoading";
-import { gsap } from "gsap";
+import { initializeCsrfToken, setupPeriodicTokenRefresh } from "@/utils/csrfInit";
 
-// Make GSAP available globally for the TruckLoading component
-window.gsap = gsap;
+// Initialize CSRF token management
+initializeCsrfToken().catch(console.error);
+setupPeriodicTokenRefresh();
 
 const appName = import.meta.env.VITE_APP_NAME || "E-Approval";
 

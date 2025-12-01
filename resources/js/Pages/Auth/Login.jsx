@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import GuestLayout from "@/Layouts/GuestLayout";
+import { setupCsrfTokenAfterLogin } from "@/utils/csrfToken";
 
 export default function Login({ status, canResetPassword }) {
     const { data, setData, post, processing, errors, reset } = useForm({
@@ -18,6 +19,14 @@ export default function Login({ status, canResetPassword }) {
         e.preventDefault();
         post(route("login"), {
             onFinish: () => reset("password"),
+            onSuccess: async () => {
+                // Refresh CSRF token after successful login
+                try {
+                    await setupCsrfTokenAfterLogin();
+                } catch (error) {
+                    console.error('Failed to refresh CSRF token after login:', error);
+                }
+            },
         });
     };
 

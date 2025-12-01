@@ -210,7 +210,9 @@ class SubmissionController extends Controller
             ->whereHas('document', function ($q) {
                 $q->where('is_active', true);
             })
-            ->with(['steps', 'steps.division', 'document.fields'])
+            ->with(['steps', 'steps.division', 'document.fields', 'document' => function($query) {
+                $query->select('id', 'name', 'description', 'is_active', 'default_columns');
+            }])
             ->get();
 
         return Inertia::render('Submissions/Create', [
@@ -410,59 +412,100 @@ class SubmissionController extends Controller
         $docFields = $workflow->document?->fields ?? collect();
         $dataPayload = $validated['data'] ?? [];
         
-        // Process table data from direct request fields (Inertia sends them separately)
-        $tableData = $request->input('tableData');
-        $tableColumns = $request->input('tableColumns');
-        
-        if (!empty($tableData) && is_array($tableData)) {
-            $dataPayload['tableData'] = $tableData;
-        }
-        
-        if (!empty($tableColumns) && is_array($tableColumns)) {
-            $dataPayload['tableColumns'] = $tableColumns;
-        }
-        
-        // Also try to process JSON strings within data object (fallback)
-        if (!empty($dataPayload['tableDataJson'])) {
-            try {
-                $tableDataFromJson = json_decode($dataPayload['tableDataJson'], true);
-                if (json_last_error() === JSON_ERROR_NONE && is_array($tableDataFromJson)) {
-                    $dataPayload['tableData'] = $tableDataFromJson;
-                }
-            } catch (\Exception $e) {
-                // Error decoding tableDataJson
+        // Skip validation if no fields are defined for this document type
+        if ($docFields->isNotEmpty()) {
+            // Process table data from direct request fields (Inertia sends them separately)
+            $tableData = $request->input('tableData');
+            $tableColumns = $request->input('tableColumns');
+            
+            if (!empty($tableData) && is_array($tableData)) {
+                $dataPayload['tableData'] = $tableData;
             }
-        }
-        
-        if (!empty($dataPayload['tableColumnsJson'])) {
-            try {
-                $tableColumnsFromJson = json_decode($dataPayload['tableColumnsJson'], true);
-                if (json_last_error() === JSON_ERROR_NONE && is_array($tableColumnsFromJson)) {
-                    $dataPayload['tableColumns'] = $tableColumnsFromJson;
-                }
-            } catch (\Exception $e) {
-                // Error decoding tableColumnsJson
+            
+            if (!empty($tableColumns) && is_array($tableColumns)) {
+                $dataPayload['tableColumns'] = $tableColumns;
             }
-        }
-        
-        // Remove the JSON strings after processing
-        unset($dataPayload['tableDataJson']);
-        unset($dataPayload['tableColumnsJson']);
-        
-        
-        foreach ($docFields as $df) {
-            if ($df->required && (!array_key_exists($df->name, $dataPayload) || $dataPayload[$df->name] === null || $dataPayload[$df->name] === '')) {
-                // Check if this is an API request
-                if ($request->wantsJson() || $request->header('Accept') === 'application/json') {
-                    return response()->json([
-                        'success' => false,
-                        'message' => $df->label . ' wajib diisi',
-                        'errors' => ["data.{$df->name}" => $df->label . ' wajib diisi']
-                    ], 422);
+            
+            // Also try to process JSON strings within data object (fallback)
+            if (!empty($dataPayload['tableDataJson'])) {
+                try {
+                    $tableDataFromJson = json_decode($dataPayload['tableDataJson'], true);
+                    if (json_last_error() === JSON_ERROR_NONE && is_array($tableDataFromJson)) {
+                        $dataPayload['tableData'] = $tableDataFromJson;
+                    }
+                } catch (\Exception $e) {
+                    // Error decoding tableDataJson
                 }
-                
-                return back()->withErrors(["data.{$df->name}" => $df->label . ' wajib diisi'])->withInput();
             }
+            
+            if (!empty($dataPayload['tableColumnsJson'])) {
+                try {
+                    $tableColumnsFromJson = json_decode($dataPayload['tableColumnsJson'], true);
+                    if (json_last_error() === JSON_ERROR_NONE && is_array($tableColumnsFromJson)) {
+                        $dataPayload['tableColumns'] = $tableColumnsFromJson;
+                    }
+                } catch (\Exception $e) {
+                    // Error decoding tableColumnsJson
+                }
+            }
+            
+            // Remove the JSON strings after processing
+            unset($dataPayload['tableDataJson']);
+            unset($dataPayload['tableColumnsJson']);
+            
+            foreach ($docFields as $df) {
+                if ($df->required && (!array_key_exists($df->name, $dataPayload) || $dataPayload[$df->name] === null || $dataPayload[$df->name] === '')) {
+                    // Check if this is an API request
+                    if ($request->wantsJson() || $request->header('Accept') === 'application/json') {
+                        return response()->json([
+                            'success' => false,
+                            'message' => $df->label . ' wajib diisi',
+                            'errors' => ["data.{$df->name}" => $df->label . ' wajib diisi']
+                        ], 422);
+                    }
+                    
+                    return back()->withErrors(["data.{$df->name}" => $df->label . ' wajib diisi'])->withInput();
+                }
+            }
+        } else {
+            // For documents without fields, still process table data if provided
+            $tableData = $request->input('tableData');
+            $tableColumns = $request->input('tableColumns');
+            
+            if (!empty($tableData) && is_array($tableData)) {
+                $dataPayload['tableData'] = $tableData;
+            }
+            
+            if (!empty($tableColumns) && is_array($tableColumns)) {
+                $dataPayload['tableColumns'] = $tableColumns;
+            }
+            
+            // Also try to process JSON strings within data object (fallback)
+            if (!empty($dataPayload['tableDataJson'])) {
+                try {
+                    $tableDataFromJson = json_decode($dataPayload['tableDataJson'], true);
+                    if (json_last_error() === JSON_ERROR_NONE && is_array($tableDataFromJson)) {
+                        $dataPayload['tableData'] = $tableDataFromJson;
+                    }
+                } catch (\Exception $e) {
+                    // Error decoding tableDataJson
+                }
+            }
+            
+            if (!empty($dataPayload['tableColumnsJson'])) {
+                try {
+                    $tableColumnsFromJson = json_decode($dataPayload['tableColumnsJson'], true);
+                    if (json_last_error() === JSON_ERROR_NONE && is_array($tableColumnsFromJson)) {
+                        $dataPayload['tableColumns'] = $tableColumnsFromJson;
+                    }
+                } catch (\Exception $e) {
+                    // Error decoding tableColumnsJson
+                }
+            }
+            
+            // Remove the JSON strings after processing
+            unset($dataPayload['tableDataJson']);
+            unset($dataPayload['tableColumnsJson']);
         }
 
         $filePath = null;
@@ -479,7 +522,7 @@ class SubmissionController extends Controller
             'file_path' => $filePath,
             'status' => 'pending',
             'current_step' => 1,
-            'data_json' => $dataPayload ?: null,
+            'data_json' => !empty($dataPayload) ? $dataPayload : null,
         ]);
 
 

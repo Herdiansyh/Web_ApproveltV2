@@ -18,9 +18,34 @@ import Header from "@/Components/Header";
 import TableExcel from "./TableExcel";
 import DynamicFields from "./DynamicFields";
 import { useLoading } from "@/Components/GlobalLoading";
+import { fetchWithCsrf } from "@/utils/csrfToken";
 
 export default function Create({ auth, userDivision, workflows }) {
     const { showLoading, hideLoading } = useLoading();
+    
+    // Default columns configuration
+    const getDefaultColumns = (workflowId = null) => {
+        const defaultColumns = [
+            { id: 1, name: "Item", key: "item" },
+            { id: 2, name: "Jumlah", key: "jumlah" },
+            { id: 3, name: "Keterangan", key: "keterangan" },
+        ];
+        
+        // Get selected workflow and document
+        if (workflowId) {
+            const selectedWorkflow = workflows.find(w => w.id === parseInt(workflowId));
+            if (selectedWorkflow?.document?.default_columns) {
+                return selectedWorkflow.document.default_columns.map((col, index) => ({
+                    id: index + 1,
+                    name: col.name || `Column ${index + 1}`,
+                    key: col.key || `col_${index + 1}`,
+                }));
+            }
+        }
+        
+        return defaultColumns;
+    };
+
     const { data, setData, processing, errors, setError } = useForm({
         workflow_id: "",
         title: "",
@@ -28,17 +53,26 @@ export default function Create({ auth, userDivision, workflows }) {
         file: null,
         data: {},
         useTableData: false,
-        tableData: [
-            { id: 1, item: "", jumlah: "", keterangan: "" },
-            { id: 2, item: "", jumlah: "", keterangan: "" },
-            { id: 3, item: "", jumlah: "", keterangan: "" },
-        ],
-        tableColumns: [
-            { id: 1, name: "Item", key: "item" },
-            { id: 2, name: "Jumlah", key: "jumlah" },
-            { id: 3, name: "Keterangan", key: "keterangan" },
-        ],
+        tableData: [],
+        tableColumns: getDefaultColumns(),
     });
+
+    // Initialize tableData with default columns
+    useEffect(() => {
+        if (data.tableData.length === 0 && data.tableColumns.length > 0) {
+            const initialData = [
+                { id: 1 },
+                { id: 2 },
+                { id: 3 },
+            ].map(row => {
+                data.tableColumns.forEach(col => {
+                    row[col.key] = "";
+                });
+                return row;
+            });
+            setData("tableData", initialData);
+        }
+    }, [data.tableColumns]);
 
     // Use form data instead of local state for table
     const [nextId, setNextId] = useState(4);
@@ -46,6 +80,27 @@ export default function Create({ auth, userDivision, workflows }) {
     const [newColumnName, setNewColumnName] = useState("");
     const [editingColumn, setEditingColumn] = useState(null);
     const [isSaved, setIsSaved] = useState(false);
+
+    // Update table columns and data when workflow changes
+    useEffect(() => {
+        if (data.workflow_id) {
+            const newColumns = getDefaultColumns(data.workflow_id);
+            setData("tableColumns", newColumns);
+            
+            // Update existing table data to match new columns
+            const updatedData = data.tableData.map(row => {
+                const newRow = { id: row.id };
+                newColumns.forEach(col => {
+                    newRow[col.key] = row[col.key] || "";
+                });
+                return newRow;
+            });
+            setData("tableData", updatedData);
+            
+            // Reset column ID counters
+            setNextColumnId(Math.max(...newColumns.map(col => col.id)) + 1);
+        }
+    }, [data.workflow_id, workflows]);
 
     // Fungsi untuk menyimpan data ke localStorage
     const handleSaveLocal = () => {
@@ -396,30 +451,8 @@ export default function Create({ auth, userDivision, workflows }) {
                     // Show custom loading animation
                     showLoading("Mengirim pengajuan...");
 
-                    // Manual fetch request
-                    const csrfToken = document
-                        .querySelector('meta[name="csrf-token"]')
-                        ?.getAttribute("content");
-                    if (!csrfToken) {
-                        console.error("Create.jsx - CSRF token not found!");
-                        hideLoading(false); // Hide loading animation on CSRF error
-                        Swal.fire({
-                            icon: "error",
-                            title: "Error!",
-                            text: "CSRF token tidak ditemukan. Silakan refresh halaman.",
-                            confirmButtonText: "OK",
-                        });
-                        return;
-                    }
-
-                    fetch(route("submissions.store"), {
+                    fetchWithCsrf(route("submissions.store"), {
                         method: "POST",
-                        headers: {
-                            "Content-Type": "application/json",
-                            "X-CSRF-TOKEN": csrfToken,
-                            Accept: "application/json",
-                            "X-Requested-With": "XMLHttpRequest",
-                        },
                         body: JSON.stringify(testData),
                     })
                         .then((response) => {

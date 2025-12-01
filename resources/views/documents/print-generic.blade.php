@@ -329,7 +329,7 @@
     <!-- APPROVAL -->
     @if (!empty($approvedBy))
         <div class="approval-stamp">
-            <span class="label">Approved by:</span>
+            <span class="label" style="display:block">Approved by:</span>
             {{ $approvedBy }}
             @if (!empty($approvedAt))
                 • {{ $approvedAt }}

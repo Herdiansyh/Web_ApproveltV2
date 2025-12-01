@@ -21,6 +21,13 @@ use Inertia\Inertia;
 use App\Models\SubdivisionPermission;
 use Illuminate\Support\Facades\Cache;
 
+// CSRF Token Refresh Endpoint
+Route::get('/csrf-token', function () {
+    return response()->json([
+        'token' => csrf_token()
+    ]);
+})->middleware('web');
+
 // Login page
 Route::get('/', function () {
     return Inertia::render('Auth/Login', [

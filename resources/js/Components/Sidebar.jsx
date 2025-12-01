@@ -32,12 +32,47 @@ import {
 } from "@/components/ui/tooltip";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
+import { useLoading } from "./GlobalLoading";
 
 export default function Sidebar({ open }) {
     const [logoutDialog, setLogoutDialog] = useState(false);
     const user = usePage().props.auth.user;
+    const { showLogoutAnimation, hideLogoutAnimation } = useLoading();
+
+    useEffect(() => {
+        // Listen for Inertia events to handle logout animation
+        const handleStart = () => {
+            // Animation already shown by confirmLogout
+        };
+
+        const handleSuccess = () => {
+            // Hide animation when logout is successful
+            hideLogoutAnimation();
+        };
+
+        const handleError = () => {
+            // Hide animation if there's an error
+            hideLogoutAnimation();
+        };
+
+        // Register Inertia event listeners and store unsubscribe functions
+        const unsubscribeStart = router.on('start', handleStart);
+        const unsubscribeSuccess = router.on('success', handleSuccess);
+        const unsubscribeError = router.on('error', handleError);
+
+        // Cleanup event listeners
+        return () => {
+            unsubscribeStart();
+            unsubscribeSuccess();
+            unsubscribeError();
+        };
+    }, [hideLogoutAnimation]);
 
     const confirmLogout = () => {
+        showLogoutAnimation();
+        setLogoutDialog(false);
+        
+        // Immediately trigger logout request
         router.post(route("logout"));
     };
 
@@ -176,58 +211,58 @@ export default function Sidebar({ open }) {
                 </nav>
             </aside>
 
-            <Dialog open={logoutDialog} onOpenChange={setLogoutDialog}>
-                <DialogContent
-                    style={{ borderRadius: "15px" }}
-                    className=" border border-blue-100 bg-gradient-to-br from-blue-50 via-white to-blue-100/65 backdrop-blur-md shadow-xl transition-all duration-300"
+   <Dialog open={logoutDialog} onOpenChange={setLogoutDialog}>
+    <DialogContent
+        style={{ borderRadius: "16px" }}
+        className="border border-gray-200 bg-white shadow-xl transition-all duration-300"
+    >
+        <DialogHeader>
+            <DialogTitle className="text-lg font-semibold text-gray-900 flex items-center gap-3">
+                <span
+                    style={{ borderRadius: "10px" }}
+                    className="p-2.5 bg-blue-50 text-blue-600"
                 >
-                    <DialogHeader>
-                        <DialogTitle className="text-lg font-semibold text-blue-700 flex items-center gap-2">
-                            <span
-                                style={{ borderRadius: "15px" }}
-                                className="p-2 bg-blue-100 text-blue-600"
-                            >
-                                <svg
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    className="h-5 w-5"
-                                    fill="none"
-                                    viewBox="0 0 24 24"
-                                    stroke="currentColor"
-                                    strokeWidth={2}
-                                >
-                                    <path
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1m0-10V5m-3 6h-3"
-                                    />
-                                </svg>
-                            </span>
-                            Konfirmasi Logout
-                        </DialogTitle>
-                    </DialogHeader>
+                    <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="h-5 w-5"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        strokeWidth={2}
+                    >
+                        <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1m0-10V5m-3 6h-3"
+                        />
+                    </svg>
+                </span>
+                Konfirmasi Logout
+            </DialogTitle>
+        </DialogHeader>
 
-                    <p className="text-sm text-slate-600 mt-2 leading-relaxed">
-                        Apakah Anda yakin ingin keluar dari aplikasi?
-                    </p>
+        <p className="text-sm text-gray-600 mt-3 leading-relaxed">
+            Apakah Anda yakin ingin keluar dari aplikasi?
+        </p>
 
-                    <DialogFooter className="mt-5 flex gap-2 justify-end">
-                        <Button
-                            style={{ borderRadius: "15px" }}
-                            className=" border border-blue-200 text-blue-600 bg-blue-50 hover:bg-blue-100 hover:text-blue-700 transition-all duration-200"
-                            onClick={() => setLogoutDialog(false)}
-                        >
-                            Batal
-                        </Button>
-                        <Button
-                            style={{ borderRadius: "15px" }}
-                            className=" bg-blue-600 text-white hover:bg-blue-700 hover:shadow-[0_0_12px_rgba(37,99,235,0.4)] transition-all duration-200"
-                            onClick={confirmLogout}
-                        >
-                            Ya, Logout
-                        </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
+        <DialogFooter className="mt-6 flex gap-3 justify-end">
+            <Button
+                style={{ borderRadius: "10px" }}
+                className="px-4 py-2 border border-gray-300 text-gray-700 bg-white hover:bg-gray-50 transition-all duration-200 font-medium"
+                onClick={() => setLogoutDialog(false)}
+            >
+                Batal
+            </Button>
+            <Button
+                style={{ borderRadius: "10px" }}
+                className="px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 transition-all duration-200 font-medium shadow-sm hover:shadow-md"
+                onClick={confirmLogout}
+            >
+                Ya, Logout
+            </Button>
+        </DialogFooter>
+    </DialogContent>
+</Dialog>
         </TooltipProvider>
     );
 }

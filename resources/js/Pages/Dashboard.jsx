@@ -10,7 +10,7 @@ import {
 } from "@/Components/ui/card";
 import { Button } from "@/Components/ui/button";
 import { Separator } from "@/Components/ui/separator";
-import { ChartPie, CheckCircle, Clock, Bell, ArrowRight } from "lucide-react";
+import { ChartPie, CheckCircle, Clock, Bell, ArrowRight, XCircle } from "lucide-react";
 import Header from "@/Components/Header";
 import Footer from "@/Components/Footer";
 
@@ -25,24 +25,24 @@ export default function Dashboard({ auth, stats, canApprove, pendingItems = [] }
         >
             <Head title="Dashboard" />
 
-            <div className="flex min-h-screen bg-background">
+            <div className="flex min-h-screen bg-gradient-to-br from-background via-background to-muted/30">
                 <TooltipProvider>
                     <Header />
                 </TooltipProvider>
 
                 <div className="flex-1 p-8 md:p-12 space-y-8">
                     {/* Welcome Section */}
-                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center p-2">
+                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                         <div>
-                            <h1 className="sm:text-3xl text-xl font-bold text-foreground">
+                            <h1 className="sm:text-4xl text-2xl font-bold text-foreground">
                                 Hai, Pak {auth.user.name}! 👋
                             </h1>
-                            <p className="text-muted-foreground text-sm  mt-1">
+                            <p className="text-muted-foreground text-base mt-2">
                                 Selamat datang kembali di sistem e-Approval.
                             </p>
                         </div>
-                        <div className="mt-4 md:mt-0 bg-card shadow-sm border border-border px-4 py-2 rounded-full text-sm text-muted-foreground">
-                            <span className="font-medium text-primary">
+                        <div className="bg-card border border-border px-5 py-2.5 rounded-xl text-sm shadow-sm">
+                            <span className="font-medium text-foreground">
                                 {new Date().toLocaleDateString("id-ID", {
                                     weekday: "long",
                                     day: "numeric",
@@ -56,38 +56,37 @@ export default function Dashboard({ auth, stats, canApprove, pendingItems = [] }
                     {/* Alert Section - only for users who can approve and have items to review */}
                     {canApprove && (pendingItems?.length || 0) > 0 && (
                         <Card
-                            className="relative overflow-hidden border-border bg-card shadow-sm"
-                            style={{ borderRadius: "15px" }}
+                            className="relative overflow-hidden border-2 border-blue-500/30 bg-gradient-to-br from-blue-500/5 via-card to-blue-500/5 shadow-lg hover:shadow-xl transition-all duration-300"
+                            style={{ borderRadius: "16px" }}
                         >
-                            <div className="absolute -top-10 -right-10 h-40 w-40 rounded-full bg-accent/30 blur-3xl" />
+                            {/* Decorative elements */}
+                            <div className="absolute -top-10 -right-10 h-40 w-40 rounded-full bg-blue-500/10 blur-3xl" />
+                            <div className="absolute -bottom-10 -left-10 h-32 w-32 rounded-full bg-blue-500/5 blur-2xl" />
+                            
                             <CardContent className="p-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4 relative z-10">
-                                <div className="flex items-start gap-3">
+                                <div className="flex items-start gap-4">
                                     <div
-                                        style={{ borderRadius: "15px" }}
-                                        className="hover:bg-orange-500 mt-0.5 inline-flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-md"
+                                        style={{ borderRadius: "12px" }}
+                                        className="mt-0.5 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-lg hover:shadow-xl hover:scale-110 transition-all duration-300"
                                     >
-                                        <Bell className="h-5 w-5" />
+                                        <Bell className="h-6 w-6 animate-pulse" />
                                     </div>
                                     <div>
-                                        <CardTitle className="text-lg text-foreground">
-                                            Ada {(pendingItems?.length || 0)} pengajuan
-                                            menunggumu 🚀
+                                        <CardTitle className="text-xl font-bold text-foreground mb-1">
+                                            Ada {(pendingItems?.length || 0)} pengajuan menunggumu 🚀
                                         </CardTitle>
                                         <CardDescription className="text-sm text-muted-foreground">
-                                            Mohon review dan ambil tindakan pada
-                                            pengajuan berikut.
+                                            Mohon review dan ambil tindakan pada pengajuan berikut.
                                         </CardDescription>
                                     </div>
                                 </div>
 
                                 <Button
-                                    style={{ borderRadius: "15px" }}
+                                    style={{ borderRadius: "12px" }}
                                     asChild
-                                    className="bg-primary text-primary-foreground hover:bg-primary/90"
+                                    className="bg-gradient-to-r from-blue-600 to-blue-500 text-white hover:from-blue-700 hover:to-blue-600 shadow-md hover:shadow-lg transition-all duration-200 hover:scale-105 active:scale-95 font-medium"
                                 >
-                                    <Link
-                                        href={route("submissions.forDivision")}
-                                    >
+                                    <Link href={route("submissions.forDivision")}>
                                         <span className="flex items-center gap-2">
                                             Buka Daftar Review
                                             <ArrowRight className="h-4 w-4" />
@@ -99,25 +98,27 @@ export default function Dashboard({ auth, stats, canApprove, pendingItems = [] }
                     )}
 
                     {/* Stats Section */}
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                         {/* Total Pengajuan - tampilkan untuk semua role kecuali direktur */}
                         {auth.user.role !== "direktur" && (
                             <Card
-                                style={{ borderRadius: "15px" }}
-                                className="border border-border shadow-md hover:shadow-lg transition"
+                                style={{ borderRadius: "16px" }}
+                                className="group border border-border hover:border-primary/50 hover:shadow-xl transition-all duration-300 bg-card overflow-hidden relative"
                             >
-                                <CardHeader className="flex flex-row items-center justify-between pb-2">
-                                    <CardTitle className="text-sm font-medium text-muted-foreground">
+                                <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-500" />
+                                <CardHeader className="flex flex-row items-center justify-between pb-2 relative z-10">
+                                    <CardTitle className="text-sm font-semibold text-muted-foreground">
                                         Total Pengajuan
                                     </CardTitle>
-                                    <ChartPie className="w-6 h-6 text-primary" />
+                                    <div className="p-2.5 bg-primary/10 rounded-lg group-hover:bg-primary/20 transition-colors">
+                                        <ChartPie className="w-5 h-5 text-primary group-hover:scale-110 transition-transform" />
+                                    </div>
                                 </CardHeader>
-                                <CardContent>
+                                <CardContent className="relative z-10">
                                     <div className="text-4xl font-bold text-primary">
                                         {stats.total}
                                     </div>
-                                    <p className="text-xs text-muted-foreground mt-1">
+                                    <p className="text-xs text-muted-foreground mt-2">
                                         Semua dokumen yang pernah diajukan
                                     </p>
                                 </CardContent>
@@ -126,20 +127,23 @@ export default function Dashboard({ auth, stats, canApprove, pendingItems = [] }
 
                         {/* Menunggu Persetujuan */}
                         <Card
-                            style={{ borderRadius: "15px" }}
-                            className="border border-border shadow-md hover:shadow-lg transition"
+                            style={{ borderRadius: "16px" }}
+                            className="group border border-border hover:border-primary-500/50 hover:shadow-xl transition-all duration-300 bg-card overflow-hidden relative"
                         >
-                            <CardHeader className="flex flex-row items-center justify-between pb-2">
-                                <CardTitle className="text-sm font-medium text-muted-foreground">
+                            <div className="absolute top-0 right-0 w-32 h-32 bg-primary-500/5 rounded-full -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-500" />
+                            <CardHeader className="flex flex-row items-center justify-between pb-2 relative z-10">
+                                <CardTitle className="text-sm font-semibold text-muted-foreground">
                                     Menunggu Persetujuan
                                 </CardTitle>
-                                <Clock className="w-6 h-6 text-yellow-500" />
+                                <div className="p-2.5 bg-primary-500/10 rounded-lg group-hover:bg-primary-500/20 transition-colors">
+                                    <Clock className="w-5 h-5 text-primary-600 dark:text-primary-400 group-hover:scale-110 transition-transform" />
+                                </div>
                             </CardHeader>
-                            <CardContent>
-                                <div className="text-4xl font-bold text-yellow-600">
+                            <CardContent className="relative z-10">
+                                <div className="text-4xl font-bold text-primary-600 dark:text-primary-400">
                                     {stats.waiting}
                                 </div>
-                                <p className="text-xs text-muted-foreground mt-1">
+                                <p className="text-xs text-muted-foreground mt-2">
                                     Masih dalam proses review
                                 </p>
                             </CardContent>
@@ -147,20 +151,23 @@ export default function Dashboard({ auth, stats, canApprove, pendingItems = [] }
 
                         {/* Disetujui */}
                         <Card
-                            style={{ borderRadius: "15px" }}
-                            className="border border-border shadow-md hover:shadow-lg transition"
+                            style={{ borderRadius: "16px" }}
+                            className="group border border-border hover:border-emerald-500/50 hover:shadow-xl transition-all duration-300 bg-card overflow-hidden relative"
                         >
-                            <CardHeader className="flex flex-row items-center justify-between pb-2">
-                                <CardTitle className="text-sm font-medium text-muted-foreground">
+                            <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 rounded-full -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-500" />
+                            <CardHeader className="flex flex-row items-center justify-between pb-2 relative z-10">
+                                <CardTitle className="text-sm font-semibold text-muted-foreground">
                                     Disetujui
                                 </CardTitle>
-                                <CheckCircle className="w-6 h-6 text-green-600" />
+                                <div className="p-2.5 bg-emerald-500/10 rounded-lg group-hover:bg-emerald-500/20 transition-colors">
+                                    <CheckCircle className="w-5 h-5 text-emerald-600 dark:text-emerald-400 group-hover:scale-110 transition-transform" />
+                                </div>
                             </CardHeader>
-                            <CardContent>
-                                <div className="text-4xl font-bold text-green-600">
+                            <CardContent className="relative z-10">
+                                <div className="text-4xl font-bold text-emerald-600 dark:text-emerald-400">
                                     {stats.approved}
                                 </div>
-                                <p className="text-xs text-muted-foreground mt-1">
+                                <p className="text-xs text-muted-foreground mt-2">
                                     Dokumen yang sudah{" "}
                                     {auth.user.role === "direktur"
                                         ? "anda setujui"
@@ -171,20 +178,23 @@ export default function Dashboard({ auth, stats, canApprove, pendingItems = [] }
 
                         {/* Ditolak */}
                         <Card
-                            style={{ borderRadius: "15px" }}
-                            className="border border-border shadow-md hover:shadow-lg transition"
+                            style={{ borderRadius: "16px" }}
+                            className="group border border-border hover:border-destructive/50 hover:shadow-xl transition-all duration-300 bg-card overflow-hidden relative"
                         >
-                            <CardHeader className="flex flex-row items-center justify-between pb-2">
-                                <CardTitle className="text-sm font-medium text-muted-foreground">
+                            <div className="absolute top-0 right-0 w-32 h-32 bg-destructive/5 rounded-full -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-500" />
+                            <CardHeader className="flex flex-row items-center justify-between pb-2 relative z-10">
+                                <CardTitle className="text-sm font-semibold text-muted-foreground">
                                     Ditolak
                                 </CardTitle>
-                                <CheckCircle className="w-6 h-6 text-red-600" />
+                                <div className="p-2.5 bg-destructive/10 rounded-lg group-hover:bg-destructive/20 transition-colors">
+                                    <XCircle className="w-5 h-5 text-destructive group-hover:scale-110 transition-transform" />
+                                </div>
                             </CardHeader>
-                            <CardContent>
-                                <div className="text-4xl font-bold text-red-600">
+                            <CardContent className="relative z-10">
+                                <div className="text-4xl font-bold text-destructive">
                                     {stats.rejected}
                                 </div>
-                                <p className="text-xs text-muted-foreground mt-1">
+                                <p className="text-xs text-muted-foreground mt-2">
                                     Dokumen yang sudah{" "}
                                     {auth.user.role === "direktur"
                                         ? "Anda tolak"
@@ -194,7 +204,7 @@ export default function Dashboard({ auth, stats, canApprove, pendingItems = [] }
                         </Card>
                     </div>
 
-                    <Separator className="my-10" />
+                    <Separator className="my-10 bg-border" />
 
                     {/* Footer */}
                     <Footer />

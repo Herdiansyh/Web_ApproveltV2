@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState } from 'react';
-import TruckLoading from './TruckLoading';
+import OptimizedTruckLoading from './OptimizedTruckLoading';
+import LogoutAnimation from './LogoutAnimation';
 
 const LoadingContext = createContext();
 
@@ -15,6 +16,7 @@ export const LoadingProvider = ({ children }) => {
     const [isLoading, setIsLoading] = useState(false);
     const [loadingText, setLoadingText] = useState('Processing...');
     const [isSuccess, setIsSuccess] = useState(true);
+    const [isLoggingOut, setIsLoggingOut] = useState(false);
 
     const showLoading = (text = 'Processing...', success = true) => {
         setLoadingText(text);
@@ -27,10 +29,27 @@ export const LoadingProvider = ({ children }) => {
         setIsLoading(false);
     };
 
+    const showLogoutAnimation = () => {
+        setIsLoggingOut(true);
+    };
+
+    const hideLogoutAnimation = () => {
+        setIsLoggingOut(false);
+    };
+
     return (
-        <LoadingContext.Provider value={{ showLoading, hideLoading, isLoading, isSuccess }}>
+        <LoadingContext.Provider value={{ 
+            showLoading, 
+            hideLoading, 
+            isLoading, 
+            isSuccess, 
+            showLogoutAnimation, 
+            hideLogoutAnimation, 
+            isLoggingOut 
+        }}>
             {children}
-            <TruckLoading show={isLoading} text={loadingText} success={isSuccess} />
+            <OptimizedTruckLoading show={isLoading} text={loadingText} success={isSuccess} />
+            <LogoutAnimation show={isLoggingOut} />
         </LoadingContext.Provider>
     );
 };

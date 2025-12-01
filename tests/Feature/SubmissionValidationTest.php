@@ -23,7 +23,7 @@ class SubmissionValidationTest extends TestCase
         $this->user = User::factory()->create([
             'email' => 'test@example.com',
             'password' => bcrypt('password'),
-            'role' => 'user',
+            'role' => 'employee',
         ]);
     }
 
@@ -97,6 +97,6 @@ class SubmissionValidationTest extends TestCase
         // Check that the error message exists and is clear
         $this->assertArrayHasKey('errors', $data);
         $this->assertArrayHasKey('workflow_id', $data['errors']);
-        $this->assertStringContains('required', strtolower($data['errors']['workflow_id'][0]));
+        $this->assertStringContainsStringIgnoringCase('required', strtolower($data['errors']['workflow_id'][0]));
     }
 }

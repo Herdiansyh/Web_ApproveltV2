@@ -15,6 +15,11 @@ class Document extends Model
         'name',
         'description',
         'is_active',
+        'default_columns',
+    ];
+
+    protected $casts = [
+        'default_columns' => 'array',
     ];
 
     public function fields(): HasMany
