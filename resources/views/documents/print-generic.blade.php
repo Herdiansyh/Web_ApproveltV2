@@ -132,16 +132,49 @@
             position: fixed;
             right: 32pt;
             bottom: 32pt;
-            padding: 10pt 14pt;
-            border-radius: 6pt;
+            padding: 12pt 16pt;
+            border-radius: 8pt;
             border: 1.5px solid #10b981;
             background: #ecfdf5;
             color: #065f46;
-            font-size: 10pt;
+            font-size: 9pt;
+            max-width: 300pt;
         }
 
         .approval-stamp .label {
             font-weight: 700;
+            display: block;
+            margin-bottom: 6pt;
+            text-align: center;
+        }
+
+        .approval-stamp .approver-item {
+            display: inline-block;
+            margin: 2pt 4pt;
+            padding: 3pt 6pt;
+            background: rgba(255, 255, 255, 0.7);
+            border-radius: 4pt;
+            font-size: 8pt;
+            font-weight: 600;
+        }
+
+        .approval-stamp .approver-name {
+            color: #065f46;
+            font-size: 8pt;
+        }
+
+        .approval-stamp .approver-role {
+            color: #047857;
+            font-size: 7pt;
+            margin-left: 2pt;
+        }
+
+        .approval-stamp .approver-date {
+            color: #6b7280;
+            line-height: 0.5cm font-size: 6pt;
+            display: block;
+            text-align: center;
+            margin-top: 2pt;
         }
 
         /* Print toolbar */
@@ -203,7 +236,7 @@
 
         @if (!empty($submission->title))
             <div class="doc-meta">
-                Judul: <strong>{{ $submission->title }}</strong>
+                Judul: {{ $submission->title }}
             </div>
         @endif
 
@@ -238,7 +271,7 @@
                     <tr>
                         <td colspan="2" style="padding: 8pt 0;">
                             <div
-                                style="font-size: 14pt; font-weight: 700; color: #1f2937; border-bottom: 2px solid #374151; padding-bottom: 4pt; margin-bottom: 8pt;">
+                                style="font-size: 14pt; font-weight: 700; color: #1f2937; margin-top: 5pt; margin-bottom: -5pt;">
                                 {{ $f->label }}
                             </div>
                         </td>
@@ -256,7 +289,6 @@
     <!-- DATA TABEL DINAMIS -->
     @if (!empty($data['tableData']) && !empty($data['tableColumns']) && count($data['tableData']) > 0)
         <div class="section">
-            <div class="section-title">Data Tabel</div>
 
             <table class="dynamic-table" style="width: 100%; border-collapse: collapse; margin-bottom: 20pt;">
                 <thead>
@@ -275,7 +307,7 @@
                             @foreach ($data['tableColumns'] as $column)
                                 <td
                                     style="border: 1px solid #d1d5db; padding: 6pt; font-size: 9pt; vertical-align: top;">
-                                    {{ $row[$column['key']] ?? '-' }}
+                                    {{ $row[$column['key']] ?? '' }}
                                 </td>
                             @endforeach
                         </tr>
@@ -327,13 +359,23 @@
     @endif
 
     <!-- APPROVAL -->
-    @if (!empty($approvedBy))
+    @if (!empty($approvers) && count($approvers) > 0)
         <div class="approval-stamp">
-            <span class="label" style="display:block">Approved by:</span>
-            {{ $approvedBy }}
-            @if (!empty($approvedAt))
-                • {{ $approvedAt }}
-            @endif
+            <span class="label">Approved by:</span>
+            <div style="text-align: center; margin-top:5pt">
+                @foreach ($approvers as $approver)
+                    <div class="approver-item">
+                        <span class="approver-name">{{ $approver['name'] }}</span>
+                        @if (!empty($approver['role']) && $approver['role'] !== 'Unknown')
+                            <span class="approver-role">({{ $approver['role'] }})</span>
+                        @endif
+                        @if (!empty($approver['approved_at']))
+                            <span
+                                class="approver-date">{{ \Carbon\Carbon::parse($approver['approved_at'])->format('d M Y, H:i') }}</span>
+                        @endif
+                    </div>
+                @endforeach
+            </div>
         </div>
     @endif
 

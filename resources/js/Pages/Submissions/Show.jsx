@@ -75,97 +75,100 @@ export default function Show({
     const handleDownload = () => {
         // Show download loading animation immediately
         setShowDownloadLoading(true);
-        
+
         // Start real download immediately with progress tracking
         const downloadUrl = route("submissions.download", submission.id);
-        
+
         // Reset progress
         setDownloadProgress(0);
-        
+
         fetch(downloadUrl, {
-            method: 'GET',
+            method: "GET",
             headers: {
-                'X-Requested-With': 'XMLHttpRequest',
-                'Accept': 'application/pdf,application/octet-stream'
-            }
+                "X-Requested-With": "XMLHttpRequest",
+                Accept: "application/pdf,application/octet-stream",
+            },
         })
-        .then(response => {
-            if (!response.ok) {
-                throw new Error('Download failed');
-            }
-            
-            const contentLength = response.headers.get('Content-Length');
-            const total = parseInt(contentLength, 10);
-            let loaded = 0;
-            
-            // Create reader to track progress
-            const reader = response.body.getReader();
-            
-            return new Response(
-                new ReadableStream({
-                    start(controller) {
-                        function pump() {
-                            return reader.read().then(({ done, value }) => {
-                                if (done) {
-                                    controller.close();
-                                    return;
-                                }
-                                
-                                loaded += value.byteLength;
-                                const progress = total > 0 ? (loaded / total) * 100 : Math.min(loaded / 100000, 100);
-                                setDownloadProgress(progress);
-                                
-                                controller.enqueue(value);
-                                return pump();
-                            });
-                        }
-                        return pump();
-                    }
-                })
-            );
-        })
-        .then(response => response.blob())
-        .then(blob => {
-            // Create download link and trigger download
-            const url = window.URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = `document-${submission.id}.pdf`;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            window.URL.revokeObjectURL(url);
-            
-            // Hide loading animation and show success message
-            setTimeout(() => {
-                setShowDownloadLoading(false);
-                setDownloadProgress(null);
-                Swal.fire({
-                    icon: "success",
-                    title: "Download Berhasil!",
-                    text: "Dokumen berhasil diunduh.",
-                    timer: 2000,
-                    showConfirmButton: false,
-                });
-            }, 500);
-        })
-        .catch(error => {
-            console.error('Download error:', error);
-            // Fallback to window.open if fetch fails
-            window.open(downloadUrl, '_blank');
-            
-            setTimeout(() => {
-                setShowDownloadLoading(false);
-                setDownloadProgress(null);
-                Swal.fire({
-                    icon: "error",
-                    title: "Download Gagal",
-                    text: "Terjadi kesalahan saat mengunduh dokumen.",
-                    timer: 2000,
-                    showConfirmButton: false,
-                });
-            }, 500);
-        });
+            .then((response) => {
+                if (!response.ok) {
+                    throw new Error("Download failed");
+                }
+
+                const contentLength = response.headers.get("Content-Length");
+                const total = parseInt(contentLength, 10);
+                let loaded = 0;
+
+                // Create reader to track progress
+                const reader = response.body.getReader();
+
+                return new Response(
+                    new ReadableStream({
+                        start(controller) {
+                            function pump() {
+                                return reader.read().then(({ done, value }) => {
+                                    if (done) {
+                                        controller.close();
+                                        return;
+                                    }
+
+                                    loaded += value.byteLength;
+                                    const progress =
+                                        total > 0
+                                            ? (loaded / total) * 100
+                                            : Math.min(loaded / 100000, 100);
+                                    setDownloadProgress(progress);
+
+                                    controller.enqueue(value);
+                                    return pump();
+                                });
+                            }
+                            return pump();
+                        },
+                    })
+                );
+            })
+            .then((response) => response.blob())
+            .then((blob) => {
+                // Create download link and trigger download
+                const url = window.URL.createObjectURL(blob);
+                const link = document.createElement("a");
+                link.href = url;
+                link.download = `document-${submission.id}.pdf`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                window.URL.revokeObjectURL(url);
+
+                // Hide loading animation and show success message
+                setTimeout(() => {
+                    setShowDownloadLoading(false);
+                    setDownloadProgress(null);
+                    Swal.fire({
+                        icon: "success",
+                        title: "Download Berhasil!",
+                        text: "Dokumen berhasil diunduh.",
+                        timer: 2000,
+                        showConfirmButton: false,
+                    });
+                }, 500);
+            })
+            .catch((error) => {
+                console.error("Download error:", error);
+                // Fallback to window.open if fetch fails
+                window.open(downloadUrl, "_blank");
+
+                setTimeout(() => {
+                    setShowDownloadLoading(false);
+                    setDownloadProgress(null);
+                    Swal.fire({
+                        icon: "error",
+                        title: "Download Gagal",
+                        text: "Terjadi kesalahan saat mengunduh dokumen.",
+                        timer: 2000,
+                        showConfirmButton: false,
+                    });
+                }, 500);
+            });
     };
 
     const handleDownloadComplete = () => {
@@ -177,76 +180,84 @@ export default function Show({
 
     const handleApprove = () => {
         if (!canApprove) return handleNoAccess();
-        
+
         // Show custom loading animation
         showLoading("Menyetujui pengajuan...");
-        
+
         fetchWithCsrf(route("submissions.approve", submission.id), {
-            method: 'POST',
+            method: "POST",
             body: JSON.stringify({
-                approval_note: data.approval_note || ""
-            })
+                approval_note: data.approval_note || "",
+            }),
         })
-        .then(response => {
-            console.log('📊 Approve Response:', {
-                status: response.status,
-                statusText: response.statusText,
-                ok: response.ok,
-                contentType: response.headers.get('content-type')
-            });
-            
-            if (!response.ok) {
-                // Check if response is HTML (error page)
-                const contentType = response.headers.get('content-type');
-                if (contentType && contentType.includes('text/html')) {
-                    throw new Error(`Server error: ${response.status} - Server mengembalikan halaman error`);
+            .then((response) => {
+                console.log("📊 Approve Response:", {
+                    status: response.status,
+                    statusText: response.statusText,
+                    ok: response.ok,
+                    contentType: response.headers.get("content-type"),
+                });
+
+                if (!response.ok) {
+                    // Check if response is HTML (error page)
+                    const contentType = response.headers.get("content-type");
+                    if (contentType && contentType.includes("text/html")) {
+                        throw new Error(
+                            `Server error: ${response.status} - Server mengembalikan halaman error`
+                        );
+                    }
+                    throw new Error(`Server error: ${response.status}`);
                 }
-                throw new Error(`Server error: ${response.status}`);
-            }
-            return response.json();
-        })
-        .catch(error => {
-            console.error('❌ JSON Parsing Error:', error);
-            
-            // Check if this is a JSON parsing error
-            if (error.message.includes('Unexpected token')) {
-                throw new Error('Server mengembalikan HTML bukan JSON. Mungkin ada error di server.');
-            }
-            
-            throw error;
-        })
-        .then(responseData => {
-            console.log('✅ Approve Response Data:', responseData);
-            hideLoading(responseData.success); // Hide loading animation with success status
-            if (responseData.success) {
-                setShowApproveModal(false);
-                reset();
-                Swal.fire({
-                    icon: "success",
-                    title: "Disetujui!",
-                    text: "Pengajuan berhasil disetujui.",
-                    timer: 2000,
-                    showConfirmButton: false,
-                }).then(() => window.location.reload());
-            } else {
+                return response.json();
+            })
+            .catch((error) => {
+                console.error("❌ JSON Parsing Error:", error);
+
+                // Check if this is a JSON parsing error
+                if (error.message.includes("Unexpected token")) {
+                    throw new Error(
+                        "Server mengembalikan HTML bukan JSON. Mungkin ada error di server."
+                    );
+                }
+
+                throw error;
+            })
+            .then((responseData) => {
+                console.log("✅ Approve Response Data:", responseData);
+                hideLoading(responseData.success); // Hide loading animation with success status
+                if (responseData.success) {
+                    setShowApproveModal(false);
+                    reset();
+                    Swal.fire({
+                        icon: "success",
+                        title: "Disetujui!",
+                        text: "Pengajuan berhasil disetujui.",
+                        timer: 2000,
+                        showConfirmButton: false,
+                    }).then(() => window.location.reload());
+                } else {
+                    Swal.fire({
+                        icon: "error",
+                        title: "Gagal!",
+                        text:
+                            responseData.message ||
+                            "Gagal menyetujui pengajuan.",
+                        confirmButtonText: "OK",
+                    });
+                }
+            })
+            .catch((error) => {
+                console.error("Approve error:", error);
+                hideLoading(false); // Hide loading animation on error
                 Swal.fire({
                     icon: "error",
-                    title: "Gagal!",
-                    text: responseData.message || "Gagal menyetujui pengajuan.",
+                    title: "Error!",
+                    text:
+                        error.message ||
+                        "Terjadi kesalahan jaringan. Silakan coba lagi.",
                     confirmButtonText: "OK",
                 });
-            }
-        })
-        .catch(error => {
-            console.error("Approve error:", error);
-            hideLoading(false); // Hide loading animation on error
-            Swal.fire({
-                icon: "error",
-                title: "Error!",
-                text: error.message || "Terjadi kesalahan jaringan. Silakan coba lagi.",
-                confirmButtonText: "OK",
             });
-        });
     };
 
     const handleReject = () => {
@@ -273,62 +284,72 @@ export default function Show({
             if (result.isConfirmed) {
                 // Show custom loading animation
                 showLoading("Menolak pengajuan...");
-                
+
                 fetchWithCsrf(route("submissions.reject", submission.id), {
-                    method: 'POST',
+                    method: "POST",
                     body: JSON.stringify({
-                        approval_note: data.approval_note
-                    })
+                        approval_note: data.approval_note,
+                    }),
                 })
-                .then(response => {
-                    if (!response.ok) {
-                        // Check if response is HTML (error page)
-                        const contentType = response.headers.get('content-type');
-                        if (contentType && contentType.includes('text/html')) {
-                            throw new Error(`Server error: ${response.status} - Server mengembalikan halaman error`);
+                    .then((response) => {
+                        if (!response.ok) {
+                            // Check if response is HTML (error page)
+                            const contentType =
+                                response.headers.get("content-type");
+                            if (
+                                contentType &&
+                                contentType.includes("text/html")
+                            ) {
+                                throw new Error(
+                                    `Server error: ${response.status} - Server mengembalikan halaman error`
+                                );
+                            }
+                            throw new Error(`Server error: ${response.status}`);
                         }
-                        throw new Error(`Server error: ${response.status}`);
-                    }
-                    return response.json();
-                })
-                .then(responseData => {
-                    hideLoading(responseData.success); // Hide loading animation with success status
-                    if (responseData.success) {
-                        setShowRejectModal(false);
-                        reset();
-                        Swal.fire({
-                            icon: "success",
-                            title: "Ditolak",
-                            text: "Pengajuan telah ditolak.",
-                            timer: 2000,
-                            showConfirmButton: false,
-                        }).then(() => window.location.reload());
-                    } else {
+                        return response.json();
+                    })
+                    .then((responseData) => {
+                        hideLoading(responseData.success); // Hide loading animation with success status
+                        if (responseData.success) {
+                            setShowRejectModal(false);
+                            reset();
+                            Swal.fire({
+                                icon: "success",
+                                title: "Ditolak",
+                                text: "Pengajuan telah ditolak.",
+                                timer: 2000,
+                                showConfirmButton: false,
+                            }).then(() => window.location.reload());
+                        } else {
+                            Swal.fire({
+                                icon: "error",
+                                title: "Gagal!",
+                                text:
+                                    responseData.message ||
+                                    "Gagal menolak pengajuan.",
+                                confirmButtonText: "OK",
+                            });
+                        }
+                    })
+                    .catch((error) => {
+                        console.error("Reject error:", error);
+                        hideLoading(false); // Hide loading animation on error
                         Swal.fire({
                             icon: "error",
-                            title: "Gagal!",
-                            text: responseData.message || "Gagal menolak pengajuan.",
+                            title: "Error!",
+                            text:
+                                error.message ||
+                                "Terjadi kesalahan jaringan. Silakan coba lagi.",
                             confirmButtonText: "OK",
                         });
-                    }
-                })
-                .catch(error => {
-                    console.error("Reject error:", error);
-                    hideLoading(false); // Hide loading animation on error
-                    Swal.fire({
-                        icon: "error",
-                        title: "Error!",
-                        text: error.message || "Terjadi kesalahan jaringan. Silakan coba lagi.",
-                        confirmButtonText: "OK",
                     });
-                });
             }
         });
     };
 
     const handleRequestNext = () => {
         if (!canApprove) return handleNoAccess();
-        
+
         Swal.fire({
             title: "Teruskan ke langkah berikutnya?",
             icon: "question",
@@ -345,51 +366,61 @@ export default function Show({
                     allowEscapeKey: false,
                     didOpen: () => {
                         Swal.showLoading();
-                    }
+                    },
                 });
-                
+
                 fetchWithCsrf(route("submissions.requestNext", submission.id), {
-                    method: 'POST',
-                    body: JSON.stringify({})
+                    method: "POST",
+                    body: JSON.stringify({}),
                 })
-                .then(response => {
-                    if (!response.ok) {
-                        // Check if response is HTML (error page)
-                        const contentType = response.headers.get('content-type');
-                        if (contentType && contentType.includes('text/html')) {
-                            throw new Error(`Server error: ${response.status} - Server mengembalikan halaman error`);
+                    .then((response) => {
+                        if (!response.ok) {
+                            // Check if response is HTML (error page)
+                            const contentType =
+                                response.headers.get("content-type");
+                            if (
+                                contentType &&
+                                contentType.includes("text/html")
+                            ) {
+                                throw new Error(
+                                    `Server error: ${response.status} - Server mengembalikan halaman error`
+                                );
+                            }
+                            throw new Error(`Server error: ${response.status}`);
                         }
-                        throw new Error(`Server error: ${response.status}`);
-                    }
-                    return response.json();
-                })
-                .then(responseData => {
-                    if (responseData.success) {
-                        Swal.fire({
-                            icon: "success",
-                            title: "Berhasil",
-                            text: "Pengajuan diteruskan ke langkah berikutnya.",
-                            timer: 2000,
-                            showConfirmButton: false,
-                        }).then(() => window.location.reload());
-                    } else {
+                        return response.json();
+                    })
+                    .then((responseData) => {
+                        if (responseData.success) {
+                            Swal.fire({
+                                icon: "success",
+                                title: "Berhasil",
+                                text: "Pengajuan diteruskan ke langkah berikutnya.",
+                                timer: 2000,
+                                showConfirmButton: false,
+                            }).then(() => window.location.reload());
+                        } else {
+                            Swal.fire({
+                                icon: "error",
+                                title: "Gagal!",
+                                text:
+                                    responseData.message ||
+                                    "Gagal meneruskan pengajuan.",
+                                confirmButtonText: "OK",
+                            });
+                        }
+                    })
+                    .catch((error) => {
+                        console.error("Request next error:", error);
                         Swal.fire({
                             icon: "error",
-                            title: "Gagal!",
-                            text: responseData.message || "Gagal meneruskan pengajuan.",
+                            title: "Error!",
+                            text:
+                                error.message ||
+                                "Terjadi kesalahan jaringan. Silakan coba lagi.",
                             confirmButtonText: "OK",
                         });
-                    }
-                })
-                .catch(error => {
-                    console.error("Request next error:", error);
-                    Swal.fire({
-                        icon: "error",
-                        title: "Error!",
-                        text: error.message || "Terjadi kesalahan jaringan. Silakan coba lagi.",
-                        confirmButtonText: "OK",
                     });
-                });
             }
         });
     };
@@ -402,15 +433,15 @@ export default function Show({
             : " text-amber-500";
 
     const dataMap = useMemo(() => {
-            const data = submission?.data_json || {};
-            console.log('Show.jsx - dataMap:', data);
-            console.log('Show.jsx - has tableData:', !!data.tableData);
-            console.log('Show.jsx - has tableColumns:', !!data.tableColumns);
-            if (data.tableData) {
-                console.log('Show.jsx - tableData length:', data.tableData.length);
-            }
-            return data;
-        }, [submission]);
+        const data = submission?.data_json || {};
+        console.log("Show.jsx - dataMap:", data);
+        console.log("Show.jsx - has tableData:", !!data.tableData);
+        console.log("Show.jsx - has tableColumns:", !!data.tableColumns);
+        if (data.tableData) {
+            console.log("Show.jsx - tableData length:", data.tableData.length);
+        }
+        return data;
+    }, [submission]);
 
     // Pattern series dari Document Type (Name Series) untuk tampilan saja
     const seriesPattern = useMemo(() => {
@@ -609,25 +640,25 @@ export default function Show({
                                     )}
 
                                     {isApprovedFinal ? (
-                                            <button
-                                                type="button"
-                                                onClick={handlePrint}
-                                                className="border border-gray-200 mb-3 inline-flex items-center justify-center p-1 md:p-2 text-sm font-medium rounded-[8px] bg-muted text-foreground hover:bg-muted/70 active:scale-[0.97] transition-all shadow-sm"
-                                                aria-label="Print"
-                                                title="Cetak dokumen"
-                                            >
-                                                <Printer className="w-5 md:w-7" />
-                                            </button>
-                                        ) : (
-                                            <span
-                                                style={{ borderRadius: "10px" }}
-                                                className="mb-3 inline-flex items-center px-2 py-1 text-[11px]  bg-slate-100 text-slate-600 border border-slate-200"
-                                                title="Cetak tersedia setelah pengajuan disetujui di tahap terakhir"
-                                            >
-                                                Cetak tersedia setelah final
-                                                approval
-                                            </span>
-                                        )}
+                                        <button
+                                            type="button"
+                                            onClick={handlePrint}
+                                            className="border border-gray-200 mb-3 inline-flex items-center justify-center p-1 md:p-2 text-sm font-medium rounded-[8px] bg-muted text-foreground hover:bg-muted/70 active:scale-[0.97] transition-all shadow-sm"
+                                            aria-label="Print"
+                                            title="Cetak dokumen"
+                                        >
+                                            <Printer className="w-5 md:w-7" />
+                                        </button>
+                                    ) : (
+                                        <span
+                                            style={{ borderRadius: "10px" }}
+                                            className="mb-3 inline-flex items-center px-2 py-1 text-[11px]  bg-slate-100 text-slate-600 border border-slate-200"
+                                            title="Cetak tersedia setelah pengajuan disetujui di tahap terakhir"
+                                        >
+                                            Cetak tersedia setelah final
+                                            approval
+                                        </span>
+                                    )}
 
                                     {(submission.status === "pending" ||
                                         submission.status
@@ -737,12 +768,17 @@ export default function Show({
 
                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                             {documentFields.map((f) => {
-                                                const type = String(f.type || "text").toLowerCase();
-                                                
+                                                const type = String(
+                                                    f.type || "text"
+                                                ).toLowerCase();
+
                                                 // Skip label type fields from showing as regular fields
                                                 if (type === "label") {
                                                     return (
-                                                        <div key={f.id || f.name} className="col-span-full">
+                                                        <div
+                                                            key={f.id || f.name}
+                                                            className="col-span-full"
+                                                        >
                                                             <div className="border-t border-gray-300 dark:border-gray-600 my-4"></div>
                                                             <h4 className="font-semibold text-lg text-gray-800 dark:text-gray-200 mt-2">
                                                                 {f.label}
@@ -750,12 +786,13 @@ export default function Show({
                                                         </div>
                                                     );
                                                 }
-                                                
+
                                                 return (
                                                     <div
                                                         key={f.id || f.name}
                                                         style={{
-                                                            borderRadius: "15px",
+                                                            borderRadius:
+                                                                "15px",
                                                         }}
                                                         className="flex flex-col px-2 py-1 rounded-lg bg-muted/40 hover:bg-muted transition-colors border-b border-border/60"
                                                     >
@@ -765,8 +802,9 @@ export default function Show({
 
                                                         <span className="font-medium text-sm leading-relaxed text-foreground">
                                                             {String(
-                                                                dataMap?.[f.name] ??
-                                                                    "-"
+                                                                dataMap?.[
+                                                                    f.name
+                                                                ] ?? "-"
                                                             )}
                                                         </span>
                                                     </div>
@@ -829,7 +867,7 @@ export default function Show({
                                                                                 column
                                                                                     .key
                                                                             ] ||
-                                                                                "-"}
+                                                                                ""}
                                                                         </td>
                                                                     )
                                                                 )}
@@ -967,9 +1005,11 @@ export default function Show({
                 }}
                 aria-hidden="true"
             />
-            
             {/* Download Loading Animation */}
-            <OptimizedDownloadLoading show={showDownloadLoading} realProgress={downloadProgress} />
+            <OptimizedDownloadLoading
+                show={showDownloadLoading}
+                realProgress={downloadProgress}
+            />
         </AuthenticatedLayout>
     );
 }

@@ -17,6 +17,7 @@ import {
 import Header from "@/Components/Header";
 import TableExcel from "./TableExcel";
 import DynamicFields from "./DynamicFields";
+import MultiTableManager from "./MultiTableManager";
 import { useLoading } from "@/Components/GlobalLoading";
 import { fetchWithCsrf } from "@/utils/csrfToken";
 
@@ -55,24 +56,50 @@ export default function Create({ auth, userDivision, workflows }) {
         useTableData: false,
         tableData: [],
         tableColumns: getDefaultColumns(),
+        useMultipleTables: false,
+        tables: [],
     });
 
     // Initialize tableData with default columns
     useEffect(() => {
-        if (data.tableData.length === 0 && data.tableColumns.length > 0) {
-            const initialData = [
-                { id: 1 },
-                { id: 2 },
-                { id: 3 },
-            ].map(row => {
-                data.tableColumns.forEach(col => {
-                    row[col.key] = "";
+        if (data.useMultipleTables) {
+            // Initialize with one default table for multiple tables mode
+            if (data.tables.length === 0) {
+                const defaultTable = {
+                    id: Date.now(),
+                    name: "Tabel 1",
+                    useTableData: true,
+                    tableColumns: getDefaultColumns(),
+                    tableData: [
+                        { id: 1 },
+                        { id: 2 },
+                        { id: 3 },
+                    ].map(row => {
+                        getDefaultColumns().forEach(col => {
+                            row[col.key] = "";
+                        });
+                        return row;
+                    }),
+                };
+                setData("tables", [defaultTable]);
+            }
+        } else {
+            // Single table mode - initialize as before
+            if (data.tableData.length === 0 && data.tableColumns.length > 0) {
+                const initialData = [
+                    { id: 1 },
+                    { id: 2 },
+                    { id: 3 },
+                ].map(row => {
+                    data.tableColumns.forEach(col => {
+                        row[col.key] = "";
+                    });
+                    return row;
                 });
-                return row;
-            });
-            setData("tableData", initialData);
+                setData("tableData", initialData);
+            }
         }
-    }, [data.tableColumns]);
+    }, [data.tableColumns, data.useMultipleTables]);
 
     // Use form data instead of local state for table
     const [nextId, setNextId] = useState(4);
@@ -85,22 +112,43 @@ export default function Create({ auth, userDivision, workflows }) {
     useEffect(() => {
         if (data.workflow_id) {
             const newColumns = getDefaultColumns(data.workflow_id);
-            setData("tableColumns", newColumns);
             
-            // Update existing table data to match new columns
-            const updatedData = data.tableData.map(row => {
-                const newRow = { id: row.id };
-                newColumns.forEach(col => {
-                    newRow[col.key] = row[col.key] || "";
+            if (data.useMultipleTables) {
+                // Update all tables with new columns
+                const updatedTables = data.tables.map(table => {
+                    const updatedData = table.tableData.map(row => {
+                        const newRow = { id: row.id };
+                        newColumns.forEach(col => {
+                            newRow[col.key] = row[col.key] || "";
+                        });
+                        return newRow;
+                    });
+                    return {
+                        ...table,
+                        tableColumns: newColumns,
+                        tableData: updatedData
+                    };
                 });
-                return newRow;
-            });
-            setData("tableData", updatedData);
+                setData("tables", updatedTables);
+            } else {
+                // Single table mode
+                setData("tableColumns", newColumns);
+                
+                // Update existing table data to match new columns
+                const updatedData = data.tableData.map(row => {
+                    const newRow = { id: row.id };
+                    newColumns.forEach(col => {
+                        newRow[col.key] = row[col.key] || "";
+                    });
+                    return newRow;
+                });
+                setData("tableData", updatedData);
+            }
             
             // Reset column ID counters
             setNextColumnId(Math.max(...newColumns.map(col => col.id)) + 1);
         }
-    }, [data.workflow_id, workflows]);
+    }, [data.workflow_id, workflows, data.useMultipleTables]);
 
     // Fungsi untuk menyimpan data ke localStorage
     const handleSaveLocal = () => {
@@ -396,11 +444,114 @@ export default function Create({ auth, userDivision, workflows }) {
             return;
         }
 
-        // Include table data in form submission only if useTableData is true
-        let tableDataFiltered = [];
-        if (data.useTableData && data.tableData && data.tableData.length > 0) {
-            tableDataFiltered = data.tableData.map((row) => {
-                // Convert all values to strings to ensure proper serialization
+        // Include table data in form submission
+
+// 🔹 Simpan ke localStorage
+useEffect(() => {
+    // Auto-save functionality disabled for now
+    // Can be re-enabled later if needed
+}, [data]);
+
+// 🔹 Auto-calc lama_cuti
+useEffect(() => {
+    if (!activeFields || activeFields.length === 0) return;
+    const fieldNames = activeFields.map((f) => String(f.name));
+    if (
+        fieldNames.includes("tanggal_mulai") &&
+        fieldNames.includes("tanggal_selesai")
+    ) {
+        const start = data?.data?.tanggal_mulai;
+        const end = data?.data?.tanggal_selesai;
+        if (start && end) {
+            try {
+                const d1 = new Date(start);
+                const d2 = new Date(end);
+                if (!isNaN(d1.getTime()) && !isNaN(d2.getTime())) {
+                    const diffMs =
+                        d2.setHours(12, 0, 0, 0) - d1.setHours(12, 0, 0, 0);
+                    const days =
+                        Math.floor(diffMs / (1000 * 60 * 60 * 24)) + 1;
+                    if (days > 0) {
+                        setData("data", {
+                            ...(data.data || {}),
+                            lama_cuti: String(days),
+                        });
+                    }
+                }
+            } catch (_) {}
+        }
+    }
+}, [data?.data?.tanggal_mulai, data?.data?.tanggal_selesai, activeFields]);
+
+const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (file.size > 10 * 1024 * 1024) {
+        Swal.fire({
+            icon: "warning",
+            title: "File terlalu besar",
+            text: "Ukuran maksimal file adalah 10MB.",
+        });
+        return;
+    }
+    setData("file", file);
+    setIsSaved(false);
+};
+
+const submit = (e) => {
+    if (e) e.preventDefault();
+
+    if (!data.workflow_id) {
+        Swal.fire({
+            icon: "warning",
+            title: "Validation Error",
+            text: "Document Type wajib dipilih sebelum mengirim pengajuan.",
+        });
+        return;
+    }
+
+    if (!data.title || data.title.trim() === "") {
+        Swal.fire({
+            icon: "warning",
+            title: "Validation Error",
+            text: "Judul wajib diisi sebelum mengirim pengajuan.",
+        });
+        return;
+    }
+
+    // Validate required dynamic fields
+    const requiredFields = documentFields.filter(
+        (field) => field.required && field.type !== "label"
+    );
+    const missingFields = [];
+
+    for (const field of requiredFields) {
+        const value = data.data?.[field.name];
+        if (!value || (typeof value === "string" && value.trim() === "")) {
+            missingFields.push(field.label);
+        }
+    }
+
+    if (missingFields.length > 0) {
+        Swal.fire({
+            icon: "warning",
+            title: "Validation Error",
+            text: `Field berikut wajib diisi: ${missingFields.join(", ")}`,
+        });
+        return;
+    }
+
+    // Include table data in form submission
+    let tableDataFiltered = [];
+    let tableColumnsFiltered = [];
+    let tablesData = [];
+
+    if (data.useMultipleTables) {
+        // Multiple tables mode
+        tablesData = data.tables.filter((table) => table.useTableData && table.tableData && table.tableData.length > 0).map((table) => ({
+            name: table.name,
+            columns: table.tableColumns,
+            data: table.tableData.map((row) => {
                 const cleanedRow = {};
                 Object.keys(row).forEach((key) => {
                     if (key === "id") {
@@ -410,68 +561,68 @@ export default function Create({ auth, userDivision, workflows }) {
                     }
                 });
                 return cleanedRow;
+            })
+        }));
+    } else {
+        // Single table mode
+        if (data.useTableData && data.tableData && data.tableData.length > 0) {
+            tableDataFiltered = data.tableData.map((row) => {
+                const cleanedRow = {};
+                Object.keys((row)).forEach((key) => {
+                    if (key === "id") {
+                        cleanedRow[key] = row[key];
+                    } else {
+                        cleanedRow[key] = String(row[key] || "");
+                    }
+                });
+                return cleanedRow;
             });
         }
+        if (data.useTableData && data.tableColumns && data.tableColumns.length > 0) {
+            tableColumnsFiltered = data.tableColumns;
+        }
+    }
 
-        Swal.fire({
-            title: "Kirim Pengajuan?",
-            text: "Pastikan data sudah benar sebelum dikirim.",
-            icon: "question",
-            showCancelButton: true,
-            confirmButtonText: "Kirim",
-            cancelButtonText: "Batal",
-        }).then((result) => {
-            if (result.isConfirmed) {
+    Swal.fire({
+        title: "Kirim Pengajuan?",
+        text: "Pastikan data sudah benar sebelum dikirim.",
+        icon: "question",
+        showCancelButton: true,
+        confirmButtonText: "Kirim",
+        cancelButtonText: "Batal",
+    }).then((result) => {
+        if (result.isConfirmed) {
+            // Test data dengan table information
+            const testData = {
+                workflow_id: data.workflow_id,
+                title: data.title,
+                description: data.description,
+                file: data.file,
+                data: data.data,
+                useMultipleTables: data.useMultipleTables,
+            };
+
+            // Add table data based on mode
+                if (data.useMultipleTables) {
+                    testData.tables = tablesData;
+                } else {
+                    if (tableDataFiltered && tableDataFiltered.length > 0) {
+                        testData.tableData = tableDataFiltered;
+                    }
+                    if (tableColumnsFiltered && tableColumnsFiltered.length > 0) {
+                        testData.tableColumns = tableColumnsFiltered;
+                    }
+                }
+
                 try {
                     // Show custom loading animation
                     showLoading("Mengirim pengajuan...");
 
-                    // Create FormData for file upload
-                    const formData = new FormData();
-                    
-                    // Add basic fields
-                    formData.append('workflow_id', data.workflow_id);
-                    formData.append('title', data.title);
-                    formData.append('description', data.description || '');
-                    
-                    // Add file if exists
-                    if (data.file) {
-                        console.log('Adding file to FormData:', data.file);
-                        formData.append('file', data.file);
-                    } else {
-                        console.log('No file to add');
-                    }
-                    
-                    // Add data as JSON string only if data exists and is not empty
-                    if (data.data && Object.keys(data.data).length > 0) {
-                        formData.append('data', JSON.stringify(data.data));
-                    }
-                    
-                    // Add table data if useTableData is true and data exists
-                    if (
-                        data.useTableData &&
-                        tableDataFiltered &&
-                        tableDataFiltered.length > 0
-                    ) {
-                        console.log('Adding tableData:', tableDataFiltered);
-                        formData.append('tableData', JSON.stringify(tableDataFiltered));
-                    }
-                    if (
-                        data.useTableData &&
-                        data.tableColumns &&
-                        data.tableColumns.length > 0
-                    ) {
-                        console.log('Adding tableColumns:', data.tableColumns);
-                        formData.append('tableColumns', JSON.stringify(data.tableColumns));
-                    }
-
                     fetchWithCsrf(route("submissions.store"), {
                         method: "POST",
-                        body: formData,
+                        body: JSON.stringify(testData),
                     })
                         .then((response) => {
-                            console.log('Response status:', response.status);
-                            console.log('Response headers:', response.headers);
                             if (!response.ok) {
                                 // Handle HTTP errors
                                 if (response.status === 422) {
@@ -846,22 +997,74 @@ export default function Create({ auth, userDivision, workflows }) {
                                             setIsSaved={setIsSaved}
                                         />
                                     )}
+                                    
+                                    {/* Table Mode Selection */}
+                                    <div className="mt-8">
+                                        <div className="flex items-center gap-4 mb-6">
+                                            <div className="flex items-center gap-2">
+                                                <input
+                                                    type="radio"
+                                                    id="singleTable"
+                                                    checked={!data.useMultipleTables}
+                                                    onChange={() => {
+                                                        setData("useMultipleTables", false);
+                                                        setIsSaved(false);
+                                                    }}
+                                                    className="text-blue-600 focus:ring-blue-500"
+                                                />
+                                                <Label
+                                                    htmlFor="singleTable"
+                                                    className="text-sm font-medium text-gray-700"
+                                                >
+                                                    Tabel Tunggal
+                                                </Label>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <input
+                                                    type="radio"
+                                                    id="multipleTables"
+                                                    checked={data.useMultipleTables}
+                                                    onChange={() => {
+                                                        setData("useMultipleTables", true);
+                                                        setIsSaved(false);
+                                                    }}
+                                                    className="text-blue-600 focus:ring-blue-500"
+                                                />
+                                                <Label
+                                                    htmlFor="multipleTables"
+                                                    className="text-sm font-medium text-gray-700"
+                                                >
+                                                    Multiple Tabel
+                                                </Label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
                                     {/* Dynamic Excel-like Table */}
-                                    <TableExcel
-                                        data={data}
-                                        setData={setData}
-                                        setIsSaved={setIsSaved}
-                                        newColumnName={newColumnName}
-                                        setNewColumnName={setNewColumnName}
-                                        addColumn={addColumn}
-                                        editingColumn={editingColumn}
-                                        setEditingColumn={setEditingColumn}
-                                        updateCellData={updateCellData}
-                                        updateColumnName={updateColumnName}
-                                        deleteColumn={deleteColumn}
-                                        addRow={addRow}
-                                        deleteRow={deleteRow}
-                                    />
+                                    {data.useMultipleTables ? (
+                                        <MultiTableManager
+                                            tables={data.tables}
+                                            setTables={(tables) => setData("tables", tables)}
+                                            setIsSaved={setIsSaved}
+                                            getDefaultColumns={getDefaultColumns}
+                                        />
+                                    ) : (
+                                        <TableExcel
+                                            data={data}
+                                            setData={setData}
+                                            setIsSaved={setIsSaved}
+                                            newColumnName={newColumnName}
+                                            setNewColumnName={setNewColumnName}
+                                            addColumn={addColumn}
+                                            editingColumn={editingColumn}
+                                            setEditingColumn={setEditingColumn}
+                                            updateCellData={updateCellData}
+                                            updateColumnName={updateColumnName}
+                                            deleteColumn={deleteColumn}
+                                            addRow={addRow}
+                                            deleteRow={deleteRow}
+                                        />
+                                    )}
 
                                     {/* Submit */}
                                     <div className="flex items-center justify-end gap-4 mt-4">

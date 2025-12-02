@@ -387,13 +387,34 @@ class SubmissionController extends Controller
      *  ------------------------ */
     public function store(Request $request)
     {
-        $validated = $request->validate([
-            'workflow_id' => 'required|exists:workflows,id',
-            'title' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'file' => 'nullable|file|max:10240',
-            'data' => 'nullable|array',
-        ]);
+        // Check if this is FormData request (has file or content-type is multipart)
+        $isFormData = $request->hasFile('file') || $request->header('Content-Type') && str_contains($request->header('Content-Type'), 'multipart/form-data');
+        
+        if ($isFormData) {
+            $validated = $request->validate([
+                'workflow_id' => 'required|exists:workflows,id',
+                'title' => 'required|string|max:255',
+                'description' => 'nullable|string',
+                'file' => 'nullable|file|max:10240',
+                'data' => 'nullable|string', // Allow string for FormData JSON
+            ]);
+            
+            // Convert JSON string to array for FormData requests
+            $dataPayload = [];
+            if (!empty($validated['data'])) {
+                $dataPayload = json_decode($validated['data'], true) ?? [];
+            }
+        } else {
+            $validated = $request->validate([
+                'workflow_id' => 'required|exists:workflows,id',
+                'title' => 'required|string|max:255',
+                'description' => 'nullable|string',
+                'file' => 'nullable|file|max:10240',
+                'data' => 'nullable|array',
+            ]);
+            
+            $dataPayload = $validated['data'] ?? [];
+        }
 
 
         $user = Auth::user();
@@ -410,7 +431,6 @@ class SubmissionController extends Controller
 
         // Validate required dynamic fields from Document Type
         $docFields = $workflow->document?->fields ?? collect();
-        $dataPayload = $validated['data'] ?? [];
         
         // Skip validation if no fields are defined for this document type
         if ($docFields->isNotEmpty()) {
@@ -418,12 +438,34 @@ class SubmissionController extends Controller
             $tableData = $request->input('tableData');
             $tableColumns = $request->input('tableColumns');
             
-            if (!empty($tableData) && is_array($tableData)) {
-                $dataPayload['tableData'] = $tableData;
-            }
-            
-            if (!empty($tableColumns) && is_array($tableColumns)) {
-                $dataPayload['tableColumns'] = $tableColumns;
+            // For FormData requests, table data comes as JSON strings
+            if ($isFormData) {
+                $tableData = $request->input('tableData');
+                $tableColumns = $request->input('tableColumns');
+                
+                // Decode JSON strings from FormData
+                if (!empty($tableData)) {
+                    $decodedTableData = json_decode($tableData, true);
+                    if (json_last_error() === JSON_ERROR_NONE && is_array($decodedTableData)) {
+                        $dataPayload['tableData'] = $decodedTableData;
+                    }
+                }
+                
+                if (!empty($tableColumns)) {
+                    $decodedTableColumns = json_decode($tableColumns, true);
+                    if (json_last_error() === JSON_ERROR_NONE && is_array($decodedTableColumns)) {
+                        $dataPayload['tableColumns'] = $decodedTableColumns;
+                    }
+                }
+            } else {
+                // Normal form requests (Inertia)
+                if (!empty($tableData) && is_array($tableData)) {
+                    $dataPayload['tableData'] = $tableData;
+                }
+                
+                if (!empty($tableColumns) && is_array($tableColumns)) {
+                    $dataPayload['tableColumns'] = $tableColumns;
+                }
             }
             
             // Also try to process JSON strings within data object (fallback)
@@ -472,12 +514,30 @@ class SubmissionController extends Controller
             $tableData = $request->input('tableData');
             $tableColumns = $request->input('tableColumns');
             
-            if (!empty($tableData) && is_array($tableData)) {
-                $dataPayload['tableData'] = $tableData;
-            }
-            
-            if (!empty($tableColumns) && is_array($tableColumns)) {
-                $dataPayload['tableColumns'] = $tableColumns;
+            // For FormData requests, table data comes as JSON strings
+            if ($isFormData) {
+                if (!empty($tableData)) {
+                    $decodedTableData = json_decode($tableData, true);
+                    if (json_last_error() === JSON_ERROR_NONE && is_array($decodedTableData)) {
+                        $dataPayload['tableData'] = $decodedTableData;
+                    }
+                }
+                
+                if (!empty($tableColumns)) {
+                    $decodedTableColumns = json_decode($tableColumns, true);
+                    if (json_last_error() === JSON_ERROR_NONE && is_array($decodedTableColumns)) {
+                        $dataPayload['tableColumns'] = $decodedTableColumns;
+                    }
+                }
+            } else {
+                // Normal form requests (Inertia)
+                if (!empty($tableData) && is_array($tableData)) {
+                    $dataPayload['tableData'] = $tableData;
+                }
+                
+                if (!empty($tableColumns) && is_array($tableColumns)) {
+                    $dataPayload['tableColumns'] = $tableColumns;
+                }
             }
             
             // Also try to process JSON strings within data object (fallback)
@@ -700,20 +760,20 @@ class SubmissionController extends Controller
             ->generate($verifyUrl);
         $fields = $submission->workflow?->document?->fields ?? collect();
 
-        // Approved By hanya jika step FINAL sudah approved
-        $approvedBy = null;
-        $approvedAt = null;
+        // Kumpulkan semua approver yang sudah approve
+        $approvers = [];
         if ($submission->workflow && $submission->workflow->steps && $submission->workflowSteps) {
-            $finalStep = $submission->workflow->steps->firstWhere('is_final_step', true);
-            $finalOrder = $finalStep?->step_order ?? ($submission->workflow->steps->max('step_order'));
-            if ($finalOrder !== null) {
-                $finalSubmissionStep = $submission->workflowSteps
-                    ->where('step_order', $finalOrder)
-                    ->where('status', 'approved')
-                    ->first();
-                if ($finalSubmissionStep) {
-                    $approvedBy = $finalSubmissionStep->approver?->name;
-                    $approvedAt = $finalSubmissionStep->approved_at ? (string) $finalSubmissionStep->approved_at : null;
+            $approvedSteps = $submission->workflowSteps
+                ->where('status', 'approved')
+                ->sortBy('step_order');
+                
+            foreach ($approvedSteps as $step) {
+                if ($step->approver && $step->approved_at) {
+                    $approvers[] = [
+                        'name' => $step->approver->name,
+                        'role' => $step->division->name ?? $step->role ?? 'Unknown',
+                        'approved_at' => (string) $step->approved_at
+                    ];
                 }
             }
         }
@@ -722,8 +782,7 @@ class SubmissionController extends Controller
             'submission' => $submission,
             'fields' => $fields,
             'data' => $submission->data_json ?? [],
-            'approvedBy' => $approvedBy,
-            'approvedAt' => $approvedAt,
+            'approvers' => $approvers,
             'qrSvg' => $qrSvg,
             'verifyUrl' => $verifyUrl,
         ])->render();
@@ -851,8 +910,24 @@ class SubmissionController extends Controller
         $submission->save();
 
         if ($isFinal) {
+            // Kumpulkan semua approver yang sudah approve untuk stamping
+            $approvers = [];
+            $approvedSteps = $submission->workflowSteps
+                ->where('status', 'approved')
+                ->sortBy('step_order');
+                
+            foreach ($approvedSteps as $step) {
+                if ($step->approver && $step->approved_at) {
+                    $approvers[] = [
+                        'name' => $step->approver->name,
+                        'role' => $step->division->name ?? $step->role ?? 'Unknown',
+                        'approved_at' => (string) $step->approved_at
+                    ];
+                }
+            }
+            
             // Proses stamping secara sinkron agar file stamped tersedia segera setelah approve
-            StampPdfOnDecision::dispatchSync($submission->id, 'approved', $user->name, now()->toDateTimeString());
+            StampPdfOnDecision::dispatchSync($submission->id, 'approved', $approvers);
         }
 
         if (!Auth::user()->can('view', $submission)) {
@@ -998,7 +1073,14 @@ public function reject(Request $request, Submission $submission)
     $submission->status = 'rejected';
     $submission->save();
 
-    dispatch(new StampPdfOnDecision($submission->id, 'rejected', $user->name, now()->toDateTimeString()));
+    // Untuk reject, hanya kirimkan rejector sebagai approver
+    $rejectApprovers = [[
+        'name' => $user->name,
+        'role' => $currentStep->division->name ?? $user->role ?? 'Unknown',
+        'approved_at' => now()->toDateTimeString()
+    ]];
+    
+    dispatch(new StampPdfOnDecision($submission->id, 'rejected', $rejectApprovers));
 
     if (!Auth::user()->can('view', $submission)) {
             // Check if this is an API request
