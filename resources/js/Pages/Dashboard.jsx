@@ -27,7 +27,6 @@ export default function Dashboard({
     canApprove,
     pendingItems = [],
 }) {
-    console.log(pendingItems);
     return (
         <AuthenticatedLayout
             header={
@@ -122,19 +121,19 @@ export default function Dashboard({
                         {auth.user.role !== "direktur" && (
                             <Card
                                 style={{ borderRadius: "16px" }}
-                                className="group border border-border hover:border-primary/50 hover:shadow-xl transition-all duration-300 bg-card overflow-hidden relative"
+                                className="group border border-border hover:border-blue/50 hover:shadow-xl transition-all duration-300 bg-card overflow-hidden relative"
                             >
-                                <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-500" />
+                                <div className="absolute top-0 right-0 w-32 h-32 bg-blue/5 rounded-full -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-500" />
                                 <CardHeader className="flex flex-row items-center justify-between pb-2 relative z-10">
                                     <CardTitle className="text-sm font-semibold text-muted-foreground">
                                         Total Pengajuan
                                     </CardTitle>
-                                    <div className="p-2.5 bg-primary/10 rounded-lg group-hover:bg-primary/20 transition-colors">
-                                        <ChartPie className="w-5 h-5 text-primary group-hover:scale-110 transition-transform" />
+                                    <div className="p-2.5 bg-blue/10 rounded-lg group-hover:bg-blue/20 transition-colors">
+                                        <ChartPie className="w-5 h-5 text-blue group-hover:scale-110 transition-transform" />
                                     </div>
                                 </CardHeader>
                                 <CardContent className="relative z-10">
-                                    <div className="text-4xl font-bold text-primary">
+                                    <div className="text-4xl font-bold text-blue">
                                         {stats.total}
                                     </div>
                                     <p className="text-xs text-muted-foreground mt-2">
@@ -147,15 +146,15 @@ export default function Dashboard({
                         {/* Menunggu Persetujuan */}
                         <Card
                             style={{ borderRadius: "16px" }}
-                            className="group border border-border hover:border-primary-500/50 hover:shadow-xl transition-all duration-300 bg-card overflow-hidden relative"
+                            className="group border border-border hover:border-blue-500/50 hover:shadow-xl transition-all duration-300 bg-card overflow-hidden relative"
                         >
-                            <div className="absolute top-0 right-0 w-32 h-32 bg-primary-500/5 rounded-full -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-500" />
+                            <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-500" />
                             <CardHeader className="flex flex-row items-center justify-between pb-2 relative z-10">
                                 <CardTitle className="text-sm font-semibold text-muted-foreground">
                                     Menunggu Persetujuan
                                 </CardTitle>
                                 <div className="p-2.5 bg-primary-500/10 rounded-lg group-hover:bg-primary-500/20 transition-colors">
-                                    <Clock className="w-5 h-5 text-primary-600 dark:text-primary-400 group-hover:scale-110 transition-transform" />
+                                    <Clock className="w-5 h-5 text-primary-600 dark:text-blue-400 group-hover:scale-110 transition-transform" />
                                 </div>
                             </CardHeader>
                             <CardContent className="relative z-10">
@@ -198,9 +197,9 @@ export default function Dashboard({
                         {/* Ditolak */}
                         <Card
                             style={{ borderRadius: "16px" }}
-                            className="group border border-border hover:border-destructive/50 hover:shadow-xl transition-all duration-300 bg-card overflow-hidden relative"
+                            className="group border border-border hover:border-red/50 hover:shadow-xl transition-all duration-300 bg-card overflow-hidden relative"
                         >
-                            <div className="absolute top-0 right-0 w-32 h-32 bg-destructive/5 rounded-full -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-500" />
+                            <div className="absolute top-0 right-0 w-32 h-32 bg-red-500/5 rounded-full -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-500" />
                             <CardHeader className="flex flex-row items-center justify-between pb-2 relative z-10">
                                 <CardTitle className="text-sm font-semibold text-muted-foreground">
                                     Ditolak
