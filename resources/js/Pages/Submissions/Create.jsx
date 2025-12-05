@@ -22,7 +22,7 @@ import { fetchWithCsrf } from "@/utils/csrfToken";
 
 export default function Create({ auth, userDivision, workflows }) {
     const { showLoading, hideLoading } = useLoading();
-    
+
     // Default columns configuration
     const getDefaultColumns = (workflowId = null) => {
         const defaultColumns = [
@@ -30,19 +30,23 @@ export default function Create({ auth, userDivision, workflows }) {
             { id: 2, name: "Jumlah", key: "jumlah" },
             { id: 3, name: "Keterangan", key: "keterangan" },
         ];
-        
+
         // Get selected workflow and document
         if (workflowId) {
-            const selectedWorkflow = workflows.find(w => w.id === parseInt(workflowId));
+            const selectedWorkflow = workflows.find(
+                (w) => w.id === parseInt(workflowId)
+            );
             if (selectedWorkflow?.document?.default_columns) {
-                return selectedWorkflow.document.default_columns.map((col, index) => ({
-                    id: index + 1,
-                    name: col.name || `Column ${index + 1}`,
-                    key: col.key || `col_${index + 1}`,
-                }));
+                return selectedWorkflow.document.default_columns.map(
+                    (col, index) => ({
+                        id: index + 1,
+                        name: col.name || `Column ${index + 1}`,
+                        key: col.key || `col_${index + 1}`,
+                    })
+                );
             }
         }
-        
+
         return defaultColumns;
     };
 
@@ -60,12 +64,8 @@ export default function Create({ auth, userDivision, workflows }) {
     // Initialize tableData with default columns
     useEffect(() => {
         if (data.tableData.length === 0 && data.tableColumns.length > 0) {
-            const initialData = [
-                { id: 1 },
-                { id: 2 },
-                { id: 3 },
-            ].map(row => {
-                data.tableColumns.forEach(col => {
+            const initialData = [{ id: 1 }, { id: 2 }, { id: 3 }].map((row) => {
+                data.tableColumns.forEach((col) => {
                     row[col.key] = "";
                 });
                 return row;
@@ -86,21 +86,30 @@ export default function Create({ auth, userDivision, workflows }) {
         if (data.workflow_id) {
             const newColumns = getDefaultColumns(data.workflow_id);
             setData("tableColumns", newColumns);
-            
+
             // Update existing table data to match new columns
-            const updatedData = data.tableData.map(row => {
+            const updatedData = data.tableData.map((row) => {
                 const newRow = { id: row.id };
-                newColumns.forEach(col => {
+                newColumns.forEach((col) => {
                     newRow[col.key] = row[col.key] || "";
                 });
                 return newRow;
             });
             setData("tableData", updatedData);
-            
+
             // Reset column ID counters
-            setNextColumnId(Math.max(...newColumns.map(col => col.id)) + 1);
+            setNextColumnId(Math.max(...newColumns.map((col) => col.id)) + 1);
         }
     }, [data.workflow_id, workflows]);
+
+    // Fungsi untuk membersihkan data localStorage
+    const clearLocalStorageData = () => {
+        try {
+            localStorage.removeItem("createFormData");
+        } catch (err) {
+            console.error("Gagal membersihkan localStorage:", err);
+        }
+    };
 
     // Fungsi untuk menyimpan data ke localStorage
     const handleSaveLocal = () => {
@@ -280,23 +289,38 @@ export default function Create({ auth, userDivision, workflows }) {
         if (savedData) {
             try {
                 const parsed = JSON.parse(savedData);
-                setData(parsed);
 
-                // Load table data if exists
-                if (parsed.tableData) {
-                    setNextId(
-                        Math.max(...parsed.tableData.map((r) => r.id)) + 1
-                    );
-                }
-                if (parsed.tableColumns) {
-                    setNextColumnId(
-                        Math.max(...parsed.tableColumns.map((c) => c.id)) + 1
-                    );
-                }
+                // Validasi data yang dimuat - hanya load jika ada data yang valid
+                if (
+                    parsed &&
+                    (parsed.title ||
+                        parsed.workflow_id ||
+                        (parsed.data && Object.keys(parsed.data).length > 0))
+                ) {
+                    setData(parsed);
 
-                setIsSaved(true);
+                    // Load table data if exists
+                    if (parsed.tableData && parsed.tableData.length > 0) {
+                        setNextId(
+                            Math.max(...parsed.tableData.map((r) => r.id)) + 1
+                        );
+                    }
+                    if (parsed.tableColumns && parsed.tableColumns.length > 0) {
+                        setNextColumnId(
+                            Math.max(...parsed.tableColumns.map((c) => c.id)) +
+                                1
+                        );
+                    }
+
+                    setIsSaved(true);
+                } else {
+                    // Clear invalid data from localStorage
+                    localStorage.removeItem("createFormData");
+                }
             } catch (e) {
                 console.error("Gagal memuat data dari localStorage:", e);
+                // Clear corrupted data
+                localStorage.removeItem("createFormData");
             }
         }
     }, []);
@@ -428,41 +452,47 @@ export default function Create({ auth, userDivision, workflows }) {
 
                     // Create FormData for file upload
                     const formData = new FormData();
-                    
+
                     // Add basic fields
-                    formData.append('workflow_id', data.workflow_id);
-                    formData.append('title', data.title);
-                    formData.append('description', data.description || '');
-                    
+                    formData.append("workflow_id", data.workflow_id);
+                    formData.append("title", data.title);
+                    formData.append("description", data.description || "");
+
                     // Add file if exists
                     if (data.file) {
-                        console.log('Adding file to FormData:', data.file);
-                        formData.append('file', data.file);
+                        console.log("Adding file to FormData:", data.file);
+                        formData.append("file", data.file);
                     } else {
-                        console.log('No file to add');
+                        console.log("No file to add");
                     }
-                    
+
                     // Add data as JSON string only if data exists and is not empty
                     if (data.data && Object.keys(data.data).length > 0) {
-                        formData.append('data', JSON.stringify(data.data));
+                        formData.append("data", JSON.stringify(data.data));
                     }
-                    
+
                     // Add table data if useTableData is true and data exists
                     if (
                         data.useTableData &&
                         tableDataFiltered &&
                         tableDataFiltered.length > 0
                     ) {
-                        console.log('Adding tableData:', tableDataFiltered);
-                        formData.append('tableData', JSON.stringify(tableDataFiltered));
+                        console.log("Adding tableData:", tableDataFiltered);
+                        formData.append(
+                            "tableData",
+                            JSON.stringify(tableDataFiltered)
+                        );
                     }
                     if (
                         data.useTableData &&
                         data.tableColumns &&
                         data.tableColumns.length > 0
                     ) {
-                        console.log('Adding tableColumns:', data.tableColumns);
-                        formData.append('tableColumns', JSON.stringify(data.tableColumns));
+                        console.log("Adding tableColumns:", data.tableColumns);
+                        formData.append(
+                            "tableColumns",
+                            JSON.stringify(data.tableColumns)
+                        );
                     }
 
                     fetchWithCsrf(route("submissions.store"), {
@@ -470,8 +500,8 @@ export default function Create({ auth, userDivision, workflows }) {
                         body: formData,
                     })
                         .then((response) => {
-                            console.log('Response status:', response.status);
-                            console.log('Response headers:', response.headers);
+                            console.log("Response status:", response.status);
+                            console.log("Response headers:", response.headers);
                             if (!response.ok) {
                                 // Handle HTTP errors
                                 if (response.status === 422) {
@@ -517,6 +547,8 @@ export default function Create({ auth, userDivision, workflows }) {
                                     timer: 2000,
                                     showConfirmButton: false,
                                 }).then(() => {
+                                    // Clear localStorage data sebelum redirect
+                                    clearLocalStorageData();
                                     // Redirect ke fordivision menggunakan URL dari response
                                     const redirectUrl =
                                         data.redirect_url ||
@@ -593,7 +625,7 @@ export default function Create({ auth, userDivision, workflows }) {
                         {/* Header */}
                         <div className="flex items-center justify-between mb-6">
                             <h1 className="md:text-2xl ml-2 text-sm mt-5 font-semibold text-gray-800">
-                                New Pengajuan
+                                Pengajuan Baru
                             </h1>
                             <div className="flex items-center gap-4">
                                 <span
@@ -797,7 +829,8 @@ export default function Create({ auth, userDivision, workflows }) {
 
                                             <div>
                                                 <Label>
-                                                    Deskripsi Pengajuan (Opsional)
+                                                    Deskripsi Pengajuan
+                                                    (Opsional)
                                                 </Label>
                                                 <Textarea
                                                     style={{

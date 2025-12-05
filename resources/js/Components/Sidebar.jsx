@@ -33,11 +33,13 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import { useLoading } from "./GlobalLoading";
+import { useOptimizedNavigation } from "@/Hooks/useOptimizedNavigation";
 
 export default function Sidebar({ open }) {
     const [logoutDialog, setLogoutDialog] = useState(false);
     const user = usePage().props.auth.user;
     const { showLogoutAnimation, hideLogoutAnimation } = useLoading();
+    const { navigateWithCache } = useOptimizedNavigation();
 
     useEffect(() => {
         // Listen for Inertia events to handle logout animation
@@ -176,10 +178,10 @@ export default function Sidebar({ open }) {
                     {navItems.map((item) => (
                         <Tooltip key={item.label}>
                             <TooltipTrigger asChild>
-                                <Link
-                                    href={item.href}
+                                <div
+                                    onClick={() => navigateWithCache(item.href)}
                                     className={cn(
-                                        "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-all",
+                                        "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-all cursor-pointer",
                                         item.active
                                             ? "bg-sidebar-accent text-sidebar-accent-foreground shadow-sm"
                                             : "text-muted-foreground hover:bg-sidebar-accent/50 hover:text-foreground"
@@ -187,7 +189,7 @@ export default function Sidebar({ open }) {
                                 >
                                     {item.icon}
                                     {open && <span>{item.label}</span>}
-                                </Link>
+                                </div>
                             </TooltipTrigger>
                             {!open && (
                                 <TooltipContent side="right">

@@ -1,10 +1,48 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import { Head, Link, router } from "@inertiajs/react";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
 import Header from "@/Components/Header";
+import DateFilter from "@/Components/DateFilter";
+import { isWithinInterval, parseISO } from "date-fns";
+import { Separator } from "@/Components/ui/separator";
+import Footer from "@/Components/Footer";
 
 export default function History({ auth, submissions }) {
-    const rows = useMemo(() => submissions?.data ?? [], [submissions]);
+    const [dateFilter, setDateFilter] = useState({
+        startDate: null,
+        endDate: null,
+        mode: null,
+    });
+
+    const handleDateFilterChange = (filterData) => {
+        setDateFilter(filterData);
+    };
+    const rows = useMemo(() => {
+        let result = submissions?.data ?? [];
+
+        // Apply date filter
+        if (dateFilter.mode === "single" && dateFilter.startDate) {
+            result = result.filter((s) => {
+                const createdDate = new Date(s.created_at);
+                const filterDate = new Date(dateFilter.startDate);
+                return createdDate.toDateString() === filterDate.toDateString();
+            });
+        } else if (
+            dateFilter.mode === "range" &&
+            dateFilter.startDate &&
+            dateFilter.endDate
+        ) {
+            result = result.filter((s) => {
+                const createdDate = parseISO(s.created_at);
+                return isWithinInterval(createdDate, {
+                    start: dateFilter.startDate,
+                    end: dateFilter.endDate,
+                });
+            });
+        }
+
+        return result;
+    }, [submissions, dateFilter]);
 
     const formatDate = (d) => {
         if (!d) return "-";
@@ -65,9 +103,16 @@ export default function History({ auth, submissions }) {
 
                 <div className="w-full p-8">
                     <div className="mx-auto bg-card shadow-sm rounded-2xl p-8 border border-border/50 backdrop-blur-sm">
-                        <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-3">
+                        <div className="flex flex-col gap-4 mb-6">
                             <div className="text-lg font-medium">
                                 Riwayat Pengajuan
+                            </div>
+                            <div className="flex flex-col md:flex-row justify-between items-stretch md:items-center gap-3">
+                                <DateFilter
+                                    onFilterChange={handleDateFilterChange}
+                                    placeholder="Pilih tanggal..."
+                                    label="Filter Tanggal"
+                                />
                             </div>
                         </div>
 
@@ -191,6 +236,9 @@ export default function History({ auth, submissions }) {
                     </div>
                 </div>
             </div>
+            <Separator className="my-10" />
+            {/* Footer */}
+            <Footer />
         </AuthenticatedLayout>
     );
 }

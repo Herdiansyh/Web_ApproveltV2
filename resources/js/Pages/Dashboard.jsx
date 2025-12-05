@@ -10,11 +10,24 @@ import {
 } from "@/Components/ui/card";
 import { Button } from "@/Components/ui/button";
 import { Separator } from "@/Components/ui/separator";
-import { ChartPie, CheckCircle, Clock, Bell, ArrowRight, XCircle } from "lucide-react";
+import {
+    ChartPie,
+    CheckCircle,
+    Clock,
+    Bell,
+    ArrowRight,
+    XCircle,
+} from "lucide-react";
 import Header from "@/Components/Header";
 import Footer from "@/Components/Footer";
 
-export default function Dashboard({ auth, stats, canApprove, pendingItems = [] }) {
+export default function Dashboard({
+    auth,
+    stats,
+    canApprove,
+    pendingItems = [],
+}) {
+    console.log(pendingItems);
     return (
         <AuthenticatedLayout
             header={
@@ -35,13 +48,16 @@ export default function Dashboard({ auth, stats, canApprove, pendingItems = [] }
                     <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                         <div>
                             <h1 className="sm:text-4xl text-2xl font-bold text-foreground">
-                                Hai, Pak {auth.user.name}! 👋
+                                Hai {auth.user.name}! 👋
                             </h1>
                             <p className="text-muted-foreground text-base mt-2">
                                 Selamat datang kembali di sistem e-Approval.
                             </p>
                         </div>
-                        <div className="bg-card border border-border px-5 py-2.5 rounded-xl text-sm shadow-sm">
+                        <div
+                            style={{ borderRadius: "15px" }}
+                            className="bg-card border border-border px-5 py-2.5 text-sm shadow-sm"
+                        >
                             <span className="font-medium text-foreground">
                                 {new Date().toLocaleDateString("id-ID", {
                                     weekday: "long",
@@ -62,7 +78,7 @@ export default function Dashboard({ auth, stats, canApprove, pendingItems = [] }
                             {/* Decorative elements */}
                             <div className="absolute -top-10 -right-10 h-40 w-40 rounded-full bg-blue-500/10 blur-3xl" />
                             <div className="absolute -bottom-10 -left-10 h-32 w-32 rounded-full bg-blue-500/5 blur-2xl" />
-                            
+
                             <CardContent className="p-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4 relative z-10">
                                 <div className="flex items-start gap-4">
                                     <div
@@ -73,10 +89,11 @@ export default function Dashboard({ auth, stats, canApprove, pendingItems = [] }
                                     </div>
                                     <div>
                                         <CardTitle className="text-xl font-bold text-foreground mb-1">
-                                            Ada {(pendingItems?.length || 0)} pengajuan menunggumu 🚀
+                                            Ada pengajuan menunggumu 🚀
                                         </CardTitle>
                                         <CardDescription className="text-sm text-muted-foreground">
-                                            Mohon review dan ambil tindakan pada pengajuan berikut.
+                                            Mohon review dan ambil tindakan pada
+                                            pengajuan berikut.
                                         </CardDescription>
                                     </div>
                                 </div>
@@ -86,7 +103,9 @@ export default function Dashboard({ auth, stats, canApprove, pendingItems = [] }
                                     asChild
                                     className="bg-gradient-to-r from-blue-600 to-blue-500 text-white hover:from-blue-700 hover:to-blue-600 shadow-md hover:shadow-lg transition-all duration-200 hover:scale-105 active:scale-95 font-medium"
                                 >
-                                    <Link href={route("submissions.forDivision")}>
+                                    <Link
+                                        href={route("submissions.forDivision")}
+                                    >
                                         <span className="flex items-center gap-2">
                                             Buka Daftar Review
                                             <ArrowRight className="h-4 w-4" />

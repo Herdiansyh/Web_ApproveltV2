@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
 import { Head, Link, router } from "@inertiajs/react";
 import { Input } from "@/Components/ui/input";
@@ -22,17 +22,115 @@ import { Eye, MoreVertical, Pencil, Trash2, Search } from "lucide-react";
 import PrimaryButton from "@/Components/PrimaryButton";
 import { Separator } from "@/Components/ui/separator";
 import Footer from "@/Components/Footer";
+import DateFilter from "@/Components/DateFilter";
+import { isWithinInterval, parseISO, format } from "date-fns";
 
 export default function Index({ auth, submissions, userDivision }) {
     const [filter, setFilter] = useState("");
+    const [dateFilter, setDateFilter] = useState({
+        startDate: null,
+        endDate: null,
+        mode: null,
+    });
     const [confirmOpen, setConfirmOpen] = useState(false);
     const [toDeleteId, setToDeleteId] = useState(null);
 
-    const handleFilterChange = (e) => setFilter(e.target.value);
+    // Initialize filter state from URL params on component mount
+    useEffect(() => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const searchFilter = urlParams.get('search');
+        const startDate = urlParams.get('start_date');
+        const endDate = urlParams.get('end_date');
+        
+        if (searchFilter) {
+            setFilter(searchFilter);
+        }
+        
+        if (startDate || endDate) {
+            setDateFilter({
+                startDate: startDate ? new Date(startDate) : null,
+                endDate: endDate ? new Date(endDate) : null,
+                mode: startDate && endDate ? "range" : startDate ? "single" : null,
+            });
+        }
+    }, []);
 
-    const filteredSubmissions = submissions.data.filter((s) =>
-        s.title.toLowerCase().includes(filter.toLowerCase())
-    );
+    const handleFilterChange = (e) => {
+        const newFilter = e.target.value;
+        setFilter(newFilter);
+        updateURLWithFilters(newFilter, dateFilter);
+    };
+
+    const handleDateFilterChange = (filterData) => {
+        setDateFilter(filterData);
+        updateURLWithFilters(filter, filterData);
+    };
+
+    const updateURLWithFilters = (searchFilter, dateFilterData) => {
+        const params = new URLSearchParams();
+        
+        if (searchFilter) {
+            params.set('search', searchFilter);
+        }
+        
+        if (dateFilterData.startDate) {
+            params.set('start_date', format(dateFilterData.startDate, 'yyyy-MM-dd'));
+        }
+        
+        if (dateFilterData.endDate) {
+            params.set('end_date', format(dateFilterData.endDate, 'yyyy-MM-dd'));
+        }
+        
+        const queryString = params.toString();
+        const newPath = queryString ? `${window.location.pathname}?${queryString}` : window.location.pathname;
+        
+        router.get(newPath, {}, { preserveState: true, preserveScroll: true });
+    };
+
+    const clearAllFilters = () => {
+        setFilter("");
+        setDateFilter({
+            startDate: null,
+            endDate: null,
+            mode: null,
+        });
+        router.get(window.location.pathname, {}, { preserveState: true, preserveScroll: true });
+    };
+
+    const filteredSubmissions = useMemo(() => {
+        // If we have server-side filtered data, use it directly
+        if (submissions.data && submissions.data.length > 0) {
+            return submissions.data;
+        }
+        
+        // Fallback to client-side filtering for backward compatibility
+        let result = submissions.data ? submissions.data.filter((s) =>
+            s.title.toLowerCase().includes(filter.toLowerCase())
+        ) : [];
+
+        // Apply date filter
+        if (dateFilter.mode === "single" && dateFilter.startDate) {
+            result = result.filter((s) => {
+                const createdDate = parseISO(s.created_at);
+                const filterDate = new Date(dateFilter.startDate);
+                filterDate.setHours(0, 0, 0, 0);
+                createdDate.setHours(0, 0, 0, 0);
+                return createdDate.getTime() === filterDate.getTime();
+            });
+        } else if (dateFilter.mode === "range" && dateFilter.startDate && dateFilter.endDate) {
+            result = result.filter((s) => {
+                const createdDate = parseISO(s.created_at);
+                const start = new Date(dateFilter.startDate);
+                const end = new Date(dateFilter.endDate);
+                start.setHours(0, 0, 0, 0);
+                end.setHours(23, 59, 59, 999);
+                return createdDate >= start && createdDate <= end;
+            });
+        }
+
+        return result;
+    }, [filter, dateFilter, submissions.data]);
+
     console.log(submissions);
 
     return (
@@ -49,34 +147,41 @@ export default function Index({ auth, submissions, userDivision }) {
                 <Header />
                 <div className="w-full p-8">
                     <div className=" mx-auto bg-card shadow-sm rounded-2xl p-8 border border-border/50 backdrop-blur-sm">
-                        <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-3">
-                            <h1 className="md:text-2xl text-sm mt-5 font-semibold text-gray-800">
+                        <div className="flex flex-col gap-4 mb-6">
+                            <h1 className="md:text-2xl text-sm font-semibold text-gray-800">
                                 📁 Daftar Pengajuan Selesai
                             </h1>
-                            <div className="relative w-full md:w-1/3">
-                                <Search className="absolute left-3 top-2.5 w-4 h-4 text-muted-foreground" />
-                                <Input
-                                    type="text"
-                                    style={{ borderRadius: "15px" }}
-                                    placeholder="Cari dokumen..."
-                                    value={filter}
-                                    onChange={handleFilterChange}
-                                    className="pl-9 focus:ring-primary/60 focus:border-primary text-xs sm:text-sm"
+                            <div className="flex flex-col md:flex-row justify-between items-stretch md:items-center gap-3">
+                                <div className="relative flex-1">
+                                    <Search className="absolute left-3 top-2.5 w-4 h-4 text-muted-foreground" />
+                                    <Input
+                                        type="text"
+                                        style={{ borderRadius: "15px" }}
+                                        placeholder="Cari dokumen..."
+                                        value={filter}
+                                        onChange={handleFilterChange}
+                                        className="pl-9 focus:ring-primary/60 focus:border-primary text-xs sm:text-sm"
+                                    />
+                                </div>
+                                <DateFilter
+                                    onFilterChange={handleDateFilterChange}
+                                    placeholder="Pilih tanggal..."
+                                    label="Filter Tanggal"
                                 />
-                            </div>
-                            <div className="w-full md:w-1/6">
-                                {auth.user.role === "employee" && (
-                                    <Link href={route("submissions.create")}>
-                                        <Button
-                                            style={{
-                                                borderRadius: "15px",
-                                            }}
-                                            className="w-full bg-primary tracking-wide hover:bg-primary/90 text-primary-foreground shadow-sm sm:text-xs text-xs font-semibold transition-all"
-                                        >
-                                            + Buat Pengajuan
-                                        </Button>
-                                    </Link>
-                                )}
+                                <div className="w-full md:w-1/6">
+                                    {auth.user.role === "employee" && (
+                                        <Link href={route("submissions.create")}>
+                                            <Button
+                                                style={{
+                                                    borderRadius: "15px",
+                                                }}
+                                                className="w-full bg-primary tracking-wide hover:bg-primary/90 text-primary-foreground shadow-sm sm:text-xs text-xs font-semibold transition-all"
+                                            >
+                                                + Buat Pengajuan
+                                            </Button>
+                                        </Link>
+                                    )}
+                                </div>
                             </div>
                         </div>
 
@@ -389,22 +494,49 @@ export default function Index({ auth, submissions, userDivision }) {
                             </table>
                         </div>
 
-                        <div className="mt-6 flex flex-wrap justify-start gap-1 text-sm">
-                            {submissions.links?.map((link, index) => (
-                                <Link
-                                    key={index}
-                                    href={link.url || "#"}
-                                    style={{ borderRadius: "10px" }}
-                                    className={`px-3 py-1 transition-colors ${
-                                        link.active
-                                            ? "bg-primary text-primary-foreground"
-                                            : "text-muted-foreground hover:text-primary hover:bg-muted"
-                                    }`}
-                                    dangerouslySetInnerHTML={{
-                                        __html: link.label,
-                                    }}
-                                />
-                            ))}
+                        <div className="mt-6 flex flex-wrap justify-between items-center gap-4">
+                            <div className="flex flex-wrap gap-1 text-sm">
+                                {submissions.links?.map((link, index) => {
+                                    // Add filter parameters to pagination links
+                                    const url = new URL(link.url || "#", window.location.origin);
+                                    if (filter) {
+                                        url.searchParams.set('search', filter);
+                                    }
+                                    if (dateFilter.startDate) {
+                                        url.searchParams.set('start_date', format(dateFilter.startDate, 'yyyy-MM-dd'));
+                                    }
+                                    if (dateFilter.endDate) {
+                                        url.searchParams.set('end_date', format(dateFilter.endDate, 'yyyy-MM-dd'));
+                                    }
+                                    
+                                    return (
+                                        <Link
+                                            key={index}
+                                            href={link.url ? url.pathname + url.search : "#"}
+                                            style={{ borderRadius: "10px" }}
+                                            className={`px-3 py-1 transition-colors ${
+                                                link.active
+                                                    ? "bg-primary text-primary-foreground"
+                                                    : "text-muted-foreground hover:text-primary hover:bg-muted"
+                                            }`}
+                                            dangerouslySetInnerHTML={{
+                                                __html: link.label,
+                                            }}
+                                        />
+                                    );
+                                })}
+                            </div>
+                            
+                            {(filter || dateFilter.startDate) && (
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={clearAllFilters}
+                                    className="text-xs"
+                                >
+                                    Clear Filters
+                                </Button>
+                            )}
                         </div>
                     </div>
                 </div>

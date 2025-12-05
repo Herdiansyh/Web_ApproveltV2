@@ -6,6 +6,7 @@ import { resolvePageComponent } from "laravel-vite-plugin/inertia-helpers";
 import { createRoot } from "react-dom/client";
 import LoadingProvider from "@/Components/GlobalLoading";
 import { initializeCsrfToken, setupPeriodicTokenRefresh } from "@/utils/csrfInit";
+import { DataProvider } from "@/Contexts/DataContext";
 
 // Initialize CSRF token management
 initializeCsrfToken().catch(console.error);
@@ -24,12 +25,15 @@ createInertiaApp({
         const root = createRoot(el);
 
         root.render(
-            <LoadingProvider>
-                <App {...props} />
-            </LoadingProvider>
+            <DataProvider>
+                <LoadingProvider>
+                    <App {...props} />
+                </LoadingProvider>
+            </DataProvider>
         );
     },
     progress: {
         color: "#4B5563",
+        delay: 200, // Only show if navigation takes longer than 200ms
     },
 });

@@ -38,16 +38,20 @@ class SubmissionController extends Controller
     /** ------------------------
      *  LIST PENGAJUAN OLEH USER
      *  ------------------------ */
-    public function index()
+    public function index(Request $request)
     {
         $user = Auth::user();
+        $search = $request->get('search');
+        $startDate = $request->get('start_date');
+        $endDate = $request->get('end_date');
+        
         // Subquery waktu aksi terakhir pada setiap submission (siapa pun yang bertindak)
         $lastActionSub = SubmissionWorkflowStep::selectRaw('submission_id, MAX(COALESCE(approved_at, updated_at)) as last_action_at')
             ->groupBy('submission_id');
 
         // Untuk Direktur: tampilkan hanya pengajuan yang sudah dia approve/reject
         if (strtolower((string) $user->role) === 'direktur') {
-            $submissions = $this->queryService->baseQuery()
+            $query = $this->queryService->baseQuery()
                 ->select('submissions.*')
                 ->leftJoinSub($lastActionSub, 'swslast', function ($join) {
                     $join->on('swslast.submission_id', '=', 'submissions.id');
@@ -64,14 +68,11 @@ class SubmissionController extends Controller
                     'workflow.document:id,name',
                     'workflow.steps:id,workflow_id,step_order,division_id,role',
                     'workflow.steps.division:id,name'
-                ])
-                ->orderByDesc(DB::raw('swslast.last_action_at'))
-                ->orderByDesc('submissions.updated_at')
-                ->paginate(10);
+                ]);
         } else {
             // OPTIMIZED: Get submissions untuk user (history/completed)
             // Service handle permission checking dengan cache
-            $submissions = $this->queryService->baseQuery()
+            $query = $this->queryService->baseQuery()
                 ->select('submissions.*')
                 ->leftJoinSub($lastActionSub, 'swslast', function ($join) {
                     $join->on('swslast.submission_id', '=', 'submissions.id');
@@ -101,11 +102,25 @@ class SubmissionController extends Controller
                     'workflow.document:id,name',
                     'workflow.steps:id,workflow_id,step_order,division_id,role',
                     'workflow.steps.division:id,name'
-                ])
-                ->orderByDesc(DB::raw('swslast.last_action_at'))
-                ->orderByDesc('submissions.updated_at')
-                ->paginate(10);
+                ]);
         }
+
+        // Apply filters
+        if ($search) {
+            $query->where('submissions.title', 'like', '%' . $search . '%');
+        }
+        
+        if ($startDate) {
+            $query->whereDate('submissions.created_at', '>=', $startDate);
+        }
+        
+        if ($endDate) {
+            $query->whereDate('submissions.created_at', '<=', $endDate);
+        }
+
+        $submissions = $query->orderByDesc(DB::raw('swslast.last_action_at'))
+            ->orderByDesc('submissions.updated_at')
+            ->paginate(10);
 
         // Attach permission info (cached) and current_workflow_step
         if ($user->subdivision_id) {
@@ -135,6 +150,9 @@ class SubmissionController extends Controller
         $divisionId = $user->division_id;
         $subdivisionId = $user->subdivision_id;
         $statusFilter = $request->get('status', 'all');
+        $search = $request->get('search');
+        $startDate = $request->get('start_date');
+        $endDate = $request->get('end_date');
 
         // OPTIMIZED: Get active submissions untuk division user
         // Service & cache handle permission checks
@@ -142,7 +160,7 @@ class SubmissionController extends Controller
             ? $this->permissionService->hasPermission($subdivisionId, 'can_view')
             : false;
 
-        $submissions = $this->queryService->baseQuery()
+        $query = $this->queryService->baseQuery()
             ->active()  // Only non-approved/non-rejected
             ->where(function ($outer) use ($user, $divisionId, $canViewGlobal) {
                 // Case 1: User sendiri
@@ -174,9 +192,22 @@ class SubmissionController extends Controller
                 'workflow.steps:id,workflow_id,step_order,division_id,role',
                 'workflow.steps.division:id,name',
                 'workflowSteps:id,submission_id,step_order,approver_id,status'
-            ])
-            ->latest()
-            ->paginate(10);
+            ]);
+
+        // Apply filters
+        if ($search) {
+            $query->where('submissions.title', 'like', '%' . $search . '%');
+        }
+        
+        if ($startDate) {
+            $query->whereDate('submissions.created_at', '>=', $startDate);
+        }
+        
+        if ($endDate) {
+            $query->whereDate('submissions.created_at', '<=', $endDate);
+        }
+
+        $submissions = $query->latest()->paginate(10);
 
         // Attach permission info (cached)
         if ($subdivisionId) {
@@ -796,6 +827,8 @@ class SubmissionController extends Controller
     public function history(Request $request)
     {
         $user = Auth::user();
+        $startDate = $request->get('start_date');
+        $endDate = $request->get('end_date');
 
         // Subquery: waktu aksi terakhir user pada setiap submission
         $lastActionSub = SubmissionWorkflowStep::selectRaw('submission_id, MAX(COALESCE(approved_at, updated_at)) as last_action_at')
@@ -819,6 +852,15 @@ class SubmissionController extends Controller
             })
             ->orderByDesc(DB::raw('swslast.last_action_at'))
             ->orderByDesc('submissions.updated_at');
+
+        // Apply date filters
+        if ($startDate) {
+            $query->whereDate('submissions.created_at', '>=', $startDate);
+        }
+        
+        if ($endDate) {
+            $query->whereDate('submissions.created_at', '<=', $endDate);
+        }
 
         $submissions = $query->paginate(10);
 
