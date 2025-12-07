@@ -36,7 +36,7 @@ Route::get('/', function () {
         'laravelVersion' => Application::VERSION,
         'phpVersion' => PHP_VERSION,
     ]);
-});
+})->middleware('guest');
 
 // Public verification route (no auth)
 Route::get('/verify/{token}', [VerificationController::class, 'show'])

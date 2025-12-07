@@ -59,7 +59,7 @@ export default function AdminDashboard({ auth, stats }) {
                     </div>
 
                     {/* Quick Actions */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                         <Card
                             style={{ borderRadius: "16px" }}
                             className="group border border-border hover:border-primary/50 hover:shadow-xl transition-all duration-300 bg-card overflow-hidden relative"
@@ -135,31 +135,7 @@ export default function AdminDashboard({ auth, stats }) {
                             </CardContent>
                         </Card>
 
-                        <Card
-                            style={{ borderRadius: "16px" }}
-                            className="group border border-border hover:border-purple-500/50 hover:shadow-xl transition-all duration-300 bg-card overflow-hidden relative"
-                        >
-                            <div className="absolute top-0 right-0 w-32 h-32 bg-purple-500/5 rounded-full -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-500" />
-                            <CardHeader className="flex flex-row items-center justify-between pb-2 relative z-10">
-                                <CardTitle className="text-sm font-semibold text-muted-foreground">
-                                    Pengaturan Sistem
-                                </CardTitle>
-                                <div className="p-2.5 bg-purple-500/10 rounded-lg group-hover:bg-purple-500/20 transition-colors">
-                                    <Settings className="w-5 h-5 text-purple-600 dark:text-purple-400 group-hover:scale-110 transition-transform" />
-                                </div>
-                            </CardHeader>
-                            <CardContent className="relative z-10">
-                                <Link>
-                                    <Button
-                                        variant="default"
-                                        className="mt-4 w-full text-sm font-medium bg-purple-600 hover:bg-purple-700 dark:bg-purple-500 dark:hover:bg-purple-600 transition-colors shadow-sm"
-                                        style={{ borderRadius: "10px" }}
-                                    >
-                                        Buka Pengaturan
-                                    </Button>
-                                </Link>
-                            </CardContent>
-                        </Card>
+                     
                     </div>
 
                     {/* Overview Section */}
