@@ -20,6 +20,7 @@ import {
 import { router } from "@inertiajs/react";
 import { ArrowRight, Edit, Plus, Settings, Trash2 } from "lucide-react";
 import React from "react";
+import Swal from "sweetalert2";
 export default function CardWorkflow({
     filteredWorkflows,
     filterText,

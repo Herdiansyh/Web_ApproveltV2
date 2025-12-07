@@ -93,18 +93,7 @@ export default function Login({ status, canResetPassword }) {
                         </div>
 
                         <div className="flex items-center justify-between">
-                            <div className="flex items-center space-x-2">
-                                <Checkbox
-                                    id="remember"
-                                    checked={data.remember}
-                                    onCheckedChange={(checked) =>
-                                        setData("remember", checked)
-                                    }
-                                />
-                                <Label htmlFor="remember" className="text-sm">
-                                    Remember me
-                                </Label>
-                            </div>
+                          
 
                             {canResetPassword && (
                                 <Link

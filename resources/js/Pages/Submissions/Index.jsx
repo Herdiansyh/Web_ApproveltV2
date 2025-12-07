@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo } from "react";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
 import { Head, Link, router } from "@inertiajs/react";
 import { Input } from "@/Components/ui/input";
@@ -23,7 +23,7 @@ import PrimaryButton from "@/Components/PrimaryButton";
 import { Separator } from "@/Components/ui/separator";
 import Footer from "@/Components/Footer";
 import DateFilter from "@/Components/DateFilter";
-import { isWithinInterval, parseISO, format } from "date-fns";
+import { isWithinInterval, parseISO } from "date-fns";
 
 export default function Index({ auth, submissions, userDivision }) {
     const [filter, setFilter] = useState("");
@@ -35,96 +35,33 @@ export default function Index({ auth, submissions, userDivision }) {
     const [confirmOpen, setConfirmOpen] = useState(false);
     const [toDeleteId, setToDeleteId] = useState(null);
 
-    // Initialize filter state from URL params on component mount
-    useEffect(() => {
-        const urlParams = new URLSearchParams(window.location.search);
-        const searchFilter = urlParams.get('search');
-        const startDate = urlParams.get('start_date');
-        const endDate = urlParams.get('end_date');
-        
-        if (searchFilter) {
-            setFilter(searchFilter);
-        }
-        
-        if (startDate || endDate) {
-            setDateFilter({
-                startDate: startDate ? new Date(startDate) : null,
-                endDate: endDate ? new Date(endDate) : null,
-                mode: startDate && endDate ? "range" : startDate ? "single" : null,
-            });
-        }
-    }, []);
-
-    const handleFilterChange = (e) => {
-        const newFilter = e.target.value;
-        setFilter(newFilter);
-        updateURLWithFilters(newFilter, dateFilter);
-    };
+    const handleFilterChange = (e) => setFilter(e.target.value);
 
     const handleDateFilterChange = (filterData) => {
         setDateFilter(filterData);
-        updateURLWithFilters(filter, filterData);
-    };
-
-    const updateURLWithFilters = (searchFilter, dateFilterData) => {
-        const params = new URLSearchParams();
-        
-        if (searchFilter) {
-            params.set('search', searchFilter);
-        }
-        
-        if (dateFilterData.startDate) {
-            params.set('start_date', format(dateFilterData.startDate, 'yyyy-MM-dd'));
-        }
-        
-        if (dateFilterData.endDate) {
-            params.set('end_date', format(dateFilterData.endDate, 'yyyy-MM-dd'));
-        }
-        
-        const queryString = params.toString();
-        const newPath = queryString ? `${window.location.pathname}?${queryString}` : window.location.pathname;
-        
-        router.get(newPath, {}, { preserveState: true, preserveScroll: true });
-    };
-
-    const clearAllFilters = () => {
-        setFilter("");
-        setDateFilter({
-            startDate: null,
-            endDate: null,
-            mode: null,
-        });
-        router.get(window.location.pathname, {}, { preserveState: true, preserveScroll: true });
     };
 
     const filteredSubmissions = useMemo(() => {
-        // If we have server-side filtered data, use it directly
-        if (submissions.data && submissions.data.length > 0) {
-            return submissions.data;
-        }
-        
-        // Fallback to client-side filtering for backward compatibility
-        let result = submissions.data ? submissions.data.filter((s) =>
+        let result = submissions.data.filter((s) =>
             s.title.toLowerCase().includes(filter.toLowerCase())
-        ) : [];
+        );
 
         // Apply date filter
         if (dateFilter.mode === "single" && dateFilter.startDate) {
             result = result.filter((s) => {
-                const createdDate = parseISO(s.created_at);
+                const createdDate = new Date(s.created_at);
                 const filterDate = new Date(dateFilter.startDate);
-                filterDate.setHours(0, 0, 0, 0);
-                createdDate.setHours(0, 0, 0, 0);
-                return createdDate.getTime() === filterDate.getTime();
+                return (
+                    createdDate.toDateString() === filterDate.toDateString()
+                );
             });
         } else if (dateFilter.mode === "range" && dateFilter.startDate && dateFilter.endDate) {
             result = result.filter((s) => {
                 const createdDate = parseISO(s.created_at);
-                const start = new Date(dateFilter.startDate);
-                const end = new Date(dateFilter.endDate);
-                start.setHours(0, 0, 0, 0);
-                end.setHours(23, 59, 59, 999);
-                return createdDate >= start && createdDate <= end;
+                return isWithinInterval(createdDate, {
+                    start: dateFilter.startDate,
+                    end: dateFilter.endDate,
+                });
             });
         }
 
@@ -494,49 +431,22 @@ export default function Index({ auth, submissions, userDivision }) {
                             </table>
                         </div>
 
-                        <div className="mt-6 flex flex-wrap justify-between items-center gap-4">
-                            <div className="flex flex-wrap gap-1 text-sm">
-                                {submissions.links?.map((link, index) => {
-                                    // Add filter parameters to pagination links
-                                    const url = new URL(link.url || "#", window.location.origin);
-                                    if (filter) {
-                                        url.searchParams.set('search', filter);
-                                    }
-                                    if (dateFilter.startDate) {
-                                        url.searchParams.set('start_date', format(dateFilter.startDate, 'yyyy-MM-dd'));
-                                    }
-                                    if (dateFilter.endDate) {
-                                        url.searchParams.set('end_date', format(dateFilter.endDate, 'yyyy-MM-dd'));
-                                    }
-                                    
-                                    return (
-                                        <Link
-                                            key={index}
-                                            href={link.url ? url.pathname + url.search : "#"}
-                                            style={{ borderRadius: "10px" }}
-                                            className={`px-3 py-1 transition-colors ${
-                                                link.active
-                                                    ? "bg-primary text-primary-foreground"
-                                                    : "text-muted-foreground hover:text-primary hover:bg-muted"
-                                            }`}
-                                            dangerouslySetInnerHTML={{
-                                                __html: link.label,
-                                            }}
-                                        />
-                                    );
-                                })}
-                            </div>
-                            
-                            {(filter || dateFilter.startDate) && (
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={clearAllFilters}
-                                    className="text-xs"
-                                >
-                                    Clear Filters
-                                </Button>
-                            )}
+                        <div className="mt-6 flex flex-wrap justify-start gap-1 text-sm">
+                            {submissions.links?.map((link, index) => (
+                                <Link
+                                    key={index}
+                                    href={link.url || "#"}
+                                    style={{ borderRadius: "10px" }}
+                                    className={`px-3 py-1 transition-colors ${
+                                        link.active
+                                            ? "bg-primary text-primary-foreground"
+                                            : "text-muted-foreground hover:text-primary hover:bg-muted"
+                                    }`}
+                                    dangerouslySetInnerHTML={{
+                                        __html: link.label,
+                                    }}
+                                />
+                            ))}
                         </div>
                     </div>
                 </div>

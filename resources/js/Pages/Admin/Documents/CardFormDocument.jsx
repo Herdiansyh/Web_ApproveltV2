@@ -18,6 +18,7 @@ import {
 } from "@/Components/ui/table";
 import { router } from "@inertiajs/react";
 import React from "react";
+import Swal from "sweetalert2";
 
 export default function CardFormDocument({
     handleSearch,
