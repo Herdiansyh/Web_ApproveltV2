@@ -121,15 +121,15 @@ export default function DateFilter({
             : placeholder;
 
     return (
-        <div className="relative w-full md:w-80">
+        <div className="relative w-full sm:w-80 lg:w-96">
             <div className="flex items-center gap-2">
                 <div className="flex-1 relative">
                     <div
-                        className="w-full px-4 py-2 border border-input rounded-lg bg-background text-foreground text-sm cursor-pointer hover:border-primary/60 transition flex items-center gap-2"
+                        className="w-full px-3 py-2 sm:px-4 border border-input rounded-lg bg-background text-foreground text-sm cursor-pointer hover:border-primary/60 transition flex items-center gap-2 min-h-10"
                         onClick={() => setIsOpen(!isOpen)}
                     >
-                        <CalendarIcon className="w-4 h-4 text-muted-foreground" />
-                        <span className="truncate">{displayText}</span>
+                        <CalendarIcon className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                        <span className="truncate text-xs sm:text-sm">{displayText}</span>
                     </div>
                 </div>
 
@@ -139,7 +139,7 @@ export default function DateFilter({
                         size="icon"
                         variant="ghost"
                         onClick={handleClear}
-                        className="rounded-lg hover:bg-muted/60"
+                        className="rounded-lg hover:bg-muted/60 h-8 w-8 sm:h-10 sm:w-10 flex-shrink-0"
                         title="Clear filter"
                     >
                         <X className="w-4 h-4" />
@@ -148,9 +148,9 @@ export default function DateFilter({
             </div>
 
             {isOpen && (
-                <div className="absolute top-full left-0 mt-2 z-50 bg-card border border-border/50 rounded-lg shadow-lg p-4 min-w-max">
+                <div className="absolute top-full left-0 mt-2 z-50 bg-card border border-border/50 rounded-lg shadow-lg p-3 sm:p-4 min-w-max max-w-[90vw] sm:max-w-none">
                     {/* Mode Selector */}
-                    <div className="flex gap-2 mb-4">
+                    <div className="flex flex-col sm:flex-row gap-2 mb-4">
                         <Button
                             type="button"
                             size="sm"
@@ -162,7 +162,7 @@ export default function DateFilter({
                                 setTempStartDate(null);
                                 setTempEndDate(null);
                             }}
-                            className="text-xs rounded-md"
+                            className="text-xs rounded-md flex-1"
                         >
                             Tanggal Tertentu
                         </Button>
@@ -177,7 +177,7 @@ export default function DateFilter({
                                 setTempStartDate(startDate);
                                 setTempEndDate(endDate);
                             }}
-                            className="text-xs rounded-md"
+                            className="text-xs rounded-md flex-1"
                         >
                             Rentang Tanggal
                         </Button>

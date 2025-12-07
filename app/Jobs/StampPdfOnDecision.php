@@ -101,16 +101,34 @@ class StampPdfOnDecision implements ShouldQueue
             $approverNames = [];
             $approverDates = [];
             
-            foreach ($this->approvers as $approver) {
-                $approverNames[] = strtoupper($approver['name']);
-                if (!empty($approver['approved_at'])) {
-                    $approverDates[] = \Carbon\Carbon::parse($approver['approved_at'])->format('d/m/Y H:i');
+            // Untuk dokumen eksternal, hanya tampilkan approver terakhir
+            $isExternalDocument = !$submission->generated_pdf_path && $submission->file_path;
+            
+            if ($isExternalDocument && count($this->approvers) > 1) {
+                // Ambil hanya approver terakhir untuk dokumen eksternal
+                $lastApprover = end($this->approvers);
+                $approverNames = [strtoupper($lastApprover['name'])];
+                $approverDates = [];
+                if (!empty($lastApprover['approved_at'])) {
+                    $approverDates[] = \Carbon\Carbon::parse($lastApprover['approved_at'])->format('d/m/Y H:i');
+                }
+            } else {
+                // Untuk dokumen generated atau hanya 1 approver, tampilkan semua
+                foreach ($this->approvers as $approver) {
+                    $approverNames[] = strtoupper($approver['name']);
+                    if (!empty($approver['approved_at'])) {
+                        $approverDates[] = \Carbon\Carbon::parse($approver['approved_at'])->format('d/m/Y H:i');
+                    }
                 }
             }
             
             $allApproversText = implode(' • ', $approverNames);
             $allDatesText = implode(' • ', $approverDates);
 
+            // Hitung tinggi total yang dibutuhkan (tetap konstan karena semua nama dalam satu baris)
+            $baseHeight = 25; // tinggi tetap untuk layout horizontal
+            $totalHeight = $baseHeight;
+            
             // Stamp dengan teks dan hiasan
             $rightMargin = 10;
             $bottomMargin = 10;
@@ -124,7 +142,7 @@ class StampPdfOnDecision implements ShouldQueue
             $maxWidth = max($labelWidth, $approversWidth) + 8; // Tambah padding lebih banyak
 
             $x = $submission->watermark_x ?? ($size['width'] - $maxWidth - $rightMargin);
-            $y = $submission->watermark_y ?? ($size['height'] - 35 - $bottomMargin); // Tambah height untuk multiple lines
+            $y = $submission->watermark_y ?? ($size['height'] - $totalHeight - $bottomMargin); // Gunakan tinggi dinamis
 
             // Warna stamp berdasarkan status
             $textColor = $this->status === 'approved' ? [6, 95, 70] : [220, 38, 38]; // #065f46 / #dc2626
@@ -137,8 +155,8 @@ class StampPdfOnDecision implements ShouldQueue
             // Garis atas
             $pdf->Line($x - 3, $y, $x + $maxWidth + 3, $y);
             
-            // Garis bawah (lebih panjang untuk multiple lines)
-            $pdf->Line($x - 3, $y + 25, $x + $maxWidth + 3, $y + 25);
+            // Garis bawah (menyesuaikan dengan tinggi dinamis)
+            $pdf->Line($x - 3, $y + $totalHeight, $x + $maxWidth + 3, $y + $totalHeight);
 
             // Draw small decorative corners (sudut dekoratif)
             $cornerSize = 2;
@@ -149,11 +167,11 @@ class StampPdfOnDecision implements ShouldQueue
             $pdf->Line($x + $maxWidth + 3, $y, $x + $maxWidth + 3 - $cornerSize, $y);
             $pdf->Line($x + $maxWidth + 3, $y, $x + $maxWidth + 3, $y + $cornerSize);
             // Kiri bawah
-            $pdf->Line($x - 3, $y + 25, $x - 3 + $cornerSize, $y + 25);
-            $pdf->Line($x - 3, $y + 25, $x - 3, $y + 25 - $cornerSize);
+            $pdf->Line($x - 3, $y + $totalHeight, $x - 3 + $cornerSize, $y + $totalHeight);
+            $pdf->Line($x - 3, $y + $totalHeight, $x - 3, $y + $totalHeight - $cornerSize);
             // Kanan bawah
-            $pdf->Line($x + $maxWidth + 3, $y + 25, $x + $maxWidth + 3 - $cornerSize, $y + 25);
-            $pdf->Line($x + $maxWidth + 3, $y + 25, $x + $maxWidth + 3, $y + 25 - $cornerSize);
+            $pdf->Line($x + $maxWidth + 3, $y + $totalHeight, $x + $maxWidth + 3 - $cornerSize, $y + $totalHeight);
+            $pdf->Line($x + $maxWidth + 3, $y + $totalHeight, $x + $maxWidth + 3, $y + $totalHeight - $cornerSize);
 
             // Tulis label (APPROVED BY)
             $pdf->SetFont('Helvetica', 'B', $fontSize);
@@ -161,7 +179,7 @@ class StampPdfOnDecision implements ShouldQueue
             $pdf->SetXY($x, $y + 2);
             $pdf->Cell($maxWidth, 4, $label, 0, 1, 'C', false);
 
-            // Tulis semua nama approver dalam satu baris
+            // Tulis semua nama approver dalam satu baris (horizontal)
             $pdf->SetFont('Helvetica', 'B', $fontSize + 1);
             $pdf->SetXY($x, $y + 6);
             $pdf->Cell($maxWidth, 5, $allApproversText, 0, 1, 'C', false);
@@ -169,7 +187,7 @@ class StampPdfOnDecision implements ShouldQueue
             // Tulis semua tanggal dengan font kecil
             $pdf->SetFont('Helvetica', '', $smallFontSize);
             $pdf->SetTextColor(100, 100, 100); // abu-abu
-            $pdf->SetXY($x, $y + 12);
+            $pdf->SetXY($x, $y + 11);
             $pdf->Cell($maxWidth, 3, $allDatesText, 0, 1, 'C', false);
         }
 

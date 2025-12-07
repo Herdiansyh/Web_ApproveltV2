@@ -5,7 +5,7 @@
     font-family: inherit;
     line-height: 1.4;
     width: 100%;
-    max-width: 340px; /* batasi ukuran agar tidak terlalu besar */
+    max-width: 300px; /* kurangi ukuran untuk mobile */
     margin: 0 auto;
 }
 
@@ -115,24 +115,55 @@
 /* Responsiveness */
 @media (max-width: 420px) {
     .react-calendar-custom {
-        max-width: 100%;
+        max-width: 280px; /* lebih kecil untuk layar kecil */
     }
 
     .react-calendar-custom button {
-        font-size: 0.7rem;
-        padding: 0.3rem;
+        font-size: 0.65rem;
+        padding: 0.25rem;
+        margin: 0.1rem;
     }
 
     .react-calendar-custom .react-calendar__navigation__label {
-        font-size: 0.8rem;
+        font-size: 0.75rem;
     }
 
     .react-calendar-custom .react-calendar__navigation__arrow {
-        min-width: 1.5rem;
+        min-width: 1.3rem;
+        padding: 0.15rem;
     }
 
     .react-calendar-custom .react-calendar__tile {
-        padding: 0.4rem 0.2rem;
-        min-height: 1.7rem;
+        padding: 0.3rem 0.15rem;
+        min-height: 1.5rem;
+    }
+
+    .react-calendar-custom .react-calendar__month-view__weekdays {
+        font-size: 0.6rem;
+    }
+
+    .react-calendar-custom .react-calendar__month-view__weekdays__weekday {
+        padding: 0.2rem;
+    }
+}
+
+@media (max-width: 360px) {
+    .react-calendar-custom {
+        max-width: 260px; /* sangat kecil untuk layar mini */
+    }
+
+    .react-calendar-custom button {
+        font-size: 0.6rem;
+        padding: 0.2rem;
+        margin: 0.08rem;
+    }
+
+    .react-calendar-custom .react-calendar__tile {
+        padding: 0.25rem 0.1rem;
+        min-height: 1.3rem;
+    }
+
+    .react-calendar-custom .react-calendar__navigation__label {
+        font-size: 0.7rem;
     }
 }
