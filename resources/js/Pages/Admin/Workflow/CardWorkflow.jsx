@@ -1,4 +1,3 @@
-import { Badge } from "@/Components/ui/badge";
 import { Button } from "@/Components/ui/button";
 import { Card } from "@/Components/ui/card";
 import { Input } from "@/Components/ui/input";
@@ -18,30 +17,34 @@ import {
     TableRow,
 } from "@/Components/ui/table";
 import { router } from "@inertiajs/react";
-import { ArrowRight, Edit, Plus, Settings, Trash2 } from "lucide-react";
 import React from "react";
-export default function CardWorkflow({
-    filteredWorkflows,
-    filterText,
-    setFilterText,
+import Swal from "sweetalert2";
+
+export default function CardFormDocument({
+    handleSearch,
+    search,
     filterDocument,
     setFilterDocument,
     documents,
-    openCreateModal,
-    goToPermissions,
-    openEditModal,
+    filteredDocuments,
+    handleEdit,
+    openFields,
     handleDelete,
+    handleSaveSeries,
+    handleResetSeries,
+    setIsModalOpen,
+    setEditingDocument,
 }) {
     return (
-        <Card style={{ borderRadius: "15px" }} className="p-6 shadow-sm">
-            {/* Filters & Create Button */}
-            <div className="flex flex-col md:flex-row justify-between mb-6 gap-4">
-                <div className="flex flex-col lg:flex-row gap-2 flex-1">
+        <Card className="p-6" style={{ borderRadius: "15px" }}>
+            {/* Filter & Add Button */}
+            <div className="flex flex-col md:flex-row justify-between gap-3 mb-4">
+                <div className="flex flex-col md:flex-row gap-2 w-full">
                     <Input
-                        placeholder="Search workflows..."
-                        value={filterText}
-                        onChange={(e) => setFilterText(e.target.value)}
-                        className="md:w-64 text-[0.8rem]"
+                        className="md:w-1/2 text-[0.8rem]"
+                        placeholder="Search Document..."
+                        value={search}
+                        onChange={handleSearch}
                         style={{ borderRadius: "15px" }}
                     />
                     <Select
@@ -64,13 +67,16 @@ export default function CardWorkflow({
                         </SelectContent>
                     </Select>
                 </div>
+
                 <Button
-                    onClick={openCreateModal}
-                    className="md:w-auto"
+                    onClick={() => {
+                        setEditingDocument(null);
+                        setIsModalOpen(true);
+                    }}
+                    className="md:w-[180px] w-full h-9 text-[0.8rem]"
                     style={{ borderRadius: "15px" }}
                 >
-                    <Plus className="h-4 w-4 mr-2 text-[0.8rem]" /> Create
-                    Workflow
+                    + Add New Document
                 </Button>
             </div>
 
@@ -79,120 +85,258 @@ export default function CardWorkflow({
                 <TableHeader>
                     <TableRow>
                         <TableHead>Name</TableHead>
-                        <TableHead>Document</TableHead>
-                        <TableHead>Steps</TableHead>
+                        <TableHead>Description</TableHead>
                         <TableHead>Status</TableHead>
                         <TableHead>Actions</TableHead>
                     </TableRow>
                 </TableHeader>
                 <TableBody>
-                    {filteredWorkflows.length > 0 ? (
-                        filteredWorkflows.map((wf) => (
-                            <TableRow key={wf.id}>
-                                <TableCell className="font-medium">
-                                    {wf.name}
-                                </TableCell>
+                    {filteredDocuments.length > 0 ? (
+                        filteredDocuments.map((doc) => (
+                            <TableRow key={doc.id}>
+                                <TableCell>{doc.name}</TableCell>
+                                <TableCell>{doc.description || "-"}</TableCell>
                                 <TableCell>
-                                    {wf.document?.name || "-"}
-                                </TableCell>
-                                <TableCell>
-                                    <div className="flex items-center text-sm text-gray-600">
-                                        {wf.steps?.map((step, idx) => (
-                                            <React.Fragment key={idx}>
-                                                <span>
-                                                    {step.division?.name ||
-                                                        "N/A"}
-                                                </span>
-                                                {idx < wf.steps.length - 1 && (
-                                                    <ArrowRight className="h-4 w-4 mx-1" />
-                                                )}
-                                            </React.Fragment>
-                                        ))}
-                                    </div>
-                                </TableCell>
-                                <TableCell>
-                                    <Badge
-                                        className={
-                                            wf.is_active
-                                                ? "bg-green-100 text-green-800"
-                                                : "bg-gray-100 text-gray-800"
-                                        }
-                                        style={{
-                                            borderRadius: "15px",
-                                        }}
+                                    <span
+                                        className={`inline-flex items-center px-2 py-1 rounded-full text-xs ${
+                                            doc.is_active
+                                                ? "bg-green-100 text-green-700"
+                                                : "bg-gray-200 text-gray-700"
+                                        }`}
                                     >
-                                        {wf.is_active ? "Active" : "Inactive"}
-                                    </Badge>
+                                        {doc.is_active ? "Active" : "Inactive"}
+                                    </span>
                                 </TableCell>
                                 <TableCell>
-                                    <div className="flex space-x-2">
-                                        {/* Deprecated: Per-step permissions (hidden) */}
-                                        <Button
-                                            variant={
-                                                wf.is_active
-                                                    ? "outline"
-                                                    : "secondary"
-                                            }
-                                            size="sm"
-                                            onClick={() => {
-                                                const payload = {
-                                                    name: wf.name,
-                                                    description:
-                                                        wf.description || "",
-                                                    document_id: wf.document_id,
-                                                    is_active: !wf.is_active,
-                                                };
-                                                router.put(
-                                                    route(
-                                                        "workflows.update",
-                                                        wf.id
-                                                    ),
-                                                    payload,
-                                                    {
-                                                        onSuccess: () => {
-                                                            Swal.fire(
-                                                                "Success",
-                                                                `Workflow ${
-                                                                    !wf.is_active
-                                                                        ? "activated"
-                                                                        : "deactivated"
-                                                                }`,
-                                                                "success"
+                                    <div className="flex flex-col gap-2">
+                                        <div className="flex space-x-2">
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => openFields(doc)}
+                                                style={{
+                                                    borderRadius: "15px",
+                                                }}
+                                            >
+                                                Manage Fields
+                                            </Button>
+                                            <Button
+                                                variant={
+                                                    doc.is_active
+                                                        ? "outline"
+                                                        : "secondary"
+                                                }
+                                                size="sm"
+                                                onClick={() => {
+                                                    const payload = {
+                                                        name: doc.name,
+                                                        description:
+                                                            doc.description ||
+                                                            "",
+                                                        is_active:
+                                                            !doc.is_active,
+                                                    };
+                                                    router.put(
+                                                        route(
+                                                            "documents.update",
+                                                            doc.id
+                                                        ),
+                                                        payload,
+                                                        {
+                                                            onSuccess: () => {
+                                                                Swal.fire(
+                                                                    "Success",
+                                                                    `Document ${
+                                                                        !doc.is_active
+                                                                            ? "activated"
+                                                                            : "deactivated"
+                                                                    }`,
+                                                                    "success"
+                                                                );
+                                                            },
+                                                        }
+                                                    );
+                                                }}
+                                                style={{
+                                                    borderRadius: "15px",
+                                                }}
+                                            >
+                                                {doc.is_active
+                                                    ? "Deactivate"
+                                                    : "Activate"}
+                                            </Button>
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => handleEdit(doc)}
+                                                style={{
+                                                    borderRadius: "15px",
+                                                }}
+                                            >
+                                                Edit
+                                            </Button>
+                                            <Button
+                                                variant="destructive"
+                                                size="sm"
+                                                onClick={() =>
+                                                    handleDelete(doc.id)
+                                                }
+                                                style={{
+                                                    borderRadius: "15px",
+                                                }}
+                                            >
+                                                Delete
+                                            </Button>
+                                        </div>
+
+                                        {/* Name Series Config */}
+
+                                        <div className="p-4 rounded-2xl border border-slate-200 bg-gradient-to-br from-white to-slate-50 shadow-sm">
+                                            <p className="text-sm font-semibold text-slate-700 mb-3">
+                                                Name Series
+                                            </p>
+
+                                            <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-4">
+                                                {/* Pattern */}
+                                                <div className="flex flex-col gap-1">
+                                                    <label className="text-xs font-medium text-slate-600">
+                                                        Pattern
+                                                    </label>
+                                                    <Input
+                                                        placeholder="yyyy-mm-####"
+                                                        defaultValue={
+                                                            doc.name_series
+                                                                ?.series_pattern ||
+                                                            ""
+                                                        }
+                                                        data-series-field="pattern"
+                                                        className="h-8 text-xs rounded-xl bg-slate-100 border-slate-300 focus:ring-2 focus:ring-blue-400"
+                                                    />
+                                                </div>
+
+                                                {/* Prefix */}
+                                                <div className="flex flex-col gap-1">
+                                                    <label className="text-xs font-medium text-slate-600">
+                                                        Prefix
+                                                    </label>
+                                                    <Input
+                                                        placeholder="SUB-"
+                                                        defaultValue={
+                                                            doc.name_series
+                                                                ?.prefix || ""
+                                                        }
+                                                        data-series-field="prefix"
+                                                        className="h-8 text-xs rounded-xl bg-slate-100 border-slate-300 focus:ring-2 focus:ring-blue-400"
+                                                    />
+                                                </div>
+
+                                                {/* Reset Type */}
+                                                <div className="flex flex-col gap-1">
+                                                    <label className="text-xs font-medium text-slate-600">
+                                                        Reset Type
+                                                    </label>
+                                                    <select
+                                                        defaultValue={
+                                                            doc.name_series
+                                                                ?.reset_type ||
+                                                            "none"
+                                                        }
+                                                        data-series-field="reset_type"
+                                                        className="h-8 text-xs rounded-xl bg-slate-100 border border-slate-300 px-2 focus:ring-2 focus:ring-blue-400"
+                                                    >
+                                                        <option value="none">
+                                                            No Reset
+                                                        </option>
+                                                        <option value="monthly">
+                                                            Monthly
+                                                        </option>
+                                                        <option value="yearly">
+                                                            Yearly
+                                                        </option>
+                                                    </select>
+                                                </div>
+
+                                                {/* Current Number */}
+                                                <div className="flex flex-col gap-1">
+                                                    <label className="text-xs font-medium text-slate-600">
+                                                        Current Number
+                                                    </label>
+                                                    <Input
+                                                        type="number"
+                                                        defaultValue={
+                                                            doc.name_series
+                                                                ?.current_number ??
+                                                            0
+                                                        }
+                                                        data-series-field="current_number"
+                                                        className="h-8 text-xs rounded-xl bg-slate-100 border-slate-300 focus:ring-2 focus:ring-blue-400"
+                                                    />
+                                                </div>
+                                            </div>
+
+                                            {/* Buttons */}
+                                            <div className="flex justify-end gap-2">
+                                                <Button
+                                                    size="sm"
+                                                    variant="outline"
+                                                    className="rounded-xl h-8 text-xs border-slate-300 hover:bg-blue-100 hover:text-blue-700 transition"
+                                                    onClick={(e) => {
+                                                        const container =
+                                                            e.currentTarget.closest(
+                                                                "div.p-4.rounded-2xl"
                                                             );
-                                                        },
+                                                        const getVal = (
+                                                            selector
+                                                        ) => {
+                                                            const el =
+                                                                container.querySelector(
+                                                                    selector
+                                                                );
+                                                            return el
+                                                                ? el.value
+                                                                : "";
+                                                        };
+
+                                                        const payload = {
+                                                            series_pattern:
+                                                                getVal(
+                                                                    "[data-series-field='pattern']"
+                                                                ),
+                                                            prefix: getVal(
+                                                                "[data-series-field='prefix']"
+                                                            ),
+                                                            reset_type: getVal(
+                                                                "[data-series-field='reset_type']"
+                                                            ),
+                                                            current_number:
+                                                                Number(
+                                                                    getVal(
+                                                                        "[data-series-field='current_number']"
+                                                                    ) || 0
+                                                                ),
+                                                        };
+
+                                                        handleSaveSeries(
+                                                            doc,
+                                                            payload
+                                                        );
+                                                    }}
+                                                >
+                                                    Save
+                                                </Button>
+
+                                                <Button
+                                                    size="sm"
+                                                    variant="outline"
+                                                    className="rounded-xl h-8 text-xs border-red-300 text-red-600 hover:bg-red-100 transition"
+                                                    onClick={() =>
+                                                        handleResetSeries(doc)
                                                     }
-                                                );
-                                            }}
-                                            style={{
-                                                borderRadius: "15px",
-                                            }}
-                                        >
-                                            {wf.is_active
-                                                ? "Deactivate"
-                                                : "Activate"}
-                                        </Button>
-                                        <Button
-                                            variant="outline"
-                                            size="sm"
-                                            onClick={() => openEditModal(wf)}
-                                            style={{
-                                                borderRadius: "15px",
-                                            }}
-                                        >
-                                            <Edit className="h-4 w-4 mr-1" />{" "}
-                                            Edit
-                                        </Button>
-                                        <Button
-                                            variant="destructive"
-                                            size="sm"
-                                            onClick={() => handleDelete(wf.id)}
-                                            style={{
-                                                borderRadius: "15px",
-                                            }}
-                                        >
-                                            <Trash2 className="h-4 w-4 " />{" "}
-                                            Delete
-                                        </Button>
+                                                >
+                                                    Reset Counter
+                                                </Button>
+                                            </div>
+                                        </div>
                                     </div>
                                 </TableCell>
                             </TableRow>
@@ -200,10 +344,10 @@ export default function CardWorkflow({
                     ) : (
                         <TableRow>
                             <TableCell
-                                colSpan={5}
-                                className="text-center text-gray-500 py-8"
+                                colSpan={4}
+                                className="text-center text-gray-500"
                             >
-                                No workflows found.
+                                No documents found.
                             </TableCell>
                         </TableRow>
                     )}
