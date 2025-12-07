@@ -78,7 +78,7 @@ export default function Index({ auth, users, divisions, subdivisions, roles }) {
     useEffect(() => {
         if (data.division_id) {
             const filtered = subdivisions.filter(
-                (sub) => sub.division_id === parseInt(data.division_id)
+                (sub) => String(sub.division_id) === String(data.division_id)
             );
             setFilteredSubdivisions(filtered);
         } else {
@@ -136,25 +136,16 @@ export default function Index({ auth, users, divisions, subdivisions, roles }) {
 
     const handleEdit = (user) => {
         setEditingUser(user);
-        // Set semua data user dulu, tapi kosongkan subdivision_id sementara
-        setTimeout(() => {
-            setData({
-                name: user.name,
-                email: user.email,
-                password: "",
-                role: user.role,
-                division_id: user.division_id,
-                subdivision_id: user.subdivision_id,
-            });
-        }, 0);
-        // Setelah filteredSubdivisions sudah kebentuk (karena division_id berubah),
-        // baru set subdivision_id supaya dropdown bisa nemu datanya
-        setTimeout(() => {
-            setData((prev) => ({
-                ...prev,
-                subdivision_id: user.subdivision_id,
-            }));
-        }, 100);
+        
+        // Set data user sekaligus - React akan handle urutan rendering dengan benar
+        setData({
+            name: user.name,
+            email: user.email,
+            password: "",
+            role: user.role,
+            division_id: user.division_id,
+            subdivision_id: user.subdivision_id,
+        });
     };
 
     const handleDelete = (userId) => {
@@ -211,7 +202,7 @@ export default function Index({ auth, users, divisions, subdivisions, roles }) {
             window.removeEventListener("error", handleGlobalError);
         };
     }, []);
-    console.log(users.subdivision?.name);
+    
     return (
         <AuthenticatedLayout
             user={auth.user}

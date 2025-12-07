@@ -26,6 +26,6 @@ class Division extends Model
     }
        public function subdivisions(): HasMany
     {
-        return $this->hasMany(SubDivision::class);
+        return $this->hasMany(Subdivision::class);
     }
 }

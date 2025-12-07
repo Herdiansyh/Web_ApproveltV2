@@ -93,7 +93,7 @@ export default function CardCreate({
                     <div>
                         <Label>Division</Label>
                         <Select
-                            value={data.division_id}
+                            value={String(data.division_id)}
                             onValueChange={(value) =>
                                 setData("division_id", value)
                             }
@@ -117,7 +117,7 @@ export default function CardCreate({
                     <div>
                         <Label>Subdivision</Label>
                         <Select
-                            value={data.subdivision_id}
+                            value={String(data.subdivision_id)}
                             onValueChange={(value) =>
                                 setData("subdivision_id", value)
                             }
