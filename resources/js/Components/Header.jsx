@@ -15,14 +15,16 @@ export default function Header() {
         <>
             <Sidebar open={open} />
             <div
-                className={`inline-flex items-start  ${
-                    open ? "relative m-3" : "absolute  mt-2"
+                className={`inline-flex border-gray-300  items-start  ${
+                    open
+                        ? "relative ml-3 -mr-3 "
+                        : "absolute top-12 left-1 mt-1"
                 }`}
             >
                 <Button
                     variant="ghost"
-                    size="icon"
-                    className=" text-muted-foreground hover:text-foreground"
+                    style={{ borderRadius: "15px" }}
+                    className="mt-1 ml-1 border border-gray-300 text-muted-foreground hover:text-foreground"
                     onClick={() => setOpen(!open)}
                 >
                     <Menu />

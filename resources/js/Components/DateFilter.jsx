@@ -121,15 +121,18 @@ export default function DateFilter({
             : placeholder;
 
     return (
-        <div className="relative w-full sm:w-80 lg:w-96">
+        <div className="relative w-full sm:w-80 lg:w-96 ">
             <div className="flex items-center gap-2">
                 <div className="flex-1 relative">
                     <div
-                        className="w-full px-3 py-2 sm:px-4 border border-input rounded-lg bg-background text-foreground text-sm cursor-pointer hover:border-primary/60 transition flex items-center gap-2 min-h-10"
+                        style={{ borderRadius: "15px" }}
+                        className="w-full px-3 py-2 sm:px-4 border border-input bg-background text-foreground text-sm cursor-pointer hover:border-primary/60 transition flex items-center gap-2 min-h-10"
                         onClick={() => setIsOpen(!isOpen)}
                     >
                         <CalendarIcon className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-                        <span className="truncate text-xs sm:text-sm">{displayText}</span>
+                        <span className="truncate text-xs sm:text-sm">
+                            {displayText}
+                        </span>
                     </div>
                 </div>
 
@@ -162,7 +165,8 @@ export default function DateFilter({
                                 setTempStartDate(null);
                                 setTempEndDate(null);
                             }}
-                            className="text-xs rounded-md flex-1"
+                            style={{ borderRadius: "15px" }}
+                            className="text-xs  flex-1"
                         >
                             Tanggal Tertentu
                         </Button>
@@ -177,7 +181,8 @@ export default function DateFilter({
                                 setTempStartDate(startDate);
                                 setTempEndDate(endDate);
                             }}
-                            className="text-xs rounded-md flex-1"
+                            style={{ borderRadius: "15px" }}
+                            className="text-xs  flex-1"
                         >
                             Rentang Tanggal
                         </Button>

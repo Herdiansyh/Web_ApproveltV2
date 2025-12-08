@@ -36,15 +36,23 @@ export default function AuthenticatedLayout({ header, children }) {
         let ignore = false;
         (async () => {
             try {
-                const lastReadTs = localStorage.getItem('notif:last_read_ts') || '';
-                const localCleared = localStorage.getItem('notif:clear_until') || '';
-                const since = lastReadTs && localCleared
-                    ? (new Date(lastReadTs) > new Date(localCleared) ? lastReadTs : localCleared)
-                    : (lastReadTs || localCleared);
-                const url = new URL(route('notifications.index'));
-                url.searchParams.set('limit', '5');
-                if (since) url.searchParams.set('since', since);
-                const res = await fetch(url, { headers: { Accept: 'application/json' }, credentials: 'same-origin' });
+                const lastReadTs =
+                    localStorage.getItem("notif:last_read_ts") || "";
+                const localCleared =
+                    localStorage.getItem("notif:clear_until") || "";
+                const since =
+                    lastReadTs && localCleared
+                        ? new Date(lastReadTs) > new Date(localCleared)
+                            ? lastReadTs
+                            : localCleared
+                        : lastReadTs || localCleared;
+                const url = new URL(route("notifications.index"));
+                url.searchParams.set("limit", "5");
+                if (since) url.searchParams.set("since", since);
+                const res = await fetch(url, {
+                    headers: { Accept: "application/json" },
+                    credentials: "same-origin",
+                });
                 if (!res.ok) return;
                 const data = await res.json();
                 if (ignore) return;
@@ -52,10 +60,16 @@ export default function AuthenticatedLayout({ header, children }) {
                 setNotifications(Array.isArray(data.items) ? data.items : []);
                 setTotalNotif(Number(data.total_count || 0));
                 // cache server time for next read mark
-                if (data.server_time) localStorage.setItem('notif:last_server_time', data.server_time);
+                if (data.server_time)
+                    localStorage.setItem(
+                        "notif:last_server_time",
+                        data.server_time
+                    );
             } catch {}
         })();
-        return () => { ignore = true; };
+        return () => {
+            ignore = true;
+        };
     }, []);
 
     const toggleNotif = async () => {
@@ -64,29 +78,43 @@ export default function AuthenticatedLayout({ header, children }) {
         if (next) {
             try {
                 setLoadingNotif(true);
-                const url = new URL(route('notifications.index'));
-                url.searchParams.set('limit', showAllNotif ? '100' : '5');
+                const url = new URL(route("notifications.index"));
+                url.searchParams.set("limit", showAllNotif ? "100" : "5");
                 // Always send since based on latest local read/clear marker
-                const lr = localStorage.getItem('notif:last_read_ts') || '';
-                const lc = localStorage.getItem('notif:clear_until') || '';
-                const since = lr && lc ? (new Date(lr) > new Date(lc) ? lr : lc) : (lr || lc);
-                if (since) url.searchParams.set('since', since);
-                const res = await fetch(url, { headers: { Accept: 'application/json' }, credentials: 'same-origin' });
+                const lr = localStorage.getItem("notif:last_read_ts") || "";
+                const lc = localStorage.getItem("notif:clear_until") || "";
+                const since =
+                    lr && lc
+                        ? new Date(lr) > new Date(lc)
+                            ? lr
+                            : lc
+                        : lr || lc;
+                if (since) url.searchParams.set("since", since);
+                const res = await fetch(url, {
+                    headers: { Accept: "application/json" },
+                    credentials: "same-origin",
+                });
                 if (res.ok) {
                     const data = await res.json();
-                    setNotifications(Array.isArray(data.items) ? data.items : []);
+                    setNotifications(
+                        Array.isArray(data.items) ? data.items : []
+                    );
                     setTotalNotif(Number(data.total_count || 0));
                     // Mark as read: reset badge and persist last_read_ts
                     const ts = data.server_time || new Date().toISOString();
                     try {
-                        await fetch(route('notifications.read'), {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                        await fetch(route("notifications.read"), {
+                            method: "POST",
+                            headers: {
+                                "Content-Type": "application/json",
+                                Accept: "application/json",
+                                "X-Requested-With": "XMLHttpRequest",
+                            },
                             body: JSON.stringify({ ts }),
-                            credentials: 'same-origin',
+                            credentials: "same-origin",
                         });
                     } catch {}
-                    localStorage.setItem('notif:last_read_ts', ts);
+                    localStorage.setItem("notif:last_read_ts", ts);
                     setBadgeCount(0);
                 } else {
                     setNotifications([]);
@@ -106,14 +134,22 @@ export default function AuthenticatedLayout({ header, children }) {
             // refresh list with new limit
             try {
                 setLoadingNotif(true);
-                const url = new URL(route('notifications.index'));
-                url.searchParams.set('limit', next ? '100' : '5');
+                const url = new URL(route("notifications.index"));
+                url.searchParams.set("limit", next ? "100" : "5");
                 // Include since on see more as well
-                const lr = localStorage.getItem('notif:last_read_ts') || '';
-                const lc = localStorage.getItem('notif:clear_until') || '';
-                const since = lr && lc ? (new Date(lr) > new Date(lc) ? lr : lc) : (lr || lc);
-                if (since) url.searchParams.set('since', since);
-                const res = await fetch(url, { headers: { Accept: 'application/json' }, credentials: 'same-origin' });
+                const lr = localStorage.getItem("notif:last_read_ts") || "";
+                const lc = localStorage.getItem("notif:clear_until") || "";
+                const since =
+                    lr && lc
+                        ? new Date(lr) > new Date(lc)
+                            ? lr
+                            : lc
+                        : lr || lc;
+                if (since) url.searchParams.set("since", since);
+                const res = await fetch(url, {
+                    headers: { Accept: "application/json" },
+                    credentials: "same-origin",
+                });
                 const data = res.ok ? await res.json() : { items: [] };
                 setNotifications(Array.isArray(data.items) ? data.items : []);
                 setTotalNotif(Number(data.total_count || 0));
@@ -128,8 +164,8 @@ export default function AuthenticatedLayout({ header, children }) {
     const onClearNotifications = async () => {
         // Optimistic UI: kosongkan segera
         const ts = new Date().toISOString();
-        localStorage.setItem('notif:last_read_ts', ts);
-        localStorage.setItem('notif:clear_until', ts);
+        localStorage.setItem("notif:last_read_ts", ts);
+        localStorage.setItem("notif:clear_until", ts);
         setLoadingNotif(false);
         setShowAllNotif(false);
         setNotifications([]);
@@ -138,11 +174,15 @@ export default function AuthenticatedLayout({ header, children }) {
 
         // Sinkronkan ke server (non-blocking)
         try {
-            await fetch(route('notifications.clear'), {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+            await fetch(route("notifications.clear"), {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    Accept: "application/json",
+                    "X-Requested-With": "XMLHttpRequest",
+                },
                 body: JSON.stringify({ ts }),
-                credentials: 'same-origin',
+                credentials: "same-origin",
             });
         } catch {
             // Abaikan error: UI sudah bersih; akan tersinkron saat fetch berikutnya
@@ -184,7 +224,11 @@ export default function AuthenticatedLayout({ header, children }) {
                                 className="relative"
                             >
                                 {/* notifikasi */}
-                                <button type="button" onClick={toggleNotif} className="hover:cursor-pointer">
+                                <button
+                                    type="button"
+                                    onClick={toggleNotif}
+                                    className="hover:cursor-pointer"
+                                >
                                     <Bell />
                                 </button>
                                 {badgeCount > 0 && (
@@ -192,7 +236,9 @@ export default function AuthenticatedLayout({ header, children }) {
                                         style={{ borderRadius: "10px" }}
                                         className=" text-[10px] leading-none flex items-center justify-center bg-amber-300 text-black px-1.5 h-4 min-w-4 absolute -top-2 z-50 -right-1"
                                     >
-                                        <span className="mx-auto">{badgeCount}</span>
+                                        <span className="mx-auto">
+                                            {badgeCount}
+                                        </span>
                                     </div>
                                 )}
                                 {/* POPOVER NOTIFIKASI */}
@@ -202,43 +248,81 @@ export default function AuthenticatedLayout({ header, children }) {
                                         style={{ borderRadius: "10px" }}
                                         className="absolute -left-40 mt-2 w-64 bg-white dark:bg-gray-800 shadow-lg border border-gray-200 dark:border-gray-700 rounded-lg p-3 z-50"
                                     >
-                                        <h4 className="font-semibold text-sm mb-2">Notifikasi</h4>
+                                        <h4 className="font-semibold text-sm mb-2">
+                                            Notifikasi
+                                        </h4>
                                         {loadingNotif ? (
                                             <div className="flex justify-center py-4">
-                                                <div className="text-xs text-gray-600 dark:text-gray-300">Memuat notifikasi...</div>
+                                                <div className="text-xs text-gray-600 dark:text-gray-300">
+                                                    Memuat notifikasi...
+                                                </div>
                                             </div>
                                         ) : notifications.length === 0 ? (
-                                            <div className="text-xs text-gray-600 dark:text-gray-300">Tidak ada notifikasi baru.</div>
+                                            <div className="text-xs text-gray-600 dark:text-gray-300">
+                                                Tidak ada notifikasi baru.
+                                            </div>
                                         ) : (
                                             <div>
                                                 <ul className="space-y-2 max-h-72 overflow-auto">
-                                                    {notifications.map((n, idx) => (
-                                                        <li key={idx} className="flex items-start gap-2">
-                                                            <div className="shrink-0 text-base">{n.icon || "📄"}</div>
-                                                            <div className="min-w-0">
-                                                                <div
-                                                                    className="text-xs text-foreground"
-                                                                    style={{
-                                                                        display: "-webkit-box",
-                                                                        WebkitLineClamp: 2,
-                                                                        WebkitBoxOrient: "vertical",
-                                                                        overflow: "hidden",
-                                                                    }}
-                                                                >
-                                                                    {n.message}
+                                                    {notifications.map(
+                                                        (n, idx) => (
+                                                            <li
+                                                                key={idx}
+                                                                className="flex items-start gap-2"
+                                                            >
+                                                                <div className="shrink-0 text-base">
+                                                                    {n.icon ||
+                                                                        "📄"}
                                                                 </div>
-                                                                <div className="text-[10px] text-muted-foreground mt-0.5">{n.timestamp || ""}</div>
-                                                            </div>
-                                                        </li>
-                                                    ))}
+                                                                <div className="min-w-0">
+                                                                    <div
+                                                                        className="text-xs text-foreground"
+                                                                        style={{
+                                                                            display:
+                                                                                "-webkit-box",
+                                                                            WebkitLineClamp: 2,
+                                                                            WebkitBoxOrient:
+                                                                                "vertical",
+                                                                            overflow:
+                                                                                "hidden",
+                                                                        }}
+                                                                    >
+                                                                        {
+                                                                            n.message
+                                                                        }
+                                                                    </div>
+                                                                    <div className="text-[10px] text-muted-foreground mt-0.5">
+                                                                        {n.timestamp ||
+                                                                            ""}
+                                                                    </div>
+                                                                </div>
+                                                            </li>
+                                                        )
+                                                    )}
                                                 </ul>
                                                 <div className="mt-2 flex items-center justify-between gap-2">
                                                     {totalNotif > 5 && (
-                                                        <button type="button" onClick={(e)=>{e.stopPropagation(); onSeeMoreToggle();}} className="text-[11px] text-primary hover:underline">
-                                                            {showAllNotif ? 'See less' : 'See more'}
+                                                        <button
+                                                            type="button"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                onSeeMoreToggle();
+                                                            }}
+                                                            className="text-[11px] text-primary hover:underline"
+                                                        >
+                                                            {showAllNotif
+                                                                ? "See less"
+                                                                : "See more"}
                                                         </button>
                                                     )}
-                                                    <button type="button" onClick={(e)=>{e.stopPropagation(); onClearNotifications();}} className="text-[11px] text-red-600 hover:underline ml-auto">
+                                                    <button
+                                                        type="button"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            onClearNotifications();
+                                                        }}
+                                                        className="text-[11px] text-red-600 hover:underline ml-auto"
+                                                    >
                                                         Clear notifications
                                                     </button>
                                                 </div>
@@ -270,8 +354,18 @@ export default function AuthenticatedLayout({ header, children }) {
                                         </button>
                                     </Dropdown.Trigger>
                                     <Dropdown.Content>
-                                        <Dropdown.Link href={route("profile.edit")}>Profile</Dropdown.Link>
-                                        <Dropdown.Link href={route("logout")} method="post" as="button">Log Out</Dropdown.Link>
+                                        <Dropdown.Link
+                                            href={route("profile.edit")}
+                                        >
+                                            Profile
+                                        </Dropdown.Link>
+                                        <Dropdown.Link
+                                            href={route("logout")}
+                                            method="post"
+                                            as="button"
+                                        >
+                                            Log Out
+                                        </Dropdown.Link>
                                     </Dropdown.Content>
                                 </Dropdown>
                             </div>
