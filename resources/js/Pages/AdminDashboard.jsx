@@ -45,10 +45,14 @@ export default function AdminDashboard({ auth, stats }) {
                                 Selamat datang, {auth.user.name} 👋
                             </h1>
                             <p className="text-muted-foreground mt-2 text-base">
-                                Kelola sistem dan pantau aktivitas pengguna di e-Approval.
+                                Kelola sistem dan pantau aktivitas pengguna di
+                                e-Approval.
                             </p>
                         </div>
-                        <div className="bg-card border border-border px-5 py-2.5 rounded-xl text-sm font-medium text-foreground shadow-sm">
+                        <div
+                            style={{ borderRadius: "15px" }}
+                            className="bg-card border border-border px-5 py-2.5  text-sm font-medium text-foreground shadow-sm"
+                        >
                             {new Date().toLocaleDateString("id-ID", {
                                 weekday: "long",
                                 day: "numeric",
@@ -134,8 +138,6 @@ export default function AdminDashboard({ auth, stats }) {
                                 </p>
                             </CardContent>
                         </Card>
-
-                     
                     </div>
 
                     {/* Overview Section */}
@@ -150,7 +152,8 @@ export default function AdminDashboard({ auth, stats }) {
                                         Aktivitas Terbaru
                                     </CardTitle>
                                     <CardDescription className="text-muted-foreground text-sm mt-1">
-                                        Pantau aktivitas terbaru dari seluruh pengguna
+                                        Pantau aktivitas terbaru dari seluruh
+                                        pengguna
                                     </CardDescription>
                                 </div>
                                 <div className="p-2 bg-muted rounded-lg">
@@ -167,7 +170,9 @@ export default function AdminDashboard({ auth, stats }) {
                                             className="p-4 border border-border rounded-xl hover:bg-muted/50 hover:border-border transition-all duration-200 text-sm flex justify-between items-center group"
                                         >
                                             <span className="text-foreground">
-                                                <strong className="font-semibold text-foreground">{a.user}</strong>{" "}
+                                                <strong className="font-semibold text-foreground">
+                                                    {a.user}
+                                                </strong>{" "}
                                                 {a.action}
                                             </span>
                                             <span className="text-muted-foreground text-xs font-medium">

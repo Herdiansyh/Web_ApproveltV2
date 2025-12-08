@@ -166,7 +166,7 @@ export default function DateFilter({
                                 setTempEndDate(null);
                             }}
                             style={{ borderRadius: "15px" }}
-                            className="text-xs  flex-1"
+                            className="text-xs p-2 flex-1"
                         >
                             Tanggal Tertentu
                         </Button>
@@ -182,7 +182,7 @@ export default function DateFilter({
                                 setTempEndDate(endDate);
                             }}
                             style={{ borderRadius: "15px" }}
-                            className="text-xs  flex-1"
+                            className="text-xs p-2 flex-1"
                         >
                             Rentang Tanggal
                         </Button>

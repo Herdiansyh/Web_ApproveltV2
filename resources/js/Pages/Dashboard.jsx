@@ -116,7 +116,13 @@ export default function Dashboard({
                     )}
 
                     {/* Stats Section */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <div
+                        className={`grid grid-cols-1 sm:grid-cols-2 ${
+                            auth.user.role === "direktur"
+                                ? "lg:grid-cols-3"
+                                : "lg:grid-cols-4"
+                        } gap-6`}
+                    >
                         {/* Total Pengajuan - tampilkan untuk semua role kecuali direktur */}
                         {auth.user.role !== "direktur" && (
                             <Card
