@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Log;
 use setasign\Fpdi\Fpdi;
 use setasign\Fpdi\PdfParser\StreamReader;
 use setasign\Fpdi\PdfParser\CrossReference\CrossReferenceException;
+use SimpleSoftwareIO\QrCode\Facades\QrCode;
 
 class StampPdfOnDecision implements ShouldQueue
 {
@@ -95,6 +96,9 @@ class StampPdfOnDecision implements ShouldQueue
             $size = $pdf->getTemplateSize($tplId);
             $pdf->AddPage($size['orientation'], [$size['width'], $size['height']]);
             $pdf->useTemplate($tplId);
+
+            // Hanya tambahkan stamp di halaman terakhir
+            if ($pageNo === $pageCount) {
 
             // Prepare stamp text untuk semua approver dalam satu baris
             $label = 'APPROVED BY';
@@ -189,6 +193,51 @@ class StampPdfOnDecision implements ShouldQueue
             $pdf->SetTextColor(100, 100, 100); // abu-abu
             $pdf->SetXY($x, $y + 11);
             $pdf->Cell($maxWidth, 3, $allDatesText, 0, 1, 'C', false);
+
+            // Tambahkan QR Code di sebelah kiri stamp
+            try {
+                $verifyUrl = route('verification.show', $submission->short_code);
+                $qrSvg = QrCode::format('svg')
+                    ->size(90)
+                    ->margin(1)
+                    ->errorCorrection('M')
+                    ->generate($verifyUrl);
+
+                // Konversi SVG ke gambar untuk PDF
+                $qrTempPath = sys_get_temp_dir() . '/qr_' . $submission->id . '.png';
+                $qrPng = QrCode::format('png')
+                    ->size(90)
+                    ->margin(1)
+                    ->errorCorrection('M')
+                    ->generate($verifyUrl);
+                
+                file_put_contents($qrTempPath, $qrPng);
+                
+                // Posisikan QR code di sebelah kiri stamp
+                $qrSize = 35; // 35pt ~ 12.5mm
+                $qrX = $x - $qrSize - 15; // 15pt margin dari stamp
+                $qrY = $y + ($totalHeight / 2) - ($qrSize / 2); // Center vertical
+                
+                $pdf->Image($qrTempPath, $qrX, $qrY, $qrSize, $qrSize, 'PNG');
+                
+                // Hapus file temporary
+                if (file_exists($qrTempPath)) {
+                    unlink($qrTempPath);
+                }
+                
+                // Tambahkan label QR code
+                $pdf->SetFont('Helvetica', '', 6);
+                $pdf->SetTextColor(100, 100, 100);
+                $pdf->SetXY($qrX, $qrY + $qrSize + 2);
+                $pdf->Cell($qrSize, 3, 'Verify Document', 0, 1, 'C', false);
+                
+            } catch (\Throwable $e) {
+                Log::warning('Failed to add QR code to stamped PDF', [
+                    'submission_id' => $submission->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+            }
         }
 
         try {

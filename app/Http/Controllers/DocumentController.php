@@ -6,6 +6,7 @@ use App\Models\Document;
 use App\Models\DocumentField;
 use App\Models\Workflow;
 use App\Models\DocumentNameSeries;
+use App\Http\Requests\DocumentNameSeriesRequest;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
@@ -25,6 +26,17 @@ class DocumentController extends Controller
     public function store(Request $request)
     {
         $this->authorize('create', Document::class);
+        
+        // Validate prefix uniqueness before creating document
+        if ($request->filled('prefix')) {
+            $existingPrefix = DocumentNameSeries::where('prefix', $request->prefix)->exists();
+            if ($existingPrefix) {
+                throw ValidationException::withMessages([
+                    'prefix' => 'Prefix sudah digunakan oleh dokumen lain. Silakan pilih prefix yang berbeda.'
+                ]);
+            }
+        }
+        
         $data = $request->validate([
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
@@ -32,6 +44,10 @@ class DocumentController extends Controller
             'default_columns' => 'nullable|array',
             'default_columns.*.name' => 'required|string|max:255',
             'default_columns.*.key' => 'required|string|max:255',
+            'default_columns.*.type' => 'required|string|in:text,number,date,select',
+            'default_columns.*.required' => 'required|boolean',
+            'default_columns.*.options' => 'nullable|array',
+            'default_columns.*.options.*' => 'nullable|string',
 
             // optional name series config, can be filled from create/edit modal
             'series_pattern' => 'nullable|string|max:255',
@@ -75,6 +91,19 @@ class DocumentController extends Controller
     public function update(Request $request, Document $document)
     {
         $this->authorize('update', $document);
+        
+        // Validate prefix uniqueness before updating document
+        if ($request->filled('prefix')) {
+            $existingPrefix = DocumentNameSeries::where('prefix', $request->prefix)
+                ->where('document_id', '!=', $document->id)
+                ->exists();
+            if ($existingPrefix) {
+                throw ValidationException::withMessages([
+                    'prefix' => 'Prefix sudah digunakan oleh dokumen lain. Silakan pilih prefix yang berbeda.'
+                ]);
+            }
+        }
+        
         $data = $request->validate([
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
@@ -82,6 +111,10 @@ class DocumentController extends Controller
             'default_columns' => 'nullable|array',
             'default_columns.*.name' => 'required|string|max:255',
             'default_columns.*.key' => 'required|string|max:255',
+            'default_columns.*.type' => 'required|string|in:text,number,date,select',
+            'default_columns.*.required' => 'required|boolean',
+            'default_columns.*.options' => 'nullable|array',
+            'default_columns.*.options.*' => 'nullable|string',
 
             // optional name series config from modal
             'series_pattern' => 'nullable|string|max:255',
@@ -209,16 +242,11 @@ class DocumentController extends Controller
     // Document Name Series Endpoints
     // ------------------------------
 
-    public function updateNameSeries(Request $request, Document $document)
+    public function updateNameSeries(DocumentNameSeriesRequest $request, Document $document)
     {
         $this->authorize('update', $document);
 
-        $data = $request->validate([
-            'series_pattern' => 'required|string|max:255',
-            'prefix' => 'nullable|string|max:50',
-            'reset_type' => 'required|in:none,monthly,yearly',
-            'current_number' => 'nullable|integer|min:0',
-        ]);
+        $data = $request->validated();
 
         $series = DocumentNameSeries::firstOrCreate(
             ['document_id' => $document->id],

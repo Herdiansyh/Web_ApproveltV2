@@ -14,7 +14,7 @@ return new class extends Migration
         $table->foreignId('division_id')->constrained('divisions')->cascadeOnDelete();
         $table->integer('step_order');
 
-        $table->enum('status', ['pending', 'approved', 'rejected'])->default('pending');
+        $table->enum('status', ['pending', 'approved', 'rejected', "cancelled"])->default('pending');
         $table->text('note')->nullable();
         $table->timestamp('approved_at')->nullable();
         $table->foreignId('approver_id')->nullable()->constrained('users')->nullOnDelete();

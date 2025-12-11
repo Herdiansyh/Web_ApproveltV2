@@ -2,6 +2,13 @@ import { Button } from "@/Components/ui/button";
 import { Input } from "@/Components/ui/input";
 import { Label } from "@/Components/ui/label";
 import React from "react";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/Components/ui/select";
 
 export default function TableExcel({
     data,
@@ -17,6 +24,7 @@ export default function TableExcel({
     addRow,
     deleteRow,
     updateCellData,
+    existingTableData = [],
 }) {
     return (
         <div className="mt-10">
@@ -45,8 +53,10 @@ export default function TableExcel({
             </div>
 
             <p className="text-sm text-gray-600 mb-4">
-                Centang "Gunakan Data Table" jika ingin menyertakan data tabel
-                dalam pengajuan ini.
+                {existingTableData.length > 0 
+                    ? "Pengajuan ini memiliki data table. Centang untuk mengedit atau hapus centang untuk menghapus data table."
+                    : "Centang 'Gunakan Data Table' jika ingin menyertakan data tabel dalam pengajuan ini."
+                }
             </p>
 
             {data.useTableData && (
@@ -108,14 +118,22 @@ export default function TableExcel({
                                             autoFocus
                                         />
                                     ) : (
-                                        <span
-                                            onClick={() =>
-                                                setEditingColumn(column.id)
-                                            }
-                                            className="cursor-pointer hover:text-blue-600 text-sm"
-                                        >
-                                            {column.name}
-                                        </span>
+                                        <div className="flex items-center gap-1">
+                                            <span
+                                                onClick={() =>
+                                                    setEditingColumn(column.id)
+                                                }
+                                                className="cursor-pointer hover:text-blue-600 text-sm"
+                                            >
+                                                {column.name}
+                                            </span>
+                                            <div className="flex items-center gap-1 text-xs text-gray-500">
+                                                <span>({column.type})</span>
+                                                {column.required && (
+                                                    <span className="text-red-500">*</span>
+                                                )}
+                                            </div>
+                                        </div>
                                     )}
                                     {data.tableColumns.length > 1 && (
                                         <Button
@@ -145,7 +163,12 @@ export default function TableExcel({
                                             key={column.id}
                                             className="border p-2 text-left min-w-[120px]"
                                         >
-                                            {column.name}
+                                            <div className="flex items-center gap-1">
+                                                {column.name}
+                                                {column.required && (
+                                                    <span className="text-red-500 text-xs">*</span>
+                                                )}
+                                            </div>
                                         </th>
                                     ))}
                                     <th className="border p-2 text-center w-20">
@@ -162,35 +185,47 @@ export default function TableExcel({
                                                 key={column.id}
                                                 className="border p-2"
                                             >
-                                                <Input
-                                                    value={
-                                                        row[column.key] || ""
-                                                    }
-                                                    onChange={(e) =>
-                                                        updateCellData(
-                                                            row.id,
-                                                            column.key,
-                                                            e.target.value
-                                                        )
-                                                    }
-                                                    placeholder={`Isi ${column.name.toLowerCase()}...`}
-                                                    style={{
-                                                        borderRadius: "8px",
-                                                    }}
-                                                    type={
-                                                        column.key.includes(
-                                                            "jumlah"
-                                                        ) ||
-                                                        column.key.includes(
-                                                            "qty"
-                                                        ) ||
-                                                        column.key.includes(
-                                                            "number"
-                                                        )
-                                                            ? "number"
-                                                            : "text"
-                                                    }
-                                                />
+                                                {column.type === 'select' ? (
+                                                    <Select
+                                                        value={row[column.key] || ""}
+                                                        onValueChange={(value) =>
+                                                            updateCellData(
+                                                                row.id,
+                                                                column.key,
+                                                                value
+                                                            )
+                                                        }
+                                                    >
+                                                        <SelectTrigger className="w-full">
+                                                            <SelectValue placeholder={`Pilih ${column.name.toLowerCase()}...`} />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            {column.options?.map((option, index) => (
+                                                                <SelectItem key={`${column.key}-option-${index}-${option}`} value={option}>
+                                                                    {option}
+                                                                </SelectItem>
+                                                            ))}
+                                                        </SelectContent>
+                                                    </Select>
+                                                ) : (
+                                                    <Input
+                                                        value={row[column.key] || ""}
+                                                        onChange={(e) =>
+                                                            updateCellData(
+                                                                row.id,
+                                                                column.key,
+                                                                e.target.value
+                                                            )
+                                                        }
+                                                        placeholder={`Isi ${column.name.toLowerCase()}...`}
+                                                        style={{
+                                                            borderRadius: "8px",
+                                                        }}
+                                                        type={column.type === 'number' ? 'number' : 
+                                                              column.type === 'date' ? 'date' : 'text'}
+                                                        required={column.required}
+                                                    />
+                                                )}
                                             </td>
                                         ))}
                                         <td className="border p-2 text-center">

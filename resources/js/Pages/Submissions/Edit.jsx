@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo, useEffect, useState } from "react";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
 import { Head, useForm, Link } from "@inertiajs/react";
 import { Card } from "@/Components/ui/card";
@@ -10,16 +10,199 @@ import Header from "@/Components/Header";
 import Swal from "sweetalert2";
 import { useLoading } from "@/Components/GlobalLoading";
 import { fetchWithCsrf } from "@/utils/csrfToken";
+import TableExcel from "./TableExcel";
+import DynamicFields from "./DynamicFields";
 
 export default function Edit({ auth, submission, documentFields = [] }) {
     const { showLoading, hideLoading } = useLoading();
+    
+    // Extract existing table data from submission
+    const existingData = submission.data_json || {};
+    const existingTableData = existingData.tableData || [];
+    const existingTableColumns = existingData.tableColumns || [];
+    const existingUseTableData = existingData.useTableData || false;
+    
+    // Default columns configuration
+    const getDefaultColumns = () => {
+        // If there are existing table columns, use them
+        if (existingTableColumns.length > 0) {
+            return existingTableColumns;
+        }
+        
+        // Get default columns from document configuration
+        if (submission?.workflow?.document?.default_columns) {
+            return submission.workflow.document.default_columns.map(
+                (col, index) => ({
+                    id: index + 1,
+                    name: col.name || `Column ${index + 1}`,
+                    key: col.key || `col_${index + 1}`,
+                    type: col.type || 'text',
+                    required: col.required || false,
+                    options: col.options || []
+                })
+            );
+        }
+        
+        // Fallback to hardcoded defaults
+        return [
+            { id: 1, name: "Item", key: "item", type: "text", required: false, options: [] },
+            { id: 2, name: "Jumlah", key: "jumlah", type: "number", required: true, options: [] },
+            { id: 3, name: "Keterangan", key: "keterangan", type: "text", required: false, options: [] },
+        ];
+    };
+    
     const { data, setData, post, processing, errors, reset, transform } =
         useForm({
             title: submission.title || "",
             description: submission.description || "",
             file: null,
-            data: submission.data_json || {},
+            data: existingData,
+            useTableData: existingUseTableData,
+            tableData: existingTableData,
+            tableColumns: existingTableColumns.length > 0 ? existingTableColumns : getDefaultColumns(),
         });
+    
+    // Initialize table states
+    const [nextId, setNextId] = useState(() => {
+        if (existingTableData.length > 0) {
+            return Math.max(...existingTableData.map(r => r.id)) + 1;
+        }
+        return (existingTableData.length || 0) + 1;
+    });
+    
+    const [nextColumnId, setNextColumnId] = useState(() => {
+        if (existingTableColumns.length > 0) {
+            return Math.max(...existingTableColumns.map(c => c.id)) + 1;
+        }
+        return 4;
+    });
+    
+    const [newColumnName, setNewColumnName] = useState("");
+    const [editingColumn, setEditingColumn] = useState(null);
+    const [isSaved, setIsSaved] = useState(true); // Start as true since data is loaded
+    
+    // Initialize tableData with default columns if empty
+    useEffect(() => {
+        if (data.tableData?.length === 0 && data.tableColumns?.length > 0) {
+            const initialData = [{ id: 1 }, { id: 2 }, { id: 3 }].map((row) => {
+                data.tableColumns.forEach((col) => {
+                    row[col.key] = "";
+                });
+                return row;
+            });
+            setData("tableData", initialData);
+        }
+    }, [data.tableColumns]);
+    
+    // Auto-enable table data if there's existing table data
+    useEffect(() => {
+        if (existingTableData.length > 0 && !data.useTableData) {
+            setData("useTableData", true);
+        }
+    }, [existingTableData.length]);
+    
+    // Initialize default columns when checkbox is checked and no existing columns
+    useEffect(() => {
+        if (data.useTableData && data.tableColumns.length === 0) {
+            const defaultCols = getDefaultColumns();
+            setData("tableColumns", defaultCols);
+        }
+    }, [data.useTableData]);
+    
+    // Table functions
+    const addRow = () => {
+        const newRow = { id: nextId };
+        data.tableColumns.forEach((col) => {
+            newRow[col.key] = "";
+        });
+        setData("tableData", [...data.tableData, newRow]);
+        setNextId(nextId + 1);
+        setIsSaved(false);
+    };
+    
+    const deleteRow = (id) => {
+        if (data.tableData.length > 1) {
+            setData("tableData", data.tableData.filter((row) => row.id !== id));
+            setIsSaved(false);
+        }
+    };
+    
+    const addColumn = () => {
+        if (newColumnName.trim()) {
+            const newKey = newColumnName.toLowerCase().replace(/\s+/g, "_");
+            const newColumn = {
+                id: nextColumnId,
+                name: newColumnName,
+                key: newKey,
+                type: "text",
+                required: false,
+                options: []
+            };
+            
+            setData("tableColumns", [...data.tableColumns, newColumn]);
+            
+            // Add new column data to existing rows
+            const updatedData = data.tableData.map((row) => ({
+                ...row,
+                [newKey]: "",
+            }));
+            setData("tableData", updatedData);
+            
+            setNewColumnName("");
+            setNextColumnId(nextColumnId + 1);
+            setIsSaved(false);
+        }
+    };
+    
+    const deleteColumn = (columnId) => {
+        if (data.tableColumns.length > 1) {
+            const columnToDelete = data.tableColumns.find(
+                (col) => col.id === columnId
+            );
+            const updatedColumns = data.tableColumns.filter(
+                (col) => col.id !== columnId
+            );
+            
+            setData("tableColumns", updatedColumns);
+            
+            // Remove column data from all rows
+            const updatedData = data.tableData.map((row) => {
+                const { [columnToDelete.key]: removed, ...rest } = row;
+                return rest;
+            });
+            setData("tableData", updatedData);
+            
+            setIsSaved(false);
+        }
+    };
+    
+    const updateCellData = (rowId, columnKey, value) => {
+        setData("tableData", data.tableData.map((row) =>
+            row.id === rowId ? { ...row, [columnKey]: value } : row
+        ));
+        setIsSaved(false);
+    };
+    
+    const updateColumnName = (columnId, newName) => {
+        const column = data.tableColumns.find((col) => col.id === columnId);
+        const newKey = newName.toLowerCase().replace(/\s+/g, "_");
+        const oldKey = column.key;
+        
+        // Update column name and key
+        const updatedColumns = data.tableColumns.map((col) =>
+            col.id === columnId ? { ...col, name: newName, key: newKey } : col
+        );
+        setData("tableColumns", updatedColumns);
+        
+        // Update all row data with new key
+        const updatedData = data.tableData.map((row) => {
+            const { [oldKey]: oldValue, ...rest } = row;
+            return { ...rest, [newKey]: oldValue };
+        });
+        setData("tableData", updatedData);
+        setEditingColumn(null);
+        setIsSaved(false);
+    };
 
     const handleFileChange = (e) => {
         const file = e.target.files[0];
@@ -51,14 +234,28 @@ export default function Edit({ auth, submission, documentFields = [] }) {
         }
         
         // Add data object if it exists
-        if (data.data) {
-            console.log("Edit.jsx - data.data being sent:", data.data);
-            formData.append('data', JSON.stringify(data.data));
+        if (data.data || data.tableData || data.tableColumns) {
+            
+            // Prepare data for submission - merge all data
+            const dataToSend = {
+                ...data.data,
+                useTableData: data.useTableData,
+            };
+            
+            // Only include table data if useTableData is true
+            if (data.useTableData) {
+                dataToSend.tableData = data.tableData || [];
+                dataToSend.tableColumns = data.tableColumns || [];
+            } else {
+                // Explicitly remove table data when unchecked
+                delete dataToSend.tableData;
+                delete dataToSend.tableColumns;
+            }
+            
+            formData.append('data', JSON.stringify(dataToSend));
         }
         
-        console.log("Edit.jsx - FormData contents:");
         for (let [key, value] of formData.entries()) {
-            console.log(`Edit.jsx - ${key}:`, value instanceof File ? `File: ${value.name}` : value);
         }
         
         // Get CSRF token and set up headers manually for FormData
@@ -74,8 +271,6 @@ export default function Edit({ auth, submission, documentFields = [] }) {
             body: formData
         })
         .then(response => {
-            console.log("Edit.jsx - response status:", response.status);
-            console.log("Edit.jsx - response ok:", response.ok);
             
             if (!response.ok) {
                 // Handle HTTP errors
@@ -107,8 +302,8 @@ export default function Edit({ auth, submission, documentFields = [] }) {
                     timer: 2000,
                     showConfirmButton: false,
                 }).then(() => {
-                    // Redirect back to list
-                    window.location.href = route("submissions.index");
+                    // Redirect back to show submission
+                    window.location.href = route("submissions.show", submission.id);
                 });
             } else {
                 Swal.fire({
@@ -496,6 +691,24 @@ export default function Edit({ auth, submission, documentFields = [] }) {
                                             </div>
                                         )}
 
+                                    {/* Dynamic Table Component */}
+                                    <TableExcel
+                                        data={data}
+                                        setData={setData}
+                                        setIsSaved={setIsSaved}
+                                        newColumnName={newColumnName}
+                                        setNewColumnName={setNewColumnName}
+                                        addColumn={addColumn}
+                                        editingColumn={editingColumn}
+                                        setEditingColumn={setEditingColumn}
+                                        updateColumnName={updateColumnName}
+                                        deleteColumn={deleteColumn}
+                                        addRow={addRow}
+                                        deleteRow={deleteRow}
+                                        updateCellData={updateCellData}
+                                        existingTableData={existingTableData}
+                                    />
+
                                     <div className="flex items-center justify-end gap-2">
                                         <Button
                                             type="button"
@@ -503,7 +716,7 @@ export default function Edit({ auth, submission, documentFields = [] }) {
                                             style={{ borderRadius: "15px" }}
                                             onClick={() =>
                                                 (window.location.href =
-                                                    route("submissions.index"))
+                                                    route("submissions.show", submission.id))
                                             }
                                         >
                                             Batal

@@ -121,19 +121,19 @@ export default function DateFilter({
             : placeholder;
 
     return (
-        <div className="relative w-full sm:w-80 lg:w-96 ">
+        <div className="relative  sm:w-70 lg:w-86 ">
             <div className="flex items-center gap-2">
                 <div className="flex-1 relative">
-                    <div
+                    <Button
                         style={{ borderRadius: "15px" }}
-                        className="w-full px-3 py-2 sm:px-4 border border-input bg-background text-foreground text-sm cursor-pointer hover:border-primary/60 transition flex items-center gap-2 min-h-10"
+                        className="w-full px-3 py-2 sm:px-4 border border-input bg-background text-foreground text-sm cursor-pointer hover:border-primary/60 transition flex items-center gap-2 "
                         onClick={() => setIsOpen(!isOpen)}
                     >
                         <CalendarIcon className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-                        <span className="truncate text-xs sm:text-sm">
+                        <span className="truncate text-xs sm:text-xs">
                             {displayText}
                         </span>
-                    </div>
+                    </Button>
                 </div>
 
                 {(startDate || endDate) && (
@@ -151,7 +151,7 @@ export default function DateFilter({
             </div>
 
             {isOpen && (
-                <div className="absolute top-full left-0 mt-2 z-50 bg-card border border-border/50 rounded-lg shadow-lg p-3 sm:p-4 min-w-max max-w-[90vw] sm:max-w-none">
+                <div className="absolute top-full right-0 mt-2 z-50 bg-card border border-border/50 rounded-lg shadow-lg p-3 sm:p-4 min-w-max max-w-[90vw] sm:max-w-none">
                     {/* Mode Selector */}
                     <div className="flex flex-col sm:flex-row gap-2 mb-4">
                         <Button

@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useRef } from "react";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
-import { Head, useForm } from "@inertiajs/react";
+import { Head, useForm, router, Link } from "@inertiajs/react";
 import { Card } from "@/Components/ui/card";
 import { Button } from "@/Components/ui/button";
 import { Textarea } from "@/Components/ui/textarea";
@@ -12,7 +12,7 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from "@/Components/ui/dropdown-menu";
-import { Download, Printer } from "lucide-react";
+import { Download, Printer, MoreVertical, Pencil, Trash2 } from "lucide-react";
 import { Separator } from "@/Components/ui/separator";
 import Footer from "@/Components/Footer";
 import { useLoading } from "@/Components/GlobalLoading";
@@ -191,13 +191,6 @@ export default function Show({
             }),
         })
             .then((response) => {
-                console.log("📊 Approve Response:", {
-                    status: response.status,
-                    statusText: response.statusText,
-                    ok: response.ok,
-                    contentType: response.headers.get("content-type"),
-                });
-
                 if (!response.ok) {
                     // Check if response is HTML (error page)
                     const contentType = response.headers.get("content-type");
@@ -223,7 +216,6 @@ export default function Show({
                 throw error;
             })
             .then((responseData) => {
-                console.log("✅ Approve Response Data:", responseData);
                 hideLoading(responseData.success); // Hide loading animation with success status
                 if (responseData.success) {
                     setShowApproveModal(false);
@@ -347,6 +339,51 @@ export default function Show({
         });
     };
 
+    const handleDelete = () => {
+        Swal.fire({
+            title: "Yakin ingin menghapus?",
+            text: "Pengajuan akan dihapus secara permanen.",
+            icon: "warning",
+            showCancelButton: true,
+            confirmButtonText: "Ya, hapus",
+            cancelButtonText: "Batal",
+        }).then((result) => {
+            if (result.isConfirmed) {
+                fetchWithCsrf(route("submissions.destroy", submission.id), {
+                    method: "DELETE",
+                })
+                    .then((response) => {
+                        if (!response.ok) {
+                            throw new Error("Gagal menghapus pengajuan");
+                        }
+                        return response.json();
+                    })
+                    .then(() => {
+                        Swal.fire({
+                            icon: "success",
+                            title: "Dihapus!",
+                            text: "Pengajuan berhasil dihapus.",
+                            timer: 2000,
+                            showConfirmButton: false,
+                        }).then(() => {
+                            window.location.href = route(
+                                "submissions.forDivision"
+                            );
+                        });
+                    })
+                    .catch((error) => {
+                        console.error("Delete error:", error);
+                        Swal.fire({
+                            icon: "error",
+                            title: "Gagal!",
+                            text: "Gagal menghapus pengajuan.",
+                            confirmButtonText: "OK",
+                        });
+                    });
+            }
+        });
+    };
+
     const handleRequestNext = () => {
         if (!canApprove) return handleNoAccess();
 
@@ -434,11 +471,7 @@ export default function Show({
 
     const dataMap = useMemo(() => {
         const data = submission?.data_json || {};
-        console.log("Show.jsx - dataMap:", data);
-        console.log("Show.jsx - has tableData:", !!data.tableData);
-        console.log("Show.jsx - has tableColumns:", !!data.tableColumns);
         if (data.tableData) {
-            console.log("Show.jsx - tableData length:", data.tableData.length);
         }
         return data;
     }, [submission]);
@@ -469,6 +502,10 @@ export default function Show({
     const canDeleteNow =
         !isApprovedFinal && (isOwner || (sameDivision && canDeleteGlobal));
 
+    // Check if submission has external uploaded document
+    const hasExternalDocument =
+        !!submission?.file_path && !submission?.generated_pdf_path;
+
     // Ambil catatan penolakan dari workflowSteps (step terakhir yang rejected dan punya note)
     const rejectedNote = useMemo(() => {
         if (!Array.isArray(workflowSteps)) return null;
@@ -485,7 +522,59 @@ export default function Show({
             return tb - ta;
         });
         const last = rejected[0];
-        return { note: last.note };
+        return {
+            note: last.note,
+            approved_at: last.approved_at,
+            approver: last.approver,
+        };
+    }, [workflowSteps]);
+
+    // Ambil informasi approval/reject terakhir dengan timestamp
+    const finalApprovalInfo = useMemo(() => {
+        if (!Array.isArray(workflowSteps)) return null;
+
+        // Cari step yang sudah approved atau rejected
+        const completedSteps = workflowSteps.filter((ws) => {
+            const status = String(ws.status || "").toLowerCase();
+            return status === "approved" || status === "rejected";
+        });
+
+        if (completedSteps.length === 0) return null;
+
+        // Urutkan berdasarkan waktu terakhir
+        completedSteps.sort((a, b) => {
+            const ta = new Date(a.approved_at || a.updated_at || 0).getTime();
+            const tb = new Date(b.approved_at || b.updated_at || 0).getTime();
+            return tb - ta;
+        });
+
+        const latest = completedSteps[0];
+        return {
+            status: latest.status,
+            approved_at: latest.approved_at,
+            approver: latest.approver,
+            division: latest.division,
+        };
+    }, [workflowSteps]);
+
+    // Logic untuk riwayat approval per step
+    const approvalHistory = useMemo(() => {
+        if (!Array.isArray(workflowSteps)) return [];
+
+        return workflowSteps
+            .filter((step) => {
+                const status = String(step.status || "").toLowerCase();
+                return status === "approved" || status === "rejected";
+            })
+            .map((step) => ({
+                step_order: step.step_order,
+                division: step.division,
+                status: step.status,
+                approver: step.approver,
+                approved_at: step.approved_at,
+                note: step.note,
+            }))
+            .sort((a, b) => a.step_order - b.step_order);
     }, [workflowSteps]);
 
     return (
@@ -567,18 +656,14 @@ export default function Show({
                                                 </span>
                                                 {isApprovedFinal && (
                                                     <span
-                                                        className="ml-2 text-[11px] rounded px-2 py-0.5 bg-gray-100 text-gray-700"
+                                                        style={{
+                                                            borderRadius:
+                                                                "10px",
+                                                        }}
+                                                        className="ml-2 text-[11px]  px-2 py-0.5 bg-gray-100 text-gray-700"
                                                         title="Dokumen final – aksi edit/delete dinonaktifkan."
                                                     >
                                                         Final
-                                                    </span>
-                                                )}
-                                                {hasStamped && (
-                                                    <span
-                                                        className="ml-2 text-[11px] rounded px-2 py-0.5 bg-emerald-100 text-emerald-700"
-                                                        title="File final sudah distempel"
-                                                    >
-                                                        Stamped
                                                     </span>
                                                 )}
                                             </div>
@@ -600,6 +685,20 @@ export default function Show({
                                         {submission.user.name} (
                                         {submission.user.division?.name ?? "-"})
                                     </p>
+                                    <p className="sm:text-sm text-xs text-muted-foreground">
+                                        <span className="font-semibold">
+                                            Tanggal:
+                                        </span>{" "}
+                                        {new Date(
+                                            submission.created_at
+                                        ).toLocaleString("id-ID", {
+                                            day: "numeric",
+                                            month: "long",
+                                            year: "numeric",
+                                            hour: "2-digit",
+                                            minute: "2-digit",
+                                        })}
+                                    </p>
                                     {submission.description && (
                                         <p className="text-sm text-muted-foreground">
                                             <span className="font-semibold">
@@ -619,7 +718,9 @@ export default function Show({
                                 </div>
 
                                 <div className="flex gap-2">
-                                    {isApprovedFinal && submission.file_path ? (
+                                    {isApprovedFinal &&
+                                    submission.file_path &&
+                                    hasExternalDocument ? (
                                         <button
                                             onClick={handleDownload}
                                             className="inline-flex items-center justify-center mb-2 py-1 px-2 text-sm font-medium rounded-full bg-blue-600 text-white hover:bg-blue-700 active:scale-[0.97] transition-all shadow-sm"
@@ -628,16 +729,15 @@ export default function Show({
                                             <Download className="mr-2 h-4 w-4" />{" "}
                                             Unduh Dokumen
                                         </button>
-                                    ) : (
+                                    ) : hasExternalDocument ? (
                                         <span
                                             style={{ borderRadius: "10px" }}
-                                            className="mb-2 inline-flex items-center px-2 py-1 text-[11px] bg-slate-100 text-slate-600 border border-slate-200"
+                                            className="mb-2 inline-flex items-center max-w-40 px-2 py-1 text-[11px] bg-slate-100 text-slate-600 border border-slate-200"
                                             title="Unduh tersedia setelah pengajuan disetujui di tahap terakhir"
                                         >
-                                            Unduh tersedia setelah final
-                                            approval
+                                            Unduh tersedia setelah finalisasi
                                         </span>
-                                    )}
+                                    ) : null}
 
                                     {isApprovedFinal ? (
                                         <button
@@ -752,6 +852,146 @@ export default function Show({
                                                 </DropdownMenuContent>
                                             </DropdownMenu>
                                         )}
+                                    {/* Edit/Delete Dropdown */}
+                                    {(() => {
+                                        const status = String(
+                                            submission.status || ""
+                                        ).toLowerCase();
+                                        const isApproved =
+                                            status.includes("approved");
+                                        const isRejected =
+                                            status.includes("rejected");
+
+                                        const isOwner =
+                                            auth?.user?.id ===
+                                            submission?.user_id;
+                                        const sameDivision =
+                                            userDivisionId &&
+                                            submission?.division_id ===
+                                                userDivisionId;
+                                        const canEditGlobal =
+                                            !!permissionForMe?.can_edit;
+                                        const canDeleteGlobal =
+                                            !!permissionForMe?.can_delete;
+
+                                        const showEdit =
+                                            !isApproved &&
+                                            !isRejected &&
+                                            (isOwner ||
+                                                (sameDivision &&
+                                                    canEditGlobal));
+                                        const showDelete =
+                                            !isApproved &&
+                                            !isRejected &&
+                                            (isOwner ||
+                                                (sameDivision &&
+                                                    canDeleteGlobal));
+
+                                        return showEdit || showDelete;
+                                    })() && (
+                                        <DropdownMenu>
+                                            <DropdownMenuTrigger asChild>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="rounded-full hover:bg-muted/60"
+                                                >
+                                                    <MoreVertical className="w-4 h-4 text-muted-foreground" />
+                                                </Button>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent
+                                                align="end"
+                                                className="w-36 shadow-lg border border-border/40"
+                                            >
+                                                {/* Edit */}
+                                                {(() => {
+                                                    const status = String(
+                                                        submission.status || ""
+                                                    ).toLowerCase();
+                                                    const isApproved =
+                                                        status.includes(
+                                                            "approved"
+                                                        );
+                                                    const isRejected =
+                                                        status.includes(
+                                                            "rejected"
+                                                        );
+
+                                                    const isOwner =
+                                                        auth?.user?.id ===
+                                                        submission?.user_id;
+                                                    const sameDivision =
+                                                        userDivisionId &&
+                                                        submission?.division_id ===
+                                                            userDivisionId;
+                                                    const canEditGlobal =
+                                                        !!permissionForMe?.can_edit;
+
+                                                    return (
+                                                        !isApproved &&
+                                                        !isRejected &&
+                                                        (isOwner ||
+                                                            (sameDivision &&
+                                                                canEditGlobal))
+                                                    );
+                                                })() && (
+                                                    <DropdownMenuItem asChild>
+                                                        <Link
+                                                            href={route(
+                                                                "submissions.edit",
+                                                                submission.id
+                                                            )}
+                                                            className="flex items-center gap-2"
+                                                        >
+                                                            <Pencil className="w-4 h-4" />{" "}
+                                                            Edit
+                                                        </Link>
+                                                    </DropdownMenuItem>
+                                                )}
+
+                                                {/* Delete */}
+                                                {(() => {
+                                                    const status = String(
+                                                        submission.status || ""
+                                                    ).toLowerCase();
+                                                    const isApproved =
+                                                        status.includes(
+                                                            "approved"
+                                                        );
+                                                    const isRejected =
+                                                        status.includes(
+                                                            "rejected"
+                                                        );
+
+                                                    const isOwner =
+                                                        auth?.user?.id ===
+                                                        submission?.user_id;
+                                                    const sameDivision =
+                                                        userDivisionId &&
+                                                        submission?.division_id ===
+                                                            userDivisionId;
+                                                    const canDeleteGlobal =
+                                                        !!permissionForMe?.can_delete;
+
+                                                    return (
+                                                        !isApproved &&
+                                                        !isRejected &&
+                                                        (isOwner ||
+                                                            (sameDivision &&
+                                                                canDeleteGlobal))
+                                                    );
+                                                })() && (
+                                                    <DropdownMenuItem
+                                                        onClick={handleDelete}
+                                                        className="flex items-center gap-2 text-red-600"
+                                                    >
+                                                        <Trash2 className="w-4 h-4" />{" "}
+                                                        Hapus
+                                                    </DropdownMenuItem>
+                                                )}
+                                            </DropdownMenuContent>
+                                        </DropdownMenu>
+                                    )}
                                 </div>
                             </div>
 
@@ -919,6 +1159,114 @@ export default function Show({
                                     </div>
                                 )}
                             </div>
+
+                            {/* Riwayat pengajuan Per Step */}
+                            {approvalHistory.length > 0 && (
+                                <div className="mt-6 flex flex-col items-center">
+                                    <h4 className="text-sm font-semibold text-foreground mb-3">
+                                        Riwayat Persetujuan
+                                    </h4>
+                                    <div className="flex gap-1">
+                                        <div className="flex">
+                                            <div
+                                                style={{ borderRadius: "10px" }}
+                                                className="text-xs  border border-blue-200 bg-blue-50 px-3 py-2"
+                                            >
+                                                <div className="flex items-center w-full">
+                                                    <span className="px-2 py-1 rounded text-xs font-semibold bg-blue-100 text-blue-700">
+                                                        Yang mengajukan
+                                                    </span>
+                                                </div>
+                                                {submission.user && (
+                                                    <div className="mt-1 text-gray-600">
+                                                        <span className="font-semibold">
+                                                            Oleh:
+                                                        </span>{" "}
+                                                        {submission.user.name}
+                                                    </div>
+                                                )}
+                                                {submission.created_at && (
+                                                    <div className="mt-1 text-gray-600">
+                                                        <span className="font-semibold">
+                                                            Waktu:
+                                                        </span>{" "}
+                                                        {new Date(
+                                                            submission.created_at
+                                                        ).toLocaleString(
+                                                            "id-ID",
+                                                            {
+                                                                day: "numeric",
+                                                                month: "long",
+                                                                year: "numeric",
+                                                                hour: "2-digit",
+                                                                minute: "2-digit",
+                                                            }
+                                                        )}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                        {approvalHistory.map((step, index) => (
+                                            <div
+                                                key={index}
+                                                style={{ borderRadius: "10px" }}
+                                                className="text-xs border border-gray-200 bg-gray-50 px-3 py-2"
+                                            >
+                                                <div className="flex items-center w-full">
+                                                    <span
+                                                        className={`px-2 py-1 rounded text-xs font-semibold ${
+                                                            step.status ===
+                                                            "approved"
+                                                                ? "bg-green-100 text-green-700"
+                                                                : "bg-red-100 text-red-700"
+                                                        }`}
+                                                    >
+                                                        {step.status ===
+                                                        "approved"
+                                                            ? "Disetujui"
+                                                            : "Ditolak"}
+                                                    </span>
+                                                </div>
+                                                {step.approver && (
+                                                    <div className="mt-1 text-gray-600">
+                                                        <span className="font-semibold">
+                                                            Oleh:
+                                                        </span>{" "}
+                                                        {step.approver.name}
+                                                    </div>
+                                                )}
+                                                {step.approved_at && (
+                                                    <div className="mt-1 text-gray-600">
+                                                        <span className="font-semibold">
+                                                            Waktu:
+                                                        </span>{" "}
+                                                        {new Date(
+                                                            step.approved_at
+                                                        ).toLocaleString(
+                                                            "id-ID",
+                                                            {
+                                                                day: "numeric",
+                                                                month: "long",
+                                                                year: "numeric",
+                                                                hour: "2-digit",
+                                                                minute: "2-digit",
+                                                            }
+                                                        )}
+                                                    </div>
+                                                )}
+                                                {step.note && (
+                                                    <div className="mt-1 text-gray-600">
+                                                        <span className="font-semibold">
+                                                            Catatan:
+                                                        </span>{" "}
+                                                        {step.note}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
                         </Card>
                     </div>
                 </div>

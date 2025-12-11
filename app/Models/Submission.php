@@ -28,6 +28,7 @@ class Submission extends Model
         'document_id',
         'series_code',
         'verification_token',
+        'short_code',
         'qr_code_path',
         'current_step',
         'watermark_x',
@@ -154,6 +155,39 @@ class Submission extends Model
     public function scopeByUser($query, int $userId)
     {
         return $query->where('user_id', $userId);
+    }
+
+    /**
+     * Generate short code yang aman untuk URL verifikasi
+     */
+    public static function generateShortCode(): string
+    {
+        do {
+            // Generate 8 karakter alphanumeric yang tidak ambigu
+            $chars = '23456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz';
+            $code = substr(str_shuffle(str_repeat($chars, 3)), 0, 8);
+        } while (self::where('short_code', $code)->exists());
+
+        return $code;
+    }
+
+    /**
+     * Pastikan submission memiliki short code
+     */
+    public function ensureShortCode(): void
+    {
+        if (!$this->short_code) {
+            $this->short_code = self::generateShortCode();
+            $this->save();
+        }
+    }
+
+    /**
+     * Cari submission berdasarkan short code
+     */
+    public static function findByShortCode(string $shortCode): ?self
+    {
+        return self::where('short_code', $shortCode)->first();
     }
 }
 

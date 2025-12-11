@@ -12,6 +12,7 @@ export default function DefaultColumnsManager({
     const [newColumnName, setNewColumnName] = useState("");
     const [editingColumn, setEditingColumn] = useState(null);
     const [editingValue, setEditingValue] = useState("");
+    const [editingColumnData, setEditingColumnData] = useState({});
     const editInputRef = useRef(null);
 
     // Focus input when entering edit mode
@@ -33,7 +34,10 @@ export default function DefaultColumnsManager({
             
             const newColumn = {
                 name: newColumnName.trim(),
-                key: key || `col_${defaultColumns.length + 1}`
+                key: key || `col_${defaultColumns.length + 1}`,
+                type: 'text',
+                required: false,
+                options: []
             };
             
             onChange([...defaultColumns, newColumn]);
@@ -54,6 +58,11 @@ export default function DefaultColumnsManager({
         setTimeout(() => {
             setEditingColumn(index);
             setEditingValue(column.name);
+            setEditingColumnData({
+                type: column.type || 'text',
+                required: column.required || false,
+                options: (column.options || []).join(', ')
+            });
         }, 0);
     };
 
@@ -65,23 +74,44 @@ export default function DefaultColumnsManager({
             .replace(/\s+/g, "_")
             .replace(/[^a-z0-9_]/g, "");
         
+        // Parse options for select type
+        let options = [];
+        if (editingColumnData.type === 'select' && editingColumnData.options.trim()) {
+            options = editingColumnData.options
+                .split(/[\n,]+/)
+                .map(opt => opt.trim())
+                .filter(opt => opt.length > 0);
+        }
+        
         newColumns[editingColumn] = {
             ...newColumns[editingColumn],
             name: editingValue.trim(),
-            key: key || newColumns[editingColumn].key
+            key: key || newColumns[editingColumn].key,
+            type: editingColumnData.type,
+            required: editingColumnData.required,
+            options: options
         };
         
         // Batch state updates to prevent multiple renders
         setEditingColumn(null);
         setEditingValue("");
+        setEditingColumnData({});
         onChange(newColumns);
     };
 
     const cancelEdit = () => {
         setEditingColumn(null);
         setEditingValue("");
+        setEditingColumnData({});
         // Clear focus
         editInputRef.current?.blur();
+    };
+
+    const updateEditingColumnData = (field, value) => {
+        setEditingColumnData(prev => ({
+            ...prev,
+            [field]: value
+        }));
     };
 
     return (
@@ -125,59 +155,123 @@ export default function DefaultColumnsManager({
                         defaultColumns.map((column, index) => (
                             <div
                                 key={index}
-                                className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg border"
+                                className="border rounded-lg p-3 bg-gray-50"
                             >
                                 {editingColumn === index ? (
-                                    <>
-                                        <Input
-                                            ref={editInputRef}
-                                            value={editingValue}
-                                            onChange={(e) => setEditingValue(e.target.value)}
-                                            onKeyPress={(e) => e.key === "Enter" && saveEdit()}
-                                            className="flex-1"
-                                        />
-                                        <Button
-                                            onClick={saveEdit}
-                                            size="sm"
-                                            className="bg-green-600 hover:bg-green-700"
-                                            disabled={!editingValue.trim()}
-                                        >
-                                            <Check className="w-4 h-4" />
-                                        </Button>
-                                        <Button
-                                            onClick={cancelEdit}
-                                            size="sm"
-                                            variant="outline"
-                                        >
-                                            <X className="w-4 h-4" />
-                                        </Button>
-                                    </>
+                                    <div className="space-y-3">
+                                        {/* Name Input */}
+                                        <div>
+                                            <label className="text-sm font-medium">Nama Kolom</label>
+                                            <Input
+                                                ref={editInputRef}
+                                                value={editingValue}
+                                                onChange={(e) => setEditingValue(e.target.value)}
+                                                onKeyPress={(e) => e.key === "Enter" && saveEdit()}
+                                                className="mt-1"
+                                            />
+                                        </div>
+
+                                        {/* Type Select */}
+                                        <div>
+                                            <label className="text-sm font-medium">Tipe Data</label>
+                                            <select
+                                                value={editingColumnData.type}
+                                                onChange={(e) => updateEditingColumnData('type', e.target.value)}
+                                                className="w-full mt-1 border p-2 rounded"
+                                            >
+                                                <option value="text">Text</option>
+                                                <option value="number">Number</option>
+                                                <option value="date">Date</option>
+                                                <option value="select">Select (Dropdown)</option>
+                                            </select>
+                                        </div>
+
+                                        {/* Required Checkbox */}
+                                        <div className="flex items-center gap-2">
+                                            <input
+                                                type="checkbox"
+                                                id={`required-${index}`}
+                                                checked={editingColumnData.required}
+                                                onChange={(e) => updateEditingColumnData('required', e.target.checked)}
+                                            />
+                                            <label htmlFor={`required-${index}`} className="text-sm">
+                                                Wajib diisi (Required)
+                                            </label>
+                                        </div>
+
+                                        {/* Options for Select Type */}
+                                        {editingColumnData.type === 'select' && (
+                                            <div>
+                                                <label className="text-sm font-medium">
+                                                    Opsi (pisahkan dengan koma atau enter)
+                                                </label>
+                                                <textarea
+                                                    value={editingColumnData.options}
+                                                    onChange={(e) => updateEditingColumnData('options', e.target.value)}
+                                                    className="w-full mt-1 border p-2 rounded"
+                                                    rows={3}
+                                                    placeholder="Opsi 1, Opsi 2, Opsi 3"
+                                                />
+                                            </div>
+                                        )}
+
+                                        {/* Action Buttons */}
+                                        <div className="flex gap-2 pt-2">
+                                            <Button
+                                                onClick={saveEdit}
+                                                size="sm"
+                                                className="bg-green-600 hover:bg-green-700"
+                                                disabled={!editingValue.trim()}
+                                            >
+                                                <Check className="w-4 h-4 mr-1" />
+                                                Simpan
+                                            </Button>
+                                            <Button
+                                                onClick={cancelEdit}
+                                                size="sm"
+                                                variant="outline"
+                                            >
+                                                <X className="w-4 h-4 mr-1" />
+                                                Batal
+                                            </Button>
+                                        </div>
+                                    </div>
                                 ) : (
-                                    <>
+                                    <div className="flex items-center justify-between">
                                         <div className="flex-1">
                                             <div className="font-medium">{column.name}</div>
-                                            <div className="text-sm text-gray-500">Key: {column.key}</div>
+                                            <div className="text-sm text-gray-500">
+                                                Key: {column.key} • Type: {column.type || 'text'}
+                                                {column.required ? ' • Required' : ''}
+                                            </div>
+                                            {Array.isArray(column.options) && column.options.length > 0 && (
+                                                <div className="text-xs text-gray-600 mt-1">
+                                                    Options: {column.options.join(', ')}
+                                                </div>
+                                            )}
                                         </div>
-                                        <Button
-                                            onClick={(e) => {
-                                                e.preventDefault();
-                                                e.stopPropagation();
-                                                startEditing(index, column);
-                                            }}
-                                            size="sm"
-                                            variant="outline"
-                                        >
-                                            <Edit2 className="w-4 h-4" />
-                                        </Button>
-                                        <Button
-                                            onClick={() => deleteColumn(index)}
-                                            size="sm"
-                                            variant="destructive"
-                                            disabled={defaultColumns.length <= 1}
-                                        >
-                                            <Trash2 className="w-4 h-4" />
-                                        </Button>
-                                    </>
+                                        <div className="flex gap-2">
+                                            <Button
+                                                onClick={(e) => {
+                                                    e.preventDefault();
+                                                    e.stopPropagation();
+                                                    startEditing(index, column);
+                                                }}
+                                                size="sm"
+                                                variant="outline"
+                                            >
+                                                <Edit2 className="w-4 h-4" />
+                                            </Button>
+                                            <Button
+                                                onClick={() => deleteColumn(index)}
+                                                size="sm"
+                                                variant="destructive"
+                                                disabled={defaultColumns.length <= 1}
+                                            >
+                                                <Trash2 className="w-4 h-4" />
+                                            </Button>
+                                        </div>
+                                    </div>
                                 )}
                             </div>
                         ))

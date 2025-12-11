@@ -100,12 +100,18 @@
             color: #6b7280;
         }
 
-        /* QR Code */
-        .qr-block {
+        /* QR Code and Approval Container */
+        .qr-approval-container {
             margin-top: 20pt;
             display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            gap: 20pt;
+        }
+
+        .qr-block {
+            display: flex;
             align-items: center;
-            gap: 12pt;
         }
 
         .qr-block .qr-svg,
@@ -129,9 +135,6 @@
 
         /* Approval */
         .approval-stamp {
-            position: fixed;
-            right: 32pt;
-            bottom: 32pt;
             padding: 12pt 16pt;
             border-radius: 8pt;
             border: 1.5px solid #10b981;
@@ -229,9 +232,8 @@
         </div>
 
         <div class="doc-meta">
-            Nomor Pengajuan: <strong>#{{ $submission->id }}</strong>
-            &nbsp;•&nbsp;
-            Tanggal: {{ now()->format('d M Y, H:i') }}
+
+            Tanggal: {{ \Carbon\Carbon::parse($submission->created_at)->format('d M Y, H:i') }}
         </div>
 
         @if (!empty($submission->title))
@@ -326,58 +328,56 @@
         Dokumen: {{ $submission->workflow?->document?->name ?? '-' }}
     </div>
 
-    <!-- QR CODE -->
-    @if (!empty($qrSvg) || !empty($submission->qr_code_path))
+    <!-- QR CODE AND APPROVAL STAMP ALIGNED AT BOTTOM -->
+    <div class="qr-approval-container">
         <div class="qr-block">
-
-            @if (!empty($qrSvg))
-                <div class="qr-svg">{!! $qrSvg !!}</div>
-            @else
-                @php
-                    $qrPath = $submission->qr_code_path ?? null;
-                    $svgContent = null;
-
-                    if ($qrPath && strtolower(pathinfo($qrPath, PATHINFO_EXTENSION)) === 'svg') {
-                        try {
-                            $full = public_path('storage/' . $qrPath);
-                            if (file_exists($full)) {
-                                $svgContent = file_get_contents($full);
-                            }
-                        } catch (\Throwable $e) {
-                        }
-                    }
-                @endphp
-
-                @if ($svgContent)
-                    <div class="qr-svg">{!! $svgContent !!}</div>
+            @if (!empty($qrSvg) || !empty($submission->qr_code_path))
+                @if (!empty($qrSvg))
+                    <div class="qr-svg">{!! $qrSvg !!}</div>
                 @else
-                    <img src="{{ asset('storage/' . $submission->qr_code_path) }}" alt="QR Code" />
+                    @php
+                        $qrPath = $submission->qr_code_path ?? null;
+                        $svgContent = null;
+
+                        if ($qrPath && strtolower(pathinfo($qrPath, PATHINFO_EXTENSION)) === 'svg') {
+                            try {
+                                $full = public_path('storage/' . $qrPath);
+                                if (file_exists($full)) {
+                                    $svgContent = file_get_contents($full);
+                                }
+                            } catch (\Throwable $e) {
+                            }
+                        }
+                    @endphp
+
+                    @if ($svgContent)
+                        <div class="qr-svg">{!! $svgContent !!}</div>
+                    @else
+                        <img src="{{ asset('storage/' . $submission->qr_code_path) }}" alt="QR Code" />
+                    @endif
                 @endif
             @endif
-
         </div>
-    @endif
 
-    <!-- APPROVAL -->
-    @if (!empty($approvers) && count($approvers) > 0)
-        <div class="approval-stamp">
-            <span class="label">Approved by:</span>
-            <div style="text-align: center; margin-top:5pt">
-                @foreach ($approvers as $approver)
-                    <div class="approver-item">
-                        <span class="approver-name">{{ $approver['name'] }}</span>
-                        @if (!empty($approver['role']) && $approver['role'] !== 'Unknown')
-                            <span class="approver-role">({{ $approver['role'] }})</span>
-                        @endif
-                        @if (!empty($approver['approved_at']))
-                            <span
-                                class="approver-date">{{ \Carbon\Carbon::parse($approver['approved_at'])->format('d M Y, H:i') }}</span>
-                        @endif
-                    </div>
-                @endforeach
+        <!-- APPROVAL -->
+        @if (!empty($approvers))
+            <div class="approval-stamp">
+                <span class="label">Approved by:</span>
+                <div style="text-align: center; margin-top:5pt">
+                    @foreach ($approvers as $approver)
+                        <div class="approver-item">
+                            <span class="approver-name">{{ $approver['name'] }}</span>
+
+                            @if (!empty($approver['approved_at']))
+                                <span
+                                    class="approver-date">{{ \Carbon\Carbon::parse($approver['approved_at'])->format('d M Y, H:i') }}</span>
+                            @endif
+                        </div>
+                    @endforeach
+                </div>
             </div>
-        </div>
-    @endif
+        @endif
+    </div>
 
 </body>
 

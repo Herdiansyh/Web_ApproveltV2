@@ -19,22 +19,68 @@ export default function Create({ isOpen, onClose, document }) {
         description: "",
         is_active: true,
         default_columns: [
-            { name: "Item", key: "item" },
-            { name: "Jumlah", key: "jumlah" },
-            { name: "Keterangan", key: "keterangan" },
+            { 
+                name: "Item", 
+                key: "item", 
+                type: "text", 
+                required: false, 
+                options: [] 
+            },
+            { 
+                name: "Jumlah", 
+                key: "jumlah", 
+                type: "number", 
+                required: true, 
+                options: [] 
+            },
+            { 
+                name: "Keterangan", 
+                key: "keterangan", 
+                type: "text", 
+                required: false, 
+                options: [] 
+            },
         ],
     });
 
     useEffect(() => {
         if (document) {
+            // Handle backward compatibility for old format
+            const defaultColumns = document.default_columns || [];
+            const enhancedColumns = defaultColumns.map(col => ({
+                name: col.name || '',
+                key: col.key || '',
+                type: col.type || 'text',
+                required: col.required || false,
+                options: col.options || []
+            }));
+
             setData({
                 name: document.name,
                 description: document.description || "",
                 is_active: typeof document.is_active === "boolean" ? document.is_active : true,
-                default_columns: document.default_columns || [
-                    { name: "Item", key: "item" },
-                    { name: "Jumlah", key: "jumlah" },
-                    { name: "Keterangan", key: "keterangan" },
+                default_columns: enhancedColumns.length > 0 ? enhancedColumns : [
+                    { 
+                        name: "Item", 
+                        key: "item", 
+                        type: "text", 
+                        required: false, 
+                        options: [] 
+                    },
+                    { 
+                        name: "Jumlah", 
+                        key: "jumlah", 
+                        type: "number", 
+                        required: true, 
+                        options: [] 
+                    },
+                    { 
+                        name: "Keterangan", 
+                        key: "keterangan", 
+                        type: "text", 
+                        required: false, 
+                        options: [] 
+                    },
                 ],
             });
         } else {
@@ -58,6 +104,20 @@ export default function Create({ isOpen, onClose, document }) {
                     reset();
                     onClose();
                 },
+                onError: (errors) => {
+                    // Handle validation errors from backend
+                    let errorMessage = "Terjadi kesalahan saat memperbarui dokumen.";
+                    
+                    if (errors.prefix) {
+                        errorMessage = errors.prefix;
+                    } else if (errors.name) {
+                        errorMessage = errors.name;
+                    } else if (errors.description) {
+                        errorMessage = errors.description;
+                    }
+                    
+                    Swal.fire("Error", errorMessage, "error");
+                },
             });
         } else {
             post(route("documents.store"), {
@@ -71,6 +131,20 @@ export default function Create({ isOpen, onClose, document }) {
                     });
                     reset();
                     onClose();
+                },
+                onError: (errors) => {
+                    // Handle validation errors from backend
+                    let errorMessage = "Terjadi kesalahan saat membuat dokumen.";
+                    
+                    if (errors.prefix) {
+                        errorMessage = errors.prefix;
+                    } else if (errors.name) {
+                        errorMessage = errors.name;
+                    } else if (errors.description) {
+                        errorMessage = errors.description;
+                    }
+                    
+                    Swal.fire("Error", errorMessage, "error");
                 },
             });
         }

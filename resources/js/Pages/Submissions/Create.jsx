@@ -22,13 +22,16 @@ import { fetchWithCsrf } from "@/utils/csrfToken";
 
 export default function Create({ auth, userDivision, workflows }) {
     const { showLoading, hideLoading } = useLoading();
+    
+    // Separate state for file object to prevent serialization issues
+    const [selectedFile, setSelectedFile] = useState(null);
 
     // Default columns configuration
     const getDefaultColumns = (workflowId = null) => {
         const defaultColumns = [
-            { id: 1, name: "Item", key: "item" },
-            { id: 2, name: "Jumlah", key: "jumlah" },
-            { id: 3, name: "Keterangan", key: "keterangan" },
+            { id: 1, name: "Item", key: "item", type: "text", required: false, options: [] },
+            { id: 2, name: "Jumlah", key: "jumlah", type: "number", required: true, options: [] },
+            { id: 3, name: "Keterangan", key: "keterangan", type: "text", required: false, options: [] },
         ];
 
         // Get selected workflow and document
@@ -42,6 +45,9 @@ export default function Create({ auth, userDivision, workflows }) {
                         id: index + 1,
                         name: col.name || `Column ${index + 1}`,
                         key: col.key || `col_${index + 1}`,
+                        type: col.type || 'text',
+                        required: col.required || false,
+                        options: col.options || []
                     })
                 );
             }
@@ -54,7 +60,7 @@ export default function Create({ auth, userDivision, workflows }) {
         workflow_id: "",
         title: "",
         description: "",
-        file: null,
+        file: null, // Keep for compatibility but won't store actual file
         data: {},
         useTableData: false,
         tableData: [],
@@ -106,6 +112,8 @@ export default function Create({ auth, userDivision, workflows }) {
     const clearLocalStorageData = () => {
         try {
             localStorage.removeItem("createFormData");
+            // Clear file state as well
+            setSelectedFile(null);
         } catch (err) {
             console.error("Gagal membersihkan localStorage:", err);
         }
@@ -114,11 +122,13 @@ export default function Create({ auth, userDivision, workflows }) {
     // Fungsi untuk menyimpan data ke localStorage
     const handleSaveLocal = () => {
         try {
-            // Include table data in saved data
+            // Include table data in saved data, but exclude file (can't be serialized)
             const dataToSave = {
                 ...data,
                 tableData: data.tableData,
                 tableColumns: data.tableColumns,
+                // Don't save file object to localStorage - it can't be serialized
+                file: null,
             };
             localStorage.setItem("createFormData", JSON.stringify(dataToSave));
             setIsSaved(true);
@@ -132,8 +142,8 @@ export default function Create({ auth, userDivision, workflows }) {
         } catch (err) {
             Swal.fire({
                 icon: "error",
-                title: "Gagal Menyimpan",
-                text: "Terjadi kesalahan saat menyimpan data lokal.",
+                title: "Gagal menyimpan",
+                text: "Gagal menyimpan data secara lokal.",
             });
         }
     };
@@ -364,16 +374,28 @@ export default function Create({ auth, userDivision, workflows }) {
 
     const handleFileChange = (e) => {
         const file = e.target.files[0];
-        if (!file) return;
+        if (!file) {
+            setSelectedFile(null);
+            setData("file", null);
+            return;
+        }
+        
         if (file.size > 10 * 1024 * 1024) {
             Swal.fire({
                 icon: "warning",
                 title: "File terlalu besar",
                 text: "Ukuran maksimal file adalah 10MB.",
             });
+            // Clear file input
+            e.target.value = '';
+            setSelectedFile(null);
+            setData("file", null);
             return;
         }
-        setData("file", file);
+        
+        // Store file in separate state and update form data
+        setSelectedFile(file);
+        setData("file", file); // Keep for validation compatibility
         setIsSaved(false);
     };
 
@@ -420,6 +442,31 @@ export default function Create({ auth, userDivision, workflows }) {
             return;
         }
 
+        // Validate required table columns if table data is used
+        if (data.useTableData && data.tableData && data.tableData.length > 0) {
+            const requiredColumns = data.tableColumns.filter(col => col.required);
+            const missingTableColumns = [];
+
+            for (const column of requiredColumns) {
+                for (let i = 0; i < data.tableData.length; i++) {
+                    const row = data.tableData[i];
+                    const value = row[column.key];
+                    if (!value || (typeof value === "string" && value.trim() === "")) {
+                        missingTableColumns.push(`${column.name} (baris ${i + 1})`);
+                    }
+                }
+            }
+
+            if (missingTableColumns.length > 0) {
+                Swal.fire({
+                    icon: "warning",
+                    title: "Validation Error",
+                    text: `Kolom tabel berikut wajib diisi: ${missingTableColumns.join(", ")}`,
+                });
+                return;
+            }
+        }
+
         // Include table data in form submission only if useTableData is true
         let tableDataFiltered = [];
         if (data.useTableData && data.tableData && data.tableData.length > 0) {
@@ -458,12 +505,22 @@ export default function Create({ auth, userDivision, workflows }) {
                     formData.append("title", data.title);
                     formData.append("description", data.description || "");
 
-                    // Add file if exists
-                    if (data.file) {
-                        console.log("Adding file to FormData:", data.file);
-                        formData.append("file", data.file);
+                    // Add file if exists - use selectedFile state instead of data.file
+                    if (selectedFile) {
+                        // Validate file is still a valid File object
+                        if (selectedFile instanceof File && selectedFile.size > 0) {
+                            formData.append("file", selectedFile);
+                        } else {
+                            console.error("Invalid file object:", selectedFile);
+                            Swal.fire({
+                                icon: "error",
+                                title: "File Error",
+                                text: "File tidak valid. Silakan pilih ulang file.",
+                            });
+                            hideLoading(false);
+                            return;
+                        }
                     } else {
-                        console.log("No file to add");
                     }
 
                     // Add data as JSON string only if data exists and is not empty
@@ -477,7 +534,6 @@ export default function Create({ auth, userDivision, workflows }) {
                         tableDataFiltered &&
                         tableDataFiltered.length > 0
                     ) {
-                        console.log("Adding tableData:", tableDataFiltered);
                         formData.append(
                             "tableData",
                             JSON.stringify(tableDataFiltered)
@@ -488,7 +544,6 @@ export default function Create({ auth, userDivision, workflows }) {
                         data.tableColumns &&
                         data.tableColumns.length > 0
                     ) {
-                        console.log("Adding tableColumns:", data.tableColumns);
                         formData.append(
                             "tableColumns",
                             JSON.stringify(data.tableColumns)
@@ -500,8 +555,6 @@ export default function Create({ auth, userDivision, workflows }) {
                         body: formData,
                     })
                         .then((response) => {
-                            console.log("Response status:", response.status);
-                            console.log("Response headers:", response.headers);
                             if (!response.ok) {
                                 // Handle HTTP errors
                                 if (response.status === 422) {
@@ -694,7 +747,7 @@ export default function Create({ auth, userDivision, workflows }) {
                                             </div>
 
                                             <div>
-                                                <Label>Department</Label>
+                                                <Label>Divisi</Label>
                                                 <Input
                                                     style={{
                                                         borderRadius: "10px",
@@ -860,7 +913,14 @@ export default function Create({ auth, userDivision, workflows }) {
                                                     onChange={handleFileChange}
                                                     accept=".pdf,.jpg,.jpeg,.png"
                                                     className="mt-1"
+                                                    // Clear file input when selectedFile is reset
+                                                    key={selectedFile ? selectedFile.name : 'file-input'}
                                                 />
+                                                {selectedFile && (
+                                                    <p className="text-xs text-green-600 mt-1">
+                                                        File terpilih: {selectedFile.name} ({(selectedFile.size / 1024 / 1024).toFixed(2)} MB)
+                                                    </p>
+                                                )}
                                                 <p className="text-xs text-gray-500 mt-1">
                                                     Opsional. Format: PDF, JPG,
                                                     PNG (maks. 10MB)

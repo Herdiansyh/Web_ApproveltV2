@@ -187,6 +187,22 @@ export default function Index({ auth, documents }) {
         router.post(route("documents.nameSeries.update", doc.id), payload, {
             onSuccess: () =>
                 Swal.fire("Success", "Name Series updated", "success"),
+            onError: (errors) => {
+                // Handle validation errors from backend
+                let errorMessage = "Terjadi kesalahan saat memperbarui Name Series.";
+                
+                if (errors.prefix) {
+                    errorMessage = errors.prefix;
+                } else if (errors.series_pattern) {
+                    errorMessage = errors.series_pattern;
+                } else if (errors.reset_type) {
+                    errorMessage = errors.reset_type;
+                } else if (errors.current_number) {
+                    errorMessage = errors.current_number;
+                }
+                
+                Swal.fire("Error", errorMessage, "error");
+            },
         });
     };
 

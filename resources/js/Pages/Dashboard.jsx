@@ -1,4 +1,4 @@
-import { Head, Link } from "@inertiajs/react";
+import { Head, Link, router } from "@inertiajs/react";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
 import { TooltipProvider } from "@/Components/ui/tooltip";
 import {
@@ -152,7 +152,8 @@ export default function Dashboard({
                         {/* Menunggu Persetujuan */}
                         <Card
                             style={{ borderRadius: "16px" }}
-                            className="group border border-border hover:border-blue-500/50 hover:shadow-xl transition-all duration-300 bg-card overflow-hidden relative"
+                            className="group border border-border hover:border-blue-500/50 hover:shadow-xl transition-all duration-300 bg-card overflow-hidden relative cursor-pointer hover:scale-[1.02]"
+                            onClick={() => router.get(route('submissions.forDivision'))}
                         >
                             <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-500" />
                             <CardHeader className="flex flex-row items-center justify-between pb-2 relative z-10">
@@ -170,13 +171,17 @@ export default function Dashboard({
                                 <p className="text-xs text-muted-foreground mt-2">
                                     Masih dalam proses review
                                 </p>
+                                <div className="mt-3 text-xs text-primary-600/60 dark:text-primary-400/60 group-hover:text-primary-600/80 dark:group-hover:text-primary-400/80 transition-colors">
+                                    Klik untuk review →
+                                </div>
                             </CardContent>
                         </Card>
 
                         {/* Disetujui */}
                         <Card
                             style={{ borderRadius: "16px" }}
-                            className="group border border-border hover:border-emerald-500/50 hover:shadow-xl transition-all duration-300 bg-card overflow-hidden relative"
+                            className="group border border-border hover:border-emerald-500/50 hover:shadow-xl transition-all duration-300 bg-card overflow-hidden relative cursor-pointer hover:scale-[1.02]"
+                            onClick={() => router.get(route('submissions.index'), { status: 'approved' })}
                         >
                             <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 rounded-full -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-500" />
                             <CardHeader className="flex flex-row items-center justify-between pb-2 relative z-10">
@@ -197,13 +202,17 @@ export default function Dashboard({
                                         ? "anda setujui"
                                         : "disetujui atasan"}
                                 </p>
+                                <div className="mt-3 text-xs text-emerald-600/60 dark:text-emerald-400/60 group-hover:text-emerald-600/80 dark:group-hover:text-emerald-400/80 transition-colors">
+                                    Klik untuk melihat detail →
+                                </div>
                             </CardContent>
                         </Card>
 
                         {/* Ditolak */}
                         <Card
                             style={{ borderRadius: "16px" }}
-                            className="group border border-border hover:border-red/50 hover:shadow-xl transition-all duration-300 bg-card overflow-hidden relative"
+                            className="group border border-border hover:border-red/50 hover:shadow-xl transition-all duration-300 bg-card overflow-hidden relative cursor-pointer hover:scale-[1.02]"
+                            onClick={() => router.get(route('submissions.index'), { status: 'rejected' })}
                         >
                             <div className="absolute top-0 right-0 w-32 h-32 bg-red-500/5 rounded-full -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-500" />
                             <CardHeader className="flex flex-row items-center justify-between pb-2 relative z-10">
@@ -224,6 +233,9 @@ export default function Dashboard({
                                         ? "Anda tolak"
                                         : "Ditolak atasan"}
                                 </p>
+                                <div className="mt-3 text-xs text-destructive/60 group-hover:text-destructive/80 transition-colors">
+                                    Klik untuk melihat detail →
+                                </div>
                             </CardContent>
                         </Card>
                     </div>

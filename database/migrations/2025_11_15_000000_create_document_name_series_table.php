@@ -12,7 +12,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('document_id')->constrained('documents')->onDelete('cascade');
             $table->string('series_pattern')->default('yyyy-mm-####');
-            $table->string('prefix')->nullable();
+            $table->string('prefix')->nullable()->unique();
             $table->unsignedBigInteger('current_number')->default(0);
             $table->enum('reset_type', ['none', 'monthly', 'yearly'])->default('none');
             $table->timestamp('last_reset_at')->nullable();

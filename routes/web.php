@@ -10,6 +10,7 @@ use App\Http\Controllers\WorkflowController;
 // use App\Http\Controllers\WorkflowStepPermissionController; // deprecated
 use App\Http\Controllers\GlobalPermissionController;
 use App\Http\Controllers\VerificationController;
+use App\Http\Controllers\FilterController;
 use App\Models\Document;
 use App\Models\Submission;
 use App\Models\SubmissionWorkflowStep;
@@ -39,13 +40,13 @@ Route::get('/', function () {
 })->middleware('guest');
 
 // Public verification route (no auth)
-Route::get('/verify/{token}', [VerificationController::class, 'show'])
+Route::get('/verify/{shortCode}', [VerificationController::class, 'show'])
     ->name('verification.show')
     ->middleware('throttle:30,1');
 
-// Compatibility path: /submissions/verify/{token} -> redirect ke /verify/{token}
-Route::get('/submissions/verify/{token}', function (string $token) {
-    return redirect()->route('verification.show', $token);
+// Compatibility path: /submissions/verify/{shortCode} -> redirect ke /verify/{shortCode}
+Route::get('/submissions/verify/{shortCode}', function (string $shortCode) {
+    return redirect()->route('verification.show', $shortCode);
 })->middleware('throttle:30,1');
 
 // PDF view
@@ -311,6 +312,9 @@ Route::middleware(['auth'])->group(function () {
         Cache::put('notif:last_read:' . $user->id, $tsC, now()->addDays(7));
         return response()->json(['ok' => true]);
     })->name('notifications.clear');
+
+    // Filter options endpoint
+    Route::get('/filter/options', [FilterController::class, 'getOptions'])->name('filter.options');
 
     // Manager-only routes
         Route::post('submissions/{submission}/approve', [SubmissionController::class, 'approve'])->name('submissions.approve');

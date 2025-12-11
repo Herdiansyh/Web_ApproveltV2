@@ -99,7 +99,6 @@ export const setupCsrfTokenAfterLogin = async () => {
     try {
         // Refresh token to ensure we have the latest one
         await refreshCsrfToken();
-        console.log('CSRF token refreshed after login');
     } catch (error) {
         console.error('Failed to refresh CSRF token after login:', error);
         // Don't throw error here, just log it as the token might still be valid

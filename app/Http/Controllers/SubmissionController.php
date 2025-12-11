@@ -44,6 +44,10 @@ class SubmissionController extends Controller
         $search = $request->get('search');
         $startDate = $request->get('start_date');
         $endDate = $request->get('end_date');
+        $prefixFilter = $request->get('prefix');
+        $doctypeFilter = $request->get('doctype');
+        $divisionFilter = $request->get('division');
+        $statusFilter = $request->get('status');
         
         // Subquery waktu aksi terakhir pada setiap submission (siapa pun yang bertindak)
         $lastActionSub = SubmissionWorkflowStep::selectRaw('submission_id, MAX(COALESCE(approved_at, updated_at)) as last_action_at')
@@ -118,9 +122,57 @@ class SubmissionController extends Controller
             $query->whereDate('submissions.created_at', '<=', $endDate);
         }
 
+        // Apply prefix filter if selected
+        if ($prefixFilter) {
+            $query->where('submissions.series_code', 'like', $prefixFilter . '%');
+        }
+
+        // Apply doctype filter if selected
+        if ($doctypeFilter) {
+            $query->whereHas('workflow.document', function ($q) use ($doctypeFilter) {
+                $q->where('documents.id', $doctypeFilter);
+            });
+        }
+
+        // Apply division filter if selected
+        if ($divisionFilter) {
+            $query->where('submissions.division_id', $divisionFilter);
+        }
+
+        // Apply status filter if selected
+        if ($statusFilter) {
+            if ($statusFilter === 'approved') {
+                $query->where(function($q) {
+                    $q->where('submissions.status', 'like', '%approved%')
+                      ->orWhere('submissions.status', 'like', '%Approve%');
+                });
+            } elseif ($statusFilter === 'rejected') {
+                $query->where(function($q) {
+                    $q->where('submissions.status', 'like', '%rejected%')
+                      ->orWhere('submissions.status', 'like', '%reject%');
+                });
+            }
+        }
+
         $submissions = $query->orderByDesc(DB::raw('swslast.last_action_at'))
             ->orderByDesc('submissions.updated_at')
             ->paginate(10);
+
+        // Get all registered prefixes from DocumentNameSeries
+        $availablePrefixes = DocumentNameSeries::whereNotNull('prefix')
+            ->whereHas('document', function ($q) {
+                $q->where('is_active', true);
+            })
+            ->with('document:id,name')
+            ->get()
+            ->map(function ($series) {
+                return [
+                    'prefix' => $series->prefix,
+                    'document_name' => $series->document->name,
+                ];
+            })
+            ->sortBy('prefix')
+            ->values();
 
         // Attach permission info (cached) and current_workflow_step
         if ($user->subdivision_id) {
@@ -138,6 +190,7 @@ class SubmissionController extends Controller
         return Inertia::render('Submissions/Index', [
             'submissions' => $submissions,
             'userDivision' => $user->division,
+            'availablePrefixes' => $availablePrefixes,
         ]);
     }
 
@@ -153,6 +206,9 @@ class SubmissionController extends Controller
         $search = $request->get('search');
         $startDate = $request->get('start_date');
         $endDate = $request->get('end_date');
+        $prefixFilter = $request->get('prefix');
+        $doctypeFilter = $request->get('doctype');
+        $divisionFilter = $request->get('division');
 
         // OPTIMIZED: Get active submissions untuk division user
         // Service & cache handle permission checks
@@ -207,7 +263,40 @@ class SubmissionController extends Controller
             $query->whereDate('submissions.created_at', '<=', $endDate);
         }
 
+        // Apply prefix filter if selected
+        if ($prefixFilter) {
+            $query->where('submissions.series_code', 'like', $prefixFilter . '%');
+        }
+
+        // Apply doctype filter if selected
+        if ($doctypeFilter) {
+            $query->whereHas('workflow.document', function ($q) use ($doctypeFilter) {
+                $q->where('documents.id', $doctypeFilter);
+            });
+        }
+
+        // Apply division filter if selected
+        if ($divisionFilter) {
+            $query->where('submissions.division_id', $divisionFilter);
+        }
+
         $submissions = $query->latest()->paginate(10);
+
+        // Get all registered prefixes from DocumentNameSeries
+        $availablePrefixes = DocumentNameSeries::whereNotNull('prefix')
+            ->whereHas('document', function ($q) {
+                $q->where('is_active', true);
+            })
+            ->with('document:id,name')
+            ->get()
+            ->map(function ($series) {
+                return [
+                    'prefix' => $series->prefix,
+                    'document_name' => $series->document->name,
+                ];
+            })
+            ->sortBy('prefix')
+            ->values();
 
         // Attach permission info (cached)
         if ($subdivisionId) {
@@ -226,6 +315,7 @@ class SubmissionController extends Controller
             'submissions' => $submissions,
             'userDivision' => $user->division,
             'statusFilter' => $statusFilter,
+            'availablePrefixes' => $availablePrefixes,
         ]);
     }
 
@@ -339,14 +429,22 @@ class SubmissionController extends Controller
     }
 
     /**
+     * Pastikan submission memiliki short code untuk URL verifikasi yang aman.
+     */
+    protected function ensureShortCode(Submission $submission): void
+    {
+        $submission->ensureShortCode();
+    }
+
+    /**
      * Generate file QR untuk URL verifikasi dan simpan ke storage publik.
      */
     protected function ensureQrCode(Submission $submission): void
     {
-        // Pastikan token ada
-        $this->ensureVerificationToken($submission);
+        // Pastikan short code ada (untuk URL yang aman)
+        $this->ensureShortCode($submission);
 
-        $verifyUrl = route('verification.show', $submission->verification_token);
+        $verifyUrl = route('verification.show', $submission->short_code);
         $dir = 'qrcodes/submissions';
         $filename = $submission->id . '.svg';
         $relativePath = $dir . '/' . $filename;
@@ -658,6 +756,7 @@ class SubmissionController extends Controller
             'workflow.document.nameSeries',
             'workflowSteps.division',
             'workflow.steps.division',
+            'workflowSteps.approver',
             'stamped',
         ]);
 
@@ -752,7 +851,7 @@ class SubmissionController extends Controller
 
         return Inertia::render('Submissions/Show', [
             'submission' => $submission,
-            'workflowSteps' => $submission->workflowSteps()->orderBy('step_order')->get(),
+            'workflowSteps' => $submission->workflowSteps()->with('approver')->orderBy('step_order')->get(),
             'currentStep' => $currentWorkflowStep, // 🔥 Kirim WorkflowStep (ada field actions)
             'currentSubmissionStep' => $currentSubmissionStep, // Status tracking
             'canApprove' => $canApprove,
@@ -779,9 +878,9 @@ class SubmissionController extends Controller
         if (!$submission->qr_code_path) {
             $this->ensureQrCode($submission);
         }
-        // Pastikan token tersedia untuk generate QR inline
-        $this->ensureVerificationToken($submission);
-        $verifyUrl = route('verification.show', $submission->verification_token);
+        // Pastikan short code tersedia untuk generate QR inline
+        $this->ensureShortCode($submission);
+        $verifyUrl = route('verification.show', $submission->short_code);
         $qrSvg = QrCode::format('svg')
             ->size(180)
             ->margin(0)
@@ -1225,6 +1324,12 @@ public function update(Request $request, Submission $submission)
         $dataPayload = json_decode($dataPayload, true) ?? [];
     }
     
+    // If useTableData is false, remove table data from payload
+    if (isset($dataPayload['useTableData']) && !$dataPayload['useTableData']) {
+        unset($dataPayload['tableData']);
+        unset($dataPayload['tableColumns']);
+    }
+    
     foreach ($docFields as $df) {
         if ($df->required && (!array_key_exists($df->name, $dataPayload) || $dataPayload[$df->name] === null || $dataPayload[$df->name] === '')) {
             // Check if this is an API request
@@ -1259,11 +1364,11 @@ public function update(Request $request, Submission $submission)
         return response()->json([
             'success' => true,
             'message' => 'Pengajuan berhasil diperbarui.',
-            'redirect_url' => route('submissions.index')
+            'redirect_url' => route('submissions.show', $submission->id)
         ]);
     }
 
-    return redirect()->route('submissions.index')->with('success', 'Pengajuan berhasil diperbarui.');
+    return redirect()->route('submissions.show', $submission->id)->with('success', 'Pengajuan berhasil diperbarui.');
 }
 
 /** ------------------------

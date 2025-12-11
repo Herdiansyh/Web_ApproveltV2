@@ -14,7 +14,6 @@ export const initializeCsrfToken = async () => {
     try {
         // Refresh token on app initialization
         await refreshCsrfToken();
-        console.log('CSRF token initialized successfully');
     } catch (error) {
         console.warn('Failed to initialize CSRF token:', error);
         // Don't throw error - app can still work with existing token
@@ -32,7 +31,6 @@ export const setupPeriodicTokenRefresh = () => {
     setInterval(async () => {
         try {
             await refreshCsrfToken();
-            console.log('CSRF token refreshed periodically');
         } catch (error) {
             console.warn('Failed to refresh CSRF token periodically:', error);
         }
@@ -58,7 +56,6 @@ export const setupBeforeUnloadTokenRefresh = () => {
         if (!document.hidden && !refreshPromise) {
             try {
                 await refreshCsrfToken();
-                console.log('CSRF token refreshed on visibility change');
             } catch (error) {
                 console.warn('Failed to refresh CSRF token on visibility change:', error);
             }

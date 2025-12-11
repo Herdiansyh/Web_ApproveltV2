@@ -10,13 +10,11 @@ use SimpleSoftwareIO\QrCode\Facades\QrCode;
 class VerificationController extends Controller
 {
     /**
-     * Halaman verifikasi publik berdasarkan token.
+     * Halaman verifikasi publik berdasarkan short code.
      */
-    public function show(string $token)
+    public function show(string $shortCode)
     {
-        $submission = Submission::with(['user.division', 'workflow.document'])
-            ->where('verification_token', $token)
-            ->first();
+        $submission = Submission::findByShortCode($shortCode);
 
         $isValid = (bool) $submission;
 
@@ -32,7 +30,7 @@ class VerificationController extends Controller
                     Storage::disk('public')->makeDirectory($dir);
                 }
 
-                $verifyUrl = route('verification.show', $token);
+                $verifyUrl = route('verification.show', $shortCode);
                 $svg = QrCode::format('svg')
                     ->size(200)
                     ->margin(1)
@@ -46,7 +44,7 @@ class VerificationController extends Controller
                 $qrSvg = $svg;
             } else {
                 // Selalu siapkan inline SVG sebagai fallback agar tampil meski tag <img> gagal merender SVG
-                $verifyUrl = route('verification.show', $token);
+                $verifyUrl = route('verification.show', $shortCode);
                 $qrSvg = QrCode::format('svg')
                     ->size(200)
                     ->margin(1)
