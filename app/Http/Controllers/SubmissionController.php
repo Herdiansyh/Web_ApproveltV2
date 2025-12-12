@@ -219,34 +219,31 @@ class SubmissionController extends Controller
         $doctypeFilter = $request->get('doctype');
         $divisionFilter = $request->get('division');
 
-        // OPTIMIZED: Get active submissions untuk division user
-        // Service & cache handle permission checks
-        $canViewGlobal = $subdivisionId
-            ? $this->permissionService->hasPermission($subdivisionId, 'can_view')
+        // ========================================================
+        // PENGAJUAN MASUK: Submission yang membutuhkan aksi user
+        // ========================================================
+        // Kriteria:
+        // 1. Status: active/waiting
+        // 2. User punya permission approve/reject
+        // 3. User terlibat dalam step workflow yang sedang aktif
+        // ========================================================
+        
+        $canApprove = $subdivisionId
+            ? $this->permissionService->hasPermission($subdivisionId, 'can_approve')
             : false;
 
         $query = $this->queryService->baseQuery()
             ->active()  // Only non-approved/non-rejected
-            ->where(function ($outer) use ($user, $divisionId, $canViewGlobal) {
-                // Case 1: User sendiri
-                $outer->where('user_id', $user->id)
-                // Case 2: Current workflow step di divisi user (jika admin atau punya can_view)
-                ->orWhere(function ($or) use ($divisionId, $canViewGlobal, $user) {
-                    if ($user->role === 'admin' || $canViewGlobal) {
-                        $or->whereNotNull('workflow_id')
-                           ->whereHas('workflow.steps', function ($q) use ($divisionId) {
-                               $q->whereColumn('workflow_steps.step_order', 'submissions.current_step')
-                                 ->where('workflow_steps.division_id', $divisionId);
-                           });
-                    }
-                })
-                // Case 3: Division sama dengan punya can_view
-                ->orWhere(function ($or) use ($divisionId, $canViewGlobal) {
-                    if ($canViewGlobal) {
-                        $or->where('division_id', $divisionId)
-                           ->whereNotNull('workflow_id');
-                    }
-                });
+            ->where(function ($q) use ($user, $divisionId, $canApprove) {
+                // Hanya tampilkan jika user bisa approve/reject
+                if ($user->role === 'admin' || $canApprove) {
+                    // DAN user terlibat di step yang sedang aktif
+                    $q->whereNotNull('workflow_id')
+                      ->whereHas('workflow.steps', function ($subQ) use ($divisionId) {
+                          $subQ->whereColumn('workflow_steps.step_order', 'submissions.current_step')
+                               ->where('workflow_steps.division_id', $divisionId);
+                      });
+                }
             })
             ->when($statusFilter === 'pending', fn($q) => $q->where('status', 'pending'))
             ->with([
@@ -330,7 +327,9 @@ class SubmissionController extends Controller
 
     /** ================================
      *  PENGAJUAN KELUAR (Outgoing)
-     *  Pengajuan yg user buat tapi masih waiting approval
+     *  ================================
+     *  Pengajuan yang dibuat oleh user
+     *  Tapi user TIDAK terlibat dalam step workflow yang sedang aktif
      *  ================================ */
     public function outgoing(Request $request)
     {
@@ -345,30 +344,22 @@ class SubmissionController extends Controller
         $doctypeFilter = $request->get('doctype');
         $divisionFilter = $request->get('division');
 
-        // Pengajuan Keluar = Pengajuan yang user buat + status waiting
-        // Tapi user TIDAK punya permission approve/reject
-        // Dan user TIDAK terlibat dalam workflow step saat ini
-        
-        $canApprove = $subdivisionId
-            ? $this->permissionService->hasPermission($subdivisionId, 'can_approve')
-            : false;
+        // ========================================================
+        // PENGAJUAN KELUAR: Submission dibuat user, user tunggu approval
+        // ========================================================
+        // Kriteria:
+        // 1. Status: active/waiting
+        // 2. Dibuat oleh user sendiri (user_id = auth user)
+        // 3. User TIDAK terlibat dalam step workflow yang sedang aktif
+        // ========================================================
 
         $query = $this->queryService->baseQuery()
             ->active()  // Only non-approved/non-rejected (waiting status)
             ->where('user_id', $user->id)  // Dibuat oleh user sendiri
-            ->where(function ($q) use ($user, $canApprove, $divisionId) {
-                // Kondisi 1: User tidak punya permission approve
-                // Kondisi 2: User tidak terlibat dalam step workflow saat ini
-                if (!$canApprove) {
-                    // User tidak punya permission, jadi semua pengajuan dia masuk kategori outgoing
-                    $q->whereRaw('1=1');
-                } else {
-                    // User punya permission, filter hanya yang dia tidak terlibat
-                    $q->whereDoesntHave('workflow.steps', function ($q) use ($divisionId) {
-                        $q->whereColumn('workflow_steps.step_order', 'submissions.current_step')
-                          ->where('workflow_steps.division_id', $divisionId);
-                    });
-                }
+            ->whereDoesntHave('workflow.steps', function ($q) use ($divisionId) {
+                // User TIDAK terlibat di step yang sedang aktif
+                $q->whereColumn('workflow_steps.step_order', 'submissions.current_step')
+                  ->where('workflow_steps.division_id', $divisionId);
             })
             ->when($statusFilter === 'pending', fn($q) => $q->where('status', 'pending'))
             ->with([
