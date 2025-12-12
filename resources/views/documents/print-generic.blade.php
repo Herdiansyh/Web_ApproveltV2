@@ -40,11 +40,13 @@
 
         .series-box {
             text-align: right;
-            font-size: 11pt;
-            padding: 6pt 10pt;
-            border: 1px solid #d1d5db;
-            border-radius: 6pt;
-            background: #f9fafb;
+            font-size: 9pt;
+            min-width: 120pt;
+        }
+
+        .cetak-box {
+            text-align: right;
+            font-size: 8pt;
             min-width: 120pt;
         }
 
@@ -224,11 +226,20 @@
             </h1>
 
             <!-- Series -->
-            @if (!empty($submission->series_code))
-                <div class="series-box">
-                    <strong>{{ $submission->series_code }}</strong>
-                </div>
-            @endif
+            <div style="display: flex; flex-direction: column;">
+                @if (!empty($submission->series_code))
+                    <div class="series-box">
+                        <strong>{{ $submission->series_code }}</strong>
+                    </div>
+                @endif
+
+                <!-- Print Timestamp -->
+                @if (!empty($submission->printed_at))
+                    <div class="cetak-box" style="margin-top: 4pt;">
+                        <small>Cetak:{{ $submission->printed_at->format('d M Y H:i') }}</small>
+                    </div>
+                @endif
+            </div>
         </div>
 
         <div class="doc-meta">

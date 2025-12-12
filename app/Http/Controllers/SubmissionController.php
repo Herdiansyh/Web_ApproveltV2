@@ -60,7 +60,11 @@ class SubmissionController extends Controller
                 ->leftJoinSub($lastActionSub, 'swslast', function ($join) {
                     $join->on('swslast.submission_id', '=', 'submissions.id');
                 })
-                ->completed()
+                ->where(function ($q) {
+                    $q->whereRaw('LOWER(status) LIKE ?', ['%approved%'])
+                      ->orWhereRaw('LOWER(status) LIKE ?', ['%rejected%'])
+                      ->orWhere('status', 'cancelled');
+                })
                 ->whereHas('workflowSteps', function ($q) use ($user) {
                     $q->where('approver_id', $user->id)
                       ->whereIn('status', ['approved', 'rejected']);
@@ -81,7 +85,11 @@ class SubmissionController extends Controller
                 ->leftJoinSub($lastActionSub, 'swslast', function ($join) {
                     $join->on('swslast.submission_id', '=', 'submissions.id');
                 })
-                ->completed()  // Filter only approved/rejected
+                ->where(function ($q) {
+                    $q->whereRaw('LOWER(status) LIKE ?', ['%approved%'])
+                      ->orWhereRaw('LOWER(status) LIKE ?', ['%rejected%'])
+                      ->orWhere('status', 'cancelled');
+                })
                 ->where(function ($q) use ($user) {
                     // User sendiri atau admin
                     $q->where('user_id', $user->id)
@@ -142,15 +150,16 @@ class SubmissionController extends Controller
         // Apply status filter if selected
         if ($statusFilter) {
             if ($statusFilter === 'approved') {
-                $query->where(function($q) {
-                    $q->where('submissions.status', 'like', '%approved%')
-                      ->orWhere('submissions.status', 'like', '%Approve%');
+                $query->where(function ($q) {
+                    $q->whereRaw('LOWER(status) LIKE ?', ['%approved%']);
                 });
             } elseif ($statusFilter === 'rejected') {
                 $query->where(function($q) {
                     $q->where('submissions.status', 'like', '%rejected%')
                       ->orWhere('submissions.status', 'like', '%reject%');
                 });
+            } elseif ($statusFilter === 'cancelled') {
+                $query->where('submissions.status', 'cancelled');
             }
         }
 
@@ -870,6 +879,11 @@ class SubmissionController extends Controller
     public function printDocument(Submission $submission)
     {
         $this->authorize('view', $submission);
+        
+        // Update print timestamp
+        $submission->printed_at = now();
+        $submission->save();
+        
         $submission->load(['user.division', 'workflow.document.fields', 'workflowSteps.approver', 'workflowSteps.division']);
 
         // Pastikan series_code sudah ada ketika dokumen dicetak
@@ -1395,5 +1409,127 @@ public function destroy(Request $request, Submission $submission)
     }
 
     return redirect()->route('submissions.index')->with('success', 'Pengajuan berhasil dihapus.');
+}
+
+/** ------------------------
+ *  CANCEL PENGAJUAN
+ *  ------------------------ */
+public function cancel(Request $request, Submission $submission)
+{
+    // Check if user can cancel this submission
+    if (!$submission->canBeCancelledBy(Auth::user())) {
+        $message = 'Anda tidak dapat membatalkan pengajuan ini.';
+        
+        if ($request->wantsJson() || $request->header('Accept') === 'application/json') {
+            return response()->json([
+                'success' => false,
+                'message' => $message
+            ], 403);
+        }
+        
+        return back()->with('error', $message);
+    }
+
+    $validated = $request->validate([
+        'cancel_reason' => 'required|string|max:1000'
+    ], [
+        'cancel_reason.required' => 'Alasan pembatalan wajib diisi.'
+    ]);
+
+    try {
+        DB::beginTransaction();
+        
+        $submission->cancel($validated['cancel_reason'], Auth::user());
+        
+        DB::commit();
+
+        $message = 'Pengajuan berhasil dibatalkan.';
+        
+        if ($request->wantsJson() || $request->header('Accept') === 'application/json') {
+            return response()->json([
+                'success' => true,
+                'message' => $message,
+                'redirect_url' => route('submissions.show', $submission->id)
+            ]);
+        }
+
+        return redirect()->route('submissions.show', $submission->id)->with('success', $message);
+        
+    } catch (\Exception $e) {
+        DB::rollBack();
+        Log::error('Error cancelling submission: ' . $e->getMessage());
+        
+        $message = 'Terjadi kesalahan saat membatalkan pengajuan.';
+        
+        if ($request->wantsJson() || $request->header('Accept') === 'application/json') {
+            return response()->json([
+                'success' => false,
+                'message' => $message
+            ], 500);
+        }
+
+        return back()->with('error', $message);
+    }
+}
+
+/** ------------------------
+ *  AMMEND PENGAJUAN
+ *  ------------------------ */
+public function amend(Request $request, Submission $submission)
+{
+    // Check if user can amend this submission
+    if (!$submission->canBeAmendedBy(Auth::user())) {
+        $message = 'Anda tidak dapat merevisi pengajuan ini.';
+        
+        if ($request->wantsJson() || $request->header('Accept') === 'application/json') {
+            return response()->json([
+                'success' => false,
+                'message' => $message
+            ], 403);
+        }
+        
+        return back()->with('error', $message);
+    }
+
+    $validated = $request->validate([
+        'amend_reason' => 'required|string|max:1000'
+    ], [
+        'amend_reason.required' => 'Alasan revisi wajib diisi.'
+    ]);
+
+    try {
+        DB::beginTransaction();
+        
+        $amendedSubmission = $submission->createAmendedSubmission($validated['amend_reason'], Auth::user());
+        
+        DB::commit();
+
+        $message = 'Pengajuan revisi berhasil dibuat.';
+        
+        if ($request->wantsJson() || $request->header('Accept') === 'application/json') {
+            return response()->json([
+                'success' => true,
+                'message' => $message,
+                'redirect_url' => route('submissions.edit', $amendedSubmission->id)
+            ]);
+        }
+
+        return redirect()->route('submissions.edit', $amendedSubmission->id)->with('success', $message);
+        
+    } catch (\Exception $e) {
+        DB::rollBack();
+        Log::error('Error amending submission: ' . $e->getMessage());
+        
+        $message = 'Terjadi kesalahan saat membuat pengajuan revisi.';
+        
+        if ($request->wantsJson() || $request->header('Accept') === 'application/json') {
+            return response()->json([
+                'success' => false,
+                'message' => $message
+            ], 500);
+        }
+
+        return back()->with('error', $message);
+    }
 }
 }

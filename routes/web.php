@@ -99,6 +99,9 @@ Route::get('/dashboard', function () {
         $rejectedSubmissions = SubmissionWorkflowStep::where('approver_id', $user->id)
             ->where('status', 'rejected')
             ->count();
+        $cancelledSubmissions = Submission::where('user_id', $user->id)
+            ->where('status', 'cancelled')
+            ->count();
     } else {
         // User biasa: statistik hanya dari pengajuan yang ia buat
         $totalSubmission = Submission::where('user_id', $user->id)->count();
@@ -113,6 +116,9 @@ Route::get('/dashboard', function () {
             ->count();
         $rejectedSubmissions = Submission::where('user_id', $user->id)
             ->whereRaw('LOWER(status) LIKE ?', ['%rejected%'])
+            ->count();
+        $cancelledSubmissions = Submission::where('user_id', $user->id)
+            ->where('status', 'cancelled')
             ->count();
     }
 
@@ -148,6 +154,7 @@ Route::get('/dashboard', function () {
             'waiting' => $waitingApproval,
             'approved' => $approvedSubmissions,
             'rejected' => $rejectedSubmissions,
+            'cancelled' => $cancelledSubmissions ?? 0,
         ],
         'pendingItems' => $pendingItems,
         'canApprove' => $canApproveGlobal,
@@ -181,6 +188,10 @@ Route::middleware(['auth'])->group(function () {
     Route::post('submissions/{submission}/request', [SubmissionController::class, 'request'])->name('submissions.request');
     Route::post('submissions/{submission}/request-next', [SubmissionController::class, 'requestNext'])
     ->name('submissions.requestNext');
+    
+    // Cancel and Amend routes (for submission owners)
+    Route::post('submissions/{submission}/cancel', [SubmissionController::class, 'cancel'])->name('submissions.cancel');
+    Route::post('submissions/{submission}/amend', [SubmissionController::class, 'amend'])->name('submissions.amend');
 
     // Notifications endpoint for header bell popover (supports limit & since)
     Route::get('/notifications', function () {

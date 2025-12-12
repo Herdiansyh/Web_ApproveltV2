@@ -729,7 +729,9 @@ export default function Edit({ auth, submission, documentFields = [] }) {
                                         >
                                             {processing
                                                 ? "Menyimpan..."
-                                                : "Simpan Perubahan"}
+                                                : submission.original_submission_id && submission.original_submission_id !== null
+                                                    ? "Kirim Ulang" 
+                                                    : "Simpan Perubahan"}
                                         </Button>
                                     </div>
                                 </div>

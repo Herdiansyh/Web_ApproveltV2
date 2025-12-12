@@ -11,6 +11,7 @@ import {
     DialogHeader,
     DialogTitle,
 } from "@/Components/ui/dialog";
+import { Textarea } from "@/Components/ui/textarea";
 import Header from "@/Components/Header";
 import {
     DropdownMenu,
@@ -26,6 +27,8 @@ import {
     Search,
     Filter,
     X,
+    X as CancelIcon,
+    RefreshCw,
 } from "lucide-react";
 import PrimaryButton from "@/Components/PrimaryButton";
 import { Separator } from "@/Components/ui/separator";
@@ -37,6 +40,7 @@ import {
     PopoverContent,
     PopoverTrigger,
 } from "@/Components/ui/popover";
+import { useForm } from "@inertiajs/react";
 
 export default function Index({
     auth,
@@ -53,6 +57,13 @@ export default function Index({
     });
     const [confirmOpen, setConfirmOpen] = useState(false);
     const [toDeleteId, setToDeleteId] = useState(null);
+    const [showCancelModal, setShowCancelModal] = useState(false);
+    const [showAmendModal, setShowAmendModal] = useState(false);
+    const [selectedSubmission, setSelectedSubmission] = useState(null);
+    const { data, setData, post, processing, reset } = useForm({
+        cancel_reason: "",
+        amend_reason: "",
+    });
 
     // Advanced filter states
     const [showAdvancedFilter, setShowAdvancedFilter] = useState(false);
@@ -62,51 +73,57 @@ export default function Index({
     const [loadingOptions, setLoadingOptions] = useState(false);
 
     // Check if any filters are active
-    const hasActiveFilters = filters.some(filter => filter.type && filter.value);
+    const hasActiveFilters = filters.some(
+        (filter) => filter.type && filter.value
+    );
 
     const handleFilterChange = (e) => setFilter(e.target.value);
 
     // Fetch filter options when filter type changes
-    const handleFilterTypeChange = useCallback(async (filterId, type, preserveValue = false) => {
-        const currentFilter = filters.find(f => f.id === filterId);
-        const currentValue = preserveValue && currentFilter ? currentFilter.value : "";
-        
-        setFilters((prev) =>
-            prev.map((filter) =>
-                filter.id === filterId
-                    ? { ...filter, type, value: currentValue, options: [] }
-                    : filter
-            )
-        );
+    const handleFilterTypeChange = useCallback(
+        async (filterId, type, preserveValue = false) => {
+            const currentFilter = filters.find((f) => f.id === filterId);
+            const currentValue =
+                preserveValue && currentFilter ? currentFilter.value : "";
 
-        if (type) {
-            setLoadingOptions(true);
-            try {
-                const response = await fetch(
-                    `/filter/options?filter_type=${type}`
-                );
-                const data = await response.json();
-                setFilters((prev) =>
-                    prev.map((filter) =>
-                        filter.id === filterId
-                            ? { ...filter, options: data.options || [] }
-                            : filter
-                    )
-                );
-            } catch (error) {
-                console.error("Error fetching filter options:", error);
-                setFilters((prev) =>
-                    prev.map((filter) =>
-                        filter.id === filterId
-                            ? { ...filter, options: [] }
-                            : filter
-                    )
-                );
-            } finally {
-                setLoadingOptions(false);
+            setFilters((prev) =>
+                prev.map((filter) =>
+                    filter.id === filterId
+                        ? { ...filter, type, value: currentValue, options: [] }
+                        : filter
+                )
+            );
+
+            if (type) {
+                setLoadingOptions(true);
+                try {
+                    const response = await fetch(
+                        `/filter/options?filter_type=${type}`
+                    );
+                    const data = await response.json();
+                    setFilters((prev) =>
+                        prev.map((filter) =>
+                            filter.id === filterId
+                                ? { ...filter, options: data.options || [] }
+                                : filter
+                        )
+                    );
+                } catch (error) {
+                    console.error("Error fetching filter options:", error);
+                    setFilters((prev) =>
+                        prev.map((filter) =>
+                            filter.id === filterId
+                                ? { ...filter, options: [] }
+                                : filter
+                        )
+                    );
+                } finally {
+                    setLoadingOptions(false);
+                }
             }
-        }
-    }, [setFilters, setLoadingOptions]);
+        },
+        [setFilters, setLoadingOptions]
+    );
 
     // Add new filter row
     const addFilter = () => {
@@ -162,10 +179,10 @@ export default function Index({
         setFilters([{ id: 1, type: "", value: "", options: [] }]);
 
         const params = new URLSearchParams(window.location.search);
-        params.delete('doctype');
-        params.delete('prefix');
-        params.delete('division');
-        params.delete('status');
+        params.delete("doctype");
+        params.delete("prefix");
+        params.delete("division");
+        params.delete("status");
 
         const newUrl = `${window.location.pathname}?${params.toString()}`;
         router.get(newUrl, {}, { preserveState: true });
@@ -180,43 +197,77 @@ export default function Index({
     useEffect(() => {
         const initializeFilters = async () => {
             const params = new URLSearchParams(window.location.search);
-            const prefixParam = params.get('prefix');
-            const doctypeParam = params.get('doctype');
-            const divisionParam = params.get('division');
-            const statusParam = params.get('status');
-            
+            const prefixParam = params.get("prefix");
+            const doctypeParam = params.get("doctype");
+            const divisionParam = params.get("division");
+            const statusParam = params.get("status");
+
             const initialFilters = [];
             let filterId = 1;
-            
+
             if (prefixParam) {
-                initialFilters.push({ id: filterId++, type: 'prefix', value: prefixParam, options: [] });
+                initialFilters.push({
+                    id: filterId++,
+                    type: "prefix",
+                    value: prefixParam,
+                    options: [],
+                });
             }
-            
+
             if (doctypeParam) {
-                initialFilters.push({ id: filterId++, type: 'doctype', value: doctypeParam, options: [] });
+                initialFilters.push({
+                    id: filterId++,
+                    type: "doctype",
+                    value: doctypeParam,
+                    options: [],
+                });
             }
-            
+
             if (divisionParam) {
-                initialFilters.push({ id: filterId++, type: 'division', value: divisionParam, options: [] });
+                initialFilters.push({
+                    id: filterId++,
+                    type: "division",
+                    value: divisionParam,
+                    options: [],
+                });
             }
-            
+
             if (statusParam) {
-                initialFilters.push({ id: filterId++, type: 'status', value: statusParam, options: [] });
+                initialFilters.push({
+                    id: filterId++,
+                    type: "status",
+                    value: statusParam,
+                    options: [],
+                });
             }
-            
+
             if (initialFilters.length > 0) {
                 setFilters(initialFilters);
                 // Fetch options for each filter type and preserve values from URL
                 for (const filter of initialFilters) {
                     // Local function to avoid dependency issues
-                    const fetchOptions = async (filterId, type, preserveValue = false) => {
-                        const currentFilter = initialFilters.find(f => f.id === filterId);
-                        const currentValue = preserveValue && currentFilter ? currentFilter.value : "";
-                        
+                    const fetchOptions = async (
+                        filterId,
+                        type,
+                        preserveValue = false
+                    ) => {
+                        const currentFilter = initialFilters.find(
+                            (f) => f.id === filterId
+                        );
+                        const currentValue =
+                            preserveValue && currentFilter
+                                ? currentFilter.value
+                                : "";
+
                         setFilters((prev) =>
                             prev.map((f) =>
                                 f.id === filterId
-                                    ? { ...f, type, value: currentValue, options: [] }
+                                    ? {
+                                          ...f,
+                                          type,
+                                          value: currentValue,
+                                          options: [],
+                                      }
                                     : f
                             )
                         );
@@ -231,12 +282,18 @@ export default function Index({
                                 setFilters((prev) =>
                                     prev.map((f) =>
                                         f.id === filterId
-                                            ? { ...f, options: data.options || [] }
+                                            ? {
+                                                  ...f,
+                                                  options: data.options || [],
+                                              }
                                             : f
                                     )
                                 );
                             } catch (error) {
-                                console.error("Error fetching filter options:", error);
+                                console.error(
+                                    "Error fetching filter options:",
+                                    error
+                                );
                                 setFilters((prev) =>
                                     prev.map((f) =>
                                         f.id === filterId
@@ -249,12 +306,12 @@ export default function Index({
                             }
                         }
                     };
-                    
+
                     await fetchOptions(filter.id, filter.type, true);
                 }
             }
         };
-        
+
         initializeFilters();
     }, []);
 
@@ -319,276 +376,300 @@ export default function Index({
                                 </div>
 
                                 {/* Advanced Filter Button */}
-<div className="sm:flex gap-2 justify-end ">  
-     <DateFilter 
-                                    onFilterChange={handleDateFilterChange}
-                                    placeholder="Pilih tanggal..."
-                                    label="Filter Tanggal"
-                                />
-                                <Popover
-                                    open={showAdvancedFilter}
-                                    onOpenChange={setShowAdvancedFilter}
-                                >
-                                    <PopoverTrigger asChild>
-                                        <Button
-                                            variant="outline"
-                                            style={{ borderRadius: "15px" }}
-                                            className={`flex ${hasActiveFilters ? "bg-blue-100" : ""}  items-center w-full sm:mt-0 mt-3 gap-2 text-xs sm:text-sm`}
-                                        >
-                                            <Filter className="w-4 h-4" />
-                                            Filter
-                                        </Button>
-                                    </PopoverTrigger>
-
-                                    <PopoverContent
-                                        className="w-[90vw] mr-5 sm:w-[400px] md:w-[600px] p-4 max-h-[80vh] overflow-y-auto"
-                                        align="start"
-                                        sideOffset={8}
-                                        style={{ borderRadius: "15px" }}
+                                <div className="sm:flex gap-2 justify-end ">
+                                    <DateFilter
+                                        onFilterChange={handleDateFilterChange}
+                                        placeholder="Pilih tanggal..."
+                                        label="Filter Tanggal"
+                                    />
+                                    <Popover
+                                        open={showAdvancedFilter}
+                                        onOpenChange={setShowAdvancedFilter}
                                     >
-                                        <div className="flex items-center justify-between mb-4">
-                                            <h3 className="text-sm font-medium">
-                                                Filter Lanjutan
-                                            </h3>
+                                        <PopoverTrigger asChild>
                                             <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                onClick={() =>
-                                                    setShowAdvancedFilter(false)
-                                                }
+                                                variant="outline"
+                                                style={{ borderRadius: "15px" }}
+                                                className={`flex ${
+                                                    hasActiveFilters
+                                                        ? "bg-blue-100"
+                                                        : ""
+                                                }  items-center w-full sm:mt-0 mt-3 gap-2 text-xs sm:text-sm`}
                                             >
-                                                <X className="w-4 h-4" />
+                                                <Filter className="w-4 h-4" />
+                                                Filter
                                             </Button>
-                                        </div>
+                                        </PopoverTrigger>
 
-                                        <div className="space-y-3">
-                                            {filters.map((filter, index) => (
-                                                <div
-                                                    key={filter.id}
-                                                    className="grid grid-cols-1 sm:grid-cols-3 gap-2 items-end"
+                                        <PopoverContent
+                                            className="w-[90vw] mr-5 sm:w-[400px] md:w-[600px] p-4 max-h-[80vh] overflow-y-auto"
+                                            align="start"
+                                            sideOffset={8}
+                                            style={{ borderRadius: "15px" }}
+                                        >
+                                            <div className="flex items-center justify-between mb-4">
+                                                <h3 className="text-sm font-medium">
+                                                    Filter Lanjutan
+                                                </h3>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    onClick={() =>
+                                                        setShowAdvancedFilter(
+                                                            false
+                                                        )
+                                                    }
                                                 >
-                                                    {/* Tipe Filter */}
-                                                    <div>
-                                                        <label className="block text-xs font-medium text-muted-foreground mb-1">
-                                                            Tipe Filter
-                                                        </label>
-                                                        <DropdownMenu>
-                                                            <DropdownMenuTrigger
-                                                                asChild
-                                                            >
-                                                                <Button
-                                                                    variant="outline"
-                                                                    className="w-full justify-between text-xs"
-                                                                    style={{
-                                                                        borderRadius:
-                                                                            "15px",
-                                                                    }}
-                                                                >
-                                                                    {filter.type === "doctype"
-                                                                        ? "Doctype"
-                                                                        : filter.type === "prefix"
-                                                                        ? "Prefix"
-                                                                        : filter.type === "division"
-                                                                        ? "Divisi"
-                                                                        : filter.type === "status"
-                                                                        ? "Status"
-                                                                        : "Pilih tipe"}
-                                                                </Button>
-                                                            </DropdownMenuTrigger>
-                                                            <DropdownMenuContent className="w-44">
-                                                                <DropdownMenuItem
-                                                                    onClick={() =>
-                                                                        handleFilterTypeChange(
-                                                                            filter.id,
-                                                                            "doctype"
-                                                                        )
-                                                                    }
-                                                                >
-                                                                    Doctype
-                                                                </DropdownMenuItem>
-                                                                <DropdownMenuItem
-                                                                    onClick={() =>
-                                                                        handleFilterTypeChange(
-                                                                            filter.id,
-                                                                            "prefix"
-                                                                        )
-                                                                    }
-                                                                >
-                                                                    Prefix
-                                                                </DropdownMenuItem>
-                                                                <DropdownMenuItem
-                                                                    onClick={() =>
-                                                                        handleFilterTypeChange(
-                                                                            filter.id,
-                                                                            "division"
-                                                                        )
-                                                                    }
-                                                                >
-                                                                    Divisi
-                                                                </DropdownMenuItem>
-                                                                <DropdownMenuItem
-                                                                    onClick={() =>
-                                                                        handleFilterTypeChange(
-                                                                            filter.id,
-                                                                            "status"
-                                                                        )
-                                                                    }
-                                                                >
-                                                                    Status
-                                                                </DropdownMenuItem>
-                                                            </DropdownMenuContent>
-                                                        </DropdownMenu>
-                                                    </div>
+                                                    <X className="w-4 h-4" />
+                                                </Button>
+                                            </div>
 
-                                                    {/* Nilai Filter */}
-                                                    <div>
-                                                        <label className="block text-xs font-medium text-muted-foreground mb-1">
-                                                            Nilai Filter
-                                                        </label>
-                                                        <DropdownMenu>
-                                                            <DropdownMenuTrigger
-                                                                asChild
-                                                            >
-                                                                <Button
-                                                                    variant="outline"
-                                                                    className="w-full justify-between overflow-hidden text-xs"
-                                                                    disabled={
-                                                                        !filter.type ||
-                                                                        loadingOptions
-                                                                    }
-                                                                    style={{
-                                                                        borderRadius:
-                                                                            "15px",
-                                                                    }}
-                                                                >
-                                                                    {loadingOptions
-                                                                        ? "Loading..."
-                                                                        : filter.value
-                                                                        ? filter.options.find(
-                                                                              (
-                                                                                  o
-                                                                              ) =>
-                                                                                  o.value ===
-                                                                                  filter.value
-                                                                          )
-                                                                              ?.label
-                                                                        : "Pilih nilai"}
-                                                                </Button>
-                                                            </DropdownMenuTrigger>
-                                                            <DropdownMenuContent className="w-52 max-h-40 overflow-y-auto">
-                                                                {filter.options.map(
-                                                                    (
-                                                                        option
-                                                                    ) => (
+                                            <div className="space-y-3">
+                                                {filters.map(
+                                                    (filter, index) => (
+                                                        <div
+                                                            key={filter.id}
+                                                            className="grid grid-cols-1 sm:grid-cols-3 gap-2 items-end"
+                                                        >
+                                                            {/* Tipe Filter */}
+                                                            <div>
+                                                                <label className="block text-xs font-medium text-muted-foreground mb-1">
+                                                                    Tipe Filter
+                                                                </label>
+                                                                <DropdownMenu>
+                                                                    <DropdownMenuTrigger
+                                                                        asChild
+                                                                    >
+                                                                        <Button
+                                                                            variant="outline"
+                                                                            className="w-full justify-between text-xs"
+                                                                            style={{
+                                                                                borderRadius:
+                                                                                    "15px",
+                                                                            }}
+                                                                        >
+                                                                            {filter.type ===
+                                                                            "doctype"
+                                                                                ? "Doctype"
+                                                                                : filter.type ===
+                                                                                  "prefix"
+                                                                                ? "Prefix"
+                                                                                : filter.type ===
+                                                                                  "division"
+                                                                                ? "Divisi"
+                                                                                : filter.type ===
+                                                                                  "status"
+                                                                                ? "Status"
+                                                                                : "Pilih tipe"}
+                                                                        </Button>
+                                                                    </DropdownMenuTrigger>
+                                                                    <DropdownMenuContent className="w-44">
                                                                         <DropdownMenuItem
-                                                                            key={
-                                                                                option.value
-                                                                            }
                                                                             onClick={() =>
-                                                                                updateFilterValue(
+                                                                                handleFilterTypeChange(
                                                                                     filter.id,
-                                                                                    option.value
+                                                                                    "doctype"
                                                                                 )
                                                                             }
-                                                                            className={
-                                                                                filter.value ===
-                                                                                option.value
-                                                                                    ? "bg-accent"
-                                                                                    : ""
+                                                                        >
+                                                                            Doctype
+                                                                        </DropdownMenuItem>
+                                                                        <DropdownMenuItem
+                                                                            onClick={() =>
+                                                                                handleFilterTypeChange(
+                                                                                    filter.id,
+                                                                                    "prefix"
+                                                                                )
                                                                             }
                                                                         >
-                                                                            {
-                                                                                option.label
-                                                                            }
+                                                                            Prefix
                                                                         </DropdownMenuItem>
-                                                                    )
+                                                                        <DropdownMenuItem
+                                                                            onClick={() =>
+                                                                                handleFilterTypeChange(
+                                                                                    filter.id,
+                                                                                    "division"
+                                                                                )
+                                                                            }
+                                                                        >
+                                                                            Divisi
+                                                                        </DropdownMenuItem>
+                                                                        <DropdownMenuItem
+                                                                            onClick={() =>
+                                                                                handleFilterTypeChange(
+                                                                                    filter.id,
+                                                                                    "status"
+                                                                                )
+                                                                            }
+                                                                        >
+                                                                            Status
+                                                                        </DropdownMenuItem>
+                                                                    </DropdownMenuContent>
+                                                                </DropdownMenu>
+                                                            </div>
+
+                                                            {/* Nilai Filter */}
+                                                            <div>
+                                                                <label className="block text-xs font-medium text-muted-foreground mb-1">
+                                                                    Nilai Filter
+                                                                </label>
+                                                                <DropdownMenu>
+                                                                    <DropdownMenuTrigger
+                                                                        asChild
+                                                                    >
+                                                                        <Button
+                                                                            variant="outline"
+                                                                            className="w-full justify-between overflow-hidden text-xs"
+                                                                            disabled={
+                                                                                !filter.type ||
+                                                                                loadingOptions
+                                                                            }
+                                                                            style={{
+                                                                                borderRadius:
+                                                                                    "15px",
+                                                                            }}
+                                                                        >
+                                                                            {loadingOptions
+                                                                                ? "Loading..."
+                                                                                : filter.value
+                                                                                ? filter.options.find(
+                                                                                      (
+                                                                                          o
+                                                                                      ) =>
+                                                                                          o.value ===
+                                                                                          filter.value
+                                                                                  )
+                                                                                      ?.label
+                                                                                : "Pilih nilai"}
+                                                                        </Button>
+                                                                    </DropdownMenuTrigger>
+                                                                    <DropdownMenuContent className="w-52 max-h-40 overflow-y-auto">
+                                                                        {filter.options.map(
+                                                                            (
+                                                                                option
+                                                                            ) => (
+                                                                                <DropdownMenuItem
+                                                                                    key={
+                                                                                        option.value
+                                                                                    }
+                                                                                    onClick={() =>
+                                                                                        updateFilterValue(
+                                                                                            filter.id,
+                                                                                            option.value
+                                                                                        )
+                                                                                    }
+                                                                                    className={
+                                                                                        filter.value ===
+                                                                                        option.value
+                                                                                            ? "bg-accent"
+                                                                                            : ""
+                                                                                    }
+                                                                                >
+                                                                                    {
+                                                                                        option.label
+                                                                                    }
+                                                                                </DropdownMenuItem>
+                                                                            )
+                                                                        )}
+                                                                    </DropdownMenuContent>
+                                                                </DropdownMenu>
+                                                            </div>
+
+                                                            {/* Remove Button */}
+                                                            <div className="flex gap-1">
+                                                                {filters.length >
+                                                                    1 && (
+                                                                    <Button
+                                                                        variant="outline"
+                                                                        size="sm"
+                                                                        onClick={() =>
+                                                                            removeFilter(
+                                                                                filter.id
+                                                                            )
+                                                                        }
+                                                                        className="px-2"
+                                                                        style={{
+                                                                            borderRadius:
+                                                                                "15px",
+                                                                        }}
+                                                                    >
+                                                                        <X className="w-3 h-3" />
+                                                                    </Button>
                                                                 )}
-                                                            </DropdownMenuContent>
-                                                        </DropdownMenu>
-                                                    </div>
-
-                                                    {/* Remove Button */}
-                                                    <div className="flex gap-1">
-                                                        {filters.length > 1 && (
-                                                            <Button
-                                                                variant="outline"
-                                                                size="sm"
-                                                                onClick={() =>
-                                                                    removeFilter(
-                                                                        filter.id
-                                                                    )
-                                                                }
-                                                                className="px-2"
-                                                                style={{
-                                                                    borderRadius:
-                                                                        "15px",
-                                                                }}
-                                                            >
-                                                                <X className="w-3 h-3" />
-                                                            </Button>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
-
-                                        {/* Add Filter Button */}
-                                        <div className="mt-3 w-full flex justify-end">
-                                            <button
-                                                variant="outline"
-                                                onClick={addFilter}
-                                                className=" text-xs border border-gray-200 py-1 px-2 hover:bg-gray-200"
-                                                style={{ borderRadius: "15px" }}
-                                            >
-                                                + Add Filter
-                                            </button>
-                                        </div>
-
-                                        {/* Action Buttons */}
-                                        <div className="flex justify-end gap-2 mt-4 pt-3 border-t">
-                                            <Button
-                                                onClick={handleAdvancedFilter}
-                                                disabled={
-                                                    !filters.some(
-                                                        (f) => f.type && f.value
+                                                            </div>
+                                                        </div>
                                                     )
-                                                }
-                                                className="text-xs"
-                                                style={{ borderRadius: "15px" }}
-                                            >
-                                                Apply Filter
-                                            </Button>
-                                            <Button
-                                                variant="outline"
-                                                onClick={
-                                                    handleClearAdvancedFilter
-                                                }
-                                                className="text-xs"
-                                                style={{ borderRadius: "15px" }}
-                                            >
-                                                Clear
-                                            </Button>
-                                        </div>
-                                    </PopoverContent>
-                                </Popover>
+                                                )}
+                                            </div>
 
-                               
-                                <div className="w-full sm:mt-0 mt-3">
-                                    {auth.user.role === "employee" && (
-                                        <Link
-                                            href={route("submissions.create")}
-                                        >
-                                            <Button
-                                                style={{
-                                                    borderRadius: "15px",
-                                                }}
-                                                className="w-full bg-primary tracking-wide hover:bg-primary/90 text-primary-foreground shadow-sm sm:text-xs text-xs font-semibold transition-all"
+                                            {/* Add Filter Button */}
+                                            <div className="mt-3 w-full flex justify-end">
+                                                <button
+                                                    variant="outline"
+                                                    onClick={addFilter}
+                                                    className=" text-xs border border-gray-200 py-1 px-2 hover:bg-gray-200"
+                                                    style={{
+                                                        borderRadius: "15px",
+                                                    }}
+                                                >
+                                                    + Add Filter
+                                                </button>
+                                            </div>
+
+                                            {/* Action Buttons */}
+                                            <div className="flex justify-end gap-2 mt-4 pt-3 border-t">
+                                                <Button
+                                                    onClick={
+                                                        handleAdvancedFilter
+                                                    }
+                                                    disabled={
+                                                        !filters.some(
+                                                            (f) =>
+                                                                f.type &&
+                                                                f.value
+                                                        )
+                                                    }
+                                                    className="text-xs"
+                                                    style={{
+                                                        borderRadius: "15px",
+                                                    }}
+                                                >
+                                                    Apply Filter
+                                                </Button>
+                                                <Button
+                                                    variant="outline"
+                                                    onClick={
+                                                        handleClearAdvancedFilter
+                                                    }
+                                                    className="text-xs"
+                                                    style={{
+                                                        borderRadius: "15px",
+                                                    }}
+                                                >
+                                                    Clear
+                                                </Button>
+                                            </div>
+                                        </PopoverContent>
+                                    </Popover>
+
+                                    <div className="w-full sm:mt-0 mt-3">
+                                        {auth.user.role === "employee" && (
+                                            <Link
+                                                href={route(
+                                                    "submissions.create"
+                                                )}
                                             >
-                                                + Buat Pengajuan
-                                            </Button>
-                                        </Link>
-                                    )}
-                                </div>
+                                                <Button
+                                                    style={{
+                                                        borderRadius: "15px",
+                                                    }}
+                                                    className="w-full bg-primary tracking-wide hover:bg-primary/90 text-primary-foreground shadow-sm sm:text-xs text-xs font-semibold transition-all"
+                                                >
+                                                    + Buat Pengajuan
+                                                </Button>
+                                            </Link>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -684,6 +765,9 @@ export default function Index({
                                                                   "reject"
                                                               )
                                                             ? "bg-rose-100 text-rose-700"
+                                                            : submission.status ===
+                                                              "cancelled"
+                                                            ? "bg-gray-100 text-gray-700"
                                                             : "bg-amber-100 text-amber-700"
                                                     }`}
                                                 >
@@ -701,34 +785,26 @@ export default function Index({
                                                             step?.role ||
                                                             null;
                                                         if (
-                                                            raw === "pending" ||
-                                                            raw.includes(
-                                                                "waiting"
-                                                            )
-                                                        ) {
-                                                            return `Waiting confirmation${
-                                                                who
-                                                                    ? ` to ${who}`
-                                                                    : ""
-                                                            }`;
-                                                        }
-                                                        if (
                                                             raw.includes(
                                                                 "approved"
                                                             )
                                                         )
-                                                            return "Approved";
+                                                            return "Disetujui";
                                                         if (
+                                                            raw ===
+                                                                "rejected" ||
                                                             raw.includes(
                                                                 "rejected"
-                                                            ) ||
-                                                            raw === "rejected"
+                                                            )
                                                         )
-                                                            return "Rejected";
-                                                        return (
-                                                            submission.status ||
-                                                            "Waiting"
-                                                        );
+                                                            return "Ditolak";
+                                                        if (raw === "cancelled")
+                                                            return "Dibatalkan";
+                                                        return `Waiting${
+                                                            who
+                                                                ? ` to ${who}`
+                                                                : ""
+                                                        }`;
                                                     })()}
                                                 </span>
 
@@ -748,12 +824,16 @@ export default function Index({
                                                     submission.created_at
                                                 ).toLocaleDateString("id-ID")}
                                             </td>
-                                            {!String(submission.status)
+                                            {(!String(submission.status)
                                                 .toLowerCase()
                                                 .includes("approved") &&
                                                 !String(submission.status)
                                                     .toLowerCase()
-                                                    .includes("rejected") && (
+                                                    .includes("rejected")) ||
+                                                (String(
+                                                    submission.status
+                                                ).toLowerCase() ===
+                                                    "cancelled" && (
                                                     <td
                                                         className="py-2 px-6 text-center"
                                                         onClick={(e) =>
@@ -794,6 +874,9 @@ export default function Index({
                                                                         status.includes(
                                                                             "rejected"
                                                                         );
+                                                                    const isCancelled =
+                                                                        status ===
+                                                                        "cancelled";
 
                                                                     const isOwner =
                                                                         auth
@@ -812,11 +895,36 @@ export default function Index({
                                                                     const showEdit =
                                                                         !isApproved &&
                                                                         !isRejected &&
+                                                                        !isCancelled &&
                                                                         (isOwner ||
                                                                             (sameDivision &&
                                                                                 canEditGlobal));
+                                                                    const showDelete =
+                                                                        !isApproved &&
+                                                                        !isRejected &&
+                                                                        !isCancelled &&
+                                                                        (isOwner ||
+                                                                            (sameDivision &&
+                                                                                canDeleteGlobal));
+                                                                    const showCancel =
+                                                                        !isCancelled &&
+                                                                        isApproved &&
+                                                                        (isOwner || 
+                                                                         submission.approved_by === auth.user.id ||
+                                                                         (submission.workflow_steps && 
+                                                                          submission.workflow_steps.some(step => 
+                                                                            step.approver_id === auth.user.id && 
+                                                                            step.status === 'approved'
+                                                                          )));
+                                                                    const showAmend =
+                                                                        (isCancelled || isRejected) && isOwner;
 
-                                                                    return showEdit;
+                                                                    return (
+                                                                        showEdit ||
+                                                                        showDelete ||
+                                                                        showCancel ||
+                                                                        showAmend
+                                                                    );
                                                                 })() && (
                                                                     <DropdownMenuItem
                                                                         asChild
@@ -852,6 +960,102 @@ export default function Index({
                                                                         status.includes(
                                                                             "rejected"
                                                                         );
+                                                                    const isCancelled =
+                                                                        status ===
+                                                                        "cancelled";
+
+                                                                    const isOwner =
+                                                                        auth
+                                                                            .user
+                                                                            .id ===
+                                                                        submission.user_id;
+
+                                                                    return (
+                                                                        !isCancelled &&
+                                                                        isApproved &&
+                                                                        (isOwner || 
+                                                                         submission.approved_by === auth.user.id ||
+                                                                         (submission.workflow_steps && 
+                                                                          submission.workflow_steps.some(step => 
+                                                                            step.approver_id === auth.user.id && 
+                                                                            step.status === 'approved'
+                                                                          )))
+                                                                    );
+                                                                })() && (
+                                                                    <DropdownMenuItem
+                                                                        onClick={(
+                                                                            e
+                                                                        ) => {
+                                                                            e.stopPropagation();
+                                                                            setSelectedSubmission(
+                                                                                submission
+                                                                            );
+                                                                            setShowCancelModal(
+                                                                                true
+                                                                            );
+                                                                        }}
+                                                                        className="flex items-center gap-2 text-orange-600"
+                                                                    >
+                                                                        <CancelIcon className="w-4 h-4" />{" "}
+                                                                        Batalkan
+                                                                    </DropdownMenuItem>
+                                                                )}
+
+                                                                {(() => {
+                                                                    const status =
+                                                                        String(
+                                                                            submission.status
+                                                                        ).toLowerCase();
+                                                                    const isCancelled =
+                                                                        status ===
+                                                                        "cancelled";
+                                                                    const isRejected =
+                                                                        status.includes(
+                                                                            "rejected"
+                                                                        );
+
+                                                                    const isOwner =
+                                                                        auth
+                                                                            .user
+                                                                            .id ===
+                                                                        submission.user_id;
+
+                                                                    return (
+                                                                        (isCancelled && isOwner) ||
+                                                                        (isRejected && isOwner)
+                                                                    );
+                                                                })() && (
+                                                                    <DropdownMenuItem
+                                                                        onClick={(
+                                                                            e
+                                                                        ) => {
+                                                                            e.stopPropagation();
+                                                                            setSelectedSubmission(
+                                                                                submission
+                                                                            );
+                                                                            setShowAmendModal(
+                                                                                true
+                                                                            );
+                                                                        }}
+                                                                        className="flex items-center gap-2 text-blue-600"
+                                                                    >
+                                                                        <RefreshCw className="w-4 h-4" />{" "}
+                                                                        Revisi
+                                                                    </DropdownMenuItem>
+                                                                )}
+                                                                {(() => {
+                                                                    const status =
+                                                                        String(
+                                                                            submission.status
+                                                                        ).toLowerCase();
+                                                                    const isApproved =
+                                                                        status.includes(
+                                                                            "approved"
+                                                                        );
+                                                                    const isRejected =
+                                                                        status.includes(
+                                                                            "rejected"
+                                                                        );
 
                                                                     const isOwner =
                                                                         auth
@@ -870,6 +1074,7 @@ export default function Index({
                                                                     const showDelete =
                                                                         !isApproved &&
                                                                         !isRejected &&
+                                                                        !isCancelled &&
                                                                         (isOwner ||
                                                                             (sameDivision &&
                                                                                 canDeleteGlobal));
@@ -897,7 +1102,7 @@ export default function Index({
                                                             </DropdownMenuContent>
                                                         </DropdownMenu>
                                                     </td>
-                                                )}
+                                                ))}
                                         </tr>
                                     ))}
                                 </tbody>
@@ -965,6 +1170,157 @@ export default function Index({
                             }}
                         >
                             Hapus
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Cancel Modal */}
+            <Dialog open={showCancelModal} onOpenChange={setShowCancelModal}>
+                <DialogContent style={{ borderRadius: "15px" }}>
+                    <DialogHeader>
+                        <DialogTitle>Batalkan Pengajuan</DialogTitle>
+                        <DialogDescription>
+                            Pengajuan yang sudah disetujui atau ditolak dapat
+                            dibatalkan. Status akan berubah menjadi "cancelled".
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                        <Textarea
+                            placeholder="Tuliskan alasan pembatalan..."
+                            value={data.cancel_reason}
+                            onChange={(e) =>
+                                setData("cancel_reason", e.target.value)
+                            }
+                            rows={3}
+                            required
+                        />
+                    </div>
+                    <DialogFooter className="space-x-2 flex gap-2">
+                        <Button
+                            onClick={() => {
+                                setShowCancelModal(false);
+                                setSelectedSubmission(null);
+                                reset();
+                            }}
+                            className="rounded-md"
+                            style={{ borderRadius: "15px" }}
+                            variant="outline"
+                        >
+                            Batal
+                        </Button>
+                        <Button
+                            className="rounded-md"
+                            style={{ borderRadius: "15px" }}
+                            variant="destructive"
+                            onClick={() => {
+                                if (!data.cancel_reason.trim()) {
+                                    alert("Alasan pembatalan wajib diisi");
+                                    return;
+                                }
+
+                                router.post(
+                                    route(
+                                        "submissions.cancel",
+                                        selectedSubmission.id
+                                    ),
+                                    { cancel_reason: data.cancel_reason },
+                                    {
+                                        onSuccess: () => {
+                                            setShowCancelModal(false);
+                                            setSelectedSubmission(null);
+                                            reset();
+                                            router.reload();
+                                        },
+                                        onError: (errors) => {
+                                            alert(
+                                                errors.cancel_reason ||
+                                                    "Gagal membatalkan pengajuan"
+                                            );
+                                        },
+                                    }
+                                );
+                            }}
+                            disabled={processing}
+                        >
+                            Batalkan Pengajuan
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Amend Modal */}
+            <Dialog open={showAmendModal} onOpenChange={setShowAmendModal}>
+                <DialogContent style={{ borderRadius: "15px" }}>
+                    <DialogHeader>
+                        <DialogTitle>Buat Pengajuan Revisi</DialogTitle>
+                        <DialogDescription>
+                            Pengajuan baru akan dibuat dengan data yang sama dan
+                            dapat diedit. Nomor seri akan mengikuti pengajuan
+                            yang dibatalkan.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                        <Textarea
+                            placeholder="Tuliskan alasan revisi..."
+                            value={data.amend_reason}
+                            onChange={(e) =>
+                                setData("amend_reason", e.target.value)
+                            }
+                            rows={3}
+                            required
+                        />
+                    </div>
+                    <DialogFooter className="space-x-2 flex gap-2">
+                        <Button
+                            onClick={() => {
+                                setShowAmendModal(false);
+                                setSelectedSubmission(null);
+                                reset();
+                            }}
+                            className="rounded-md"
+                            style={{ borderRadius: "15px" }}
+                            variant="outline"
+                        >
+                            Batal
+                        </Button>
+                        <Button
+                            className="rounded-md"
+                            style={{ borderRadius: "15px" }}
+                            onClick={() => {
+                                if (!data.amend_reason.trim()) {
+                                    alert("Alasan revisi wajib diisi");
+                                    return;
+                                }
+
+                                router.post(
+                                    route(
+                                        "submissions.amend",
+                                        selectedSubmission.id
+                                    ),
+                                    { amend_reason: data.amend_reason },
+                                    {
+                                        onSuccess: (page) => {
+                                            setShowAmendModal(false);
+                                            setSelectedSubmission(null);
+                                            reset();
+                                            if (page.props.redirect_url) {
+                                                window.location.href =
+                                                    page.props.redirect_url;
+                                            }
+                                        },
+                                        onError: (errors) => {
+                                            alert(
+                                                errors.amend_reason ||
+                                                    "Gagal membuat pengajuan revisi"
+                                            );
+                                        },
+                                    }
+                                );
+                            }}
+                            disabled={processing}
+                        >
+                            Buat Revisi
                         </Button>
                     </DialogFooter>
                 </DialogContent>

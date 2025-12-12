@@ -17,6 +17,7 @@ import {
     Bell,
     ArrowRight,
     XCircle,
+    AlertCircle,
 } from "lucide-react";
 import Header from "@/Components/Header";
 import Footer from "@/Components/Footer";
@@ -234,6 +235,34 @@ export default function Dashboard({
                                         : "Ditolak atasan"}
                                 </p>
                                 <div className="mt-3 text-xs text-destructive/60 group-hover:text-destructive/80 transition-colors">
+                                    Klik untuk melihat detail →
+                                </div>
+                            </CardContent>
+                        </Card>
+
+                        {/* Dibatalkan */}
+                        <Card
+                            style={{ borderRadius: "16px" }}
+                            className="group border border-border hover:border-gray-500/50 hover:shadow-xl transition-all duration-300 bg-card overflow-hidden relative cursor-pointer hover:scale-[1.02]"
+                            onClick={() => router.get(route('submissions.index'), { status: 'cancelled' })}
+                        >
+                            <div className="absolute top-0 right-0 w-32 h-32 bg-gray-500/5 rounded-full -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-500" />
+                            <CardHeader className="flex flex-row items-center justify-between pb-2 relative z-10">
+                                <CardTitle className="text-sm font-semibold text-muted-foreground">
+                                    Dibatalkan
+                                </CardTitle>
+                                <div className="p-2.5 bg-gray-500/10 rounded-lg group-hover:bg-gray-500/20 transition-colors">
+                                    <AlertCircle className="w-5 h-5 text-gray-600 dark:text-gray-400 group-hover:scale-110 transition-transform" />
+                                </div>
+                            </CardHeader>
+                            <CardContent className="relative z-10">
+                                <div className="text-4xl font-bold text-gray-600 dark:text-gray-400">
+                                    {stats.cancelled || 0}
+                                </div>
+                                <p className="text-xs text-muted-foreground mt-2">
+                                    Pengajuan yang dibatalkan
+                                </p>
+                                <div className="mt-3 text-xs text-gray-600/60 dark:text-gray-400/60 group-hover:text-gray-600/80 dark:group-hover:text-gray-400/80 transition-colors">
                                     Klik untuk melihat detail →
                                 </div>
                             </CardContent>

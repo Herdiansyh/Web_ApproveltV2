@@ -12,7 +12,15 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from "@/Components/ui/dropdown-menu";
-import { Download, Printer, MoreVertical, Pencil, Trash2 } from "lucide-react";
+import {
+    Download,
+    Printer,
+    MoreVertical,
+    Pencil,
+    Trash2,
+    X,
+    RefreshCw,
+} from "lucide-react";
 import { Separator } from "@/Components/ui/separator";
 import Footer from "@/Components/Footer";
 import { useLoading } from "@/Components/GlobalLoading";
@@ -35,11 +43,15 @@ export default function Show({
     const { showLoading, hideLoading } = useLoading();
     const [showApproveModal, setShowApproveModal] = useState(false);
     const [showRejectModal, setShowRejectModal] = useState(false);
+    const [showCancelModal, setShowCancelModal] = useState(false);
+    const [showAmendModal, setShowAmendModal] = useState(false);
     const [showDownloadLoading, setShowDownloadLoading] = useState(false);
     const [downloadProgress, setDownloadProgress] = useState(null);
     const printFrameRef = useRef(null);
     const { data, setData, post, processing, reset } = useForm({
         approval_note: "",
+        cancel_reason: "",
+        amend_reason: "",
     });
 
     const handleNoAccess = () => {
@@ -462,11 +474,206 @@ export default function Show({
         });
     };
 
+    const handleCancel = () => {
+        const isOwner = auth?.user?.id === submission?.user_id;
+        const status = String(submission.status || "").toLowerCase();
+        const isApproved = status.includes("approved");
+        const isCancelled = status === "cancelled";
+        
+        // Updated authorization logic to match dropdown
+        const canCancel =
+            !isCancelled &&
+            isApproved &&
+            (isOwner || 
+             submission.approved_by === auth?.user?.id ||
+             (submission.workflow_steps && 
+              submission.workflow_steps.some(step => 
+                step.approver_id === auth?.user?.id && 
+                step.status === 'approved'
+              )));
+
+        if (!canCancel) {
+            Swal.fire({
+                icon: "error",
+                title: "Akses Ditolak",
+                text: "Anda tidak dapat membatalkan pengajuan ini.",
+                confirmButtonText: "OK",
+            });
+            return;
+        }
+
+        if (!data.cancel_reason.trim()) {
+            Swal.fire({
+                icon: "warning",
+                title: "Alasan wajib diisi",
+                text: "Tuliskan alasan pembatalan.",
+                confirmButtonText: "OK",
+            });
+            return;
+        }
+
+        Swal.fire({
+            title: "Yakin ingin membatalkan?",
+            text: "Pengajuan akan dibatalkan.",
+            icon: "warning",
+            showCancelButton: true,
+            confirmButtonText: "Ya, batalkan",
+            cancelButtonText: "Batal",
+        }).then((result) => {
+            if (result.isConfirmed) {
+                showLoading("Membatalkan pengajuan...");
+
+                fetchWithCsrf(route("submissions.cancel", submission.id), {
+                    method: "POST",
+                    body: JSON.stringify({
+                        cancel_reason: data.cancel_reason,
+                    }),
+                })
+                    .then((response) => {
+                        if (!response.ok) {
+                            throw new Error("Gagal membatalkan pengajuan");
+                        }
+                        return response.json();
+                    })
+                    .then((responseData) => {
+                        hideLoading(responseData.success);
+                        if (responseData.success) {
+                            setShowCancelModal(false);
+                            reset();
+                            Swal.fire({
+                                icon: "success",
+                                title: "Dibatalkan!",
+                                text: "Pengajuan berhasil dibatalkan.",
+                                timer: 2000,
+                                showConfirmButton: false,
+                            }).then(() => window.location.reload());
+                        } else {
+                            Swal.fire({
+                                icon: "error",
+                                title: "Gagal!",
+                                text:
+                                    responseData.message ||
+                                    "Gagal membatalkan pengajuan.",
+                                confirmButtonText: "OK",
+                            });
+                        }
+                    })
+                    .catch((error) => {
+                        console.error("Cancel error:", error);
+                        hideLoading(false);
+                        Swal.fire({
+                            icon: "error",
+                            title: "Error!",
+                            text:
+                                error.message ||
+                                "Terjadi kesalahan jaringan. Silakan coba lagi.",
+                            confirmButtonText: "OK",
+                        });
+                    });
+            }
+        });
+    };
+
+    const handleAmend = () => {
+        const isOwner = auth?.user?.id === submission?.user_id;
+        const status = String(submission.status || "").toLowerCase();
+        const isCancelled = status === "cancelled";
+        const isRejected = status.includes("rejected");
+        
+        const canAmend = isOwner && (isCancelled || isRejected);
+
+        if (!canAmend) {
+            Swal.fire({
+                icon: "error",
+                title: "Akses Ditolak",
+                text: "Anda tidak dapat merevisi pengajuan ini.",
+                confirmButtonText: "OK",
+            });
+            return;
+        }
+
+        if (!data.amend_reason.trim()) {
+            Swal.fire({
+                icon: "warning",
+                title: "Alasan revisi wajib diisi",
+                text: "Tuliskan alasan revisi pengajuan.",
+                confirmButtonText: "OK",
+            });
+            return;
+        }
+
+        Swal.fire({
+            title: "Buat pengajuan revisi?",
+            text: "Pengajuan baru akan dibuat dengan data yang sama namun dapat diedit.",
+            icon: "question",
+            showCancelButton: true,
+            confirmButtonText: "Ya, buat revisi",
+            cancelButtonText: "Batal",
+        }).then((result) => {
+            if (result.isConfirmed) {
+                showLoading("Membuat pengajuan revisi...");
+
+                fetchWithCsrf(route("submissions.amend", submission.id), {
+                    method: "POST",
+                    body: JSON.stringify({
+                        amend_reason: data.amend_reason,
+                    }),
+                })
+                    .then((response) => {
+                        if (!response.ok) {
+                            throw new Error("Gagal membuat pengajuan revisi");
+                        }
+                        return response.json();
+                    })
+                    .then((responseData) => {
+                        hideLoading(responseData.success);
+                        if (responseData.success) {
+                            setShowAmendModal(false);
+                            reset();
+                            Swal.fire({
+                                icon: "success",
+                                title: "Berhasil!",
+                                text: "Pengajuan revisi berhasil dibuat.",
+                                timer: 2000,
+                                showConfirmButton: false,
+                            }).then(() => {
+                                window.location.href =
+                                    responseData.redirect_url;
+                            });
+                        } else {
+                            Swal.fire({
+                                icon: "error",
+                                title: "Gagal!",
+                                text:
+                                    responseData.message ||
+                                    "Gagal membuat pengajuan revisi.",
+                                confirmButtonText: "OK",
+                            });
+                        }
+                    })
+                    .catch((error) => {
+                        console.error("Amend error:", error);
+                        hideLoading(false);
+                        Swal.fire({
+                            icon: "error",
+                            title: "Error!",
+                            text:
+                                error.message ||
+                                "Terjadi kesalahan jaringan. Silakan coba lagi.",
+                            confirmButtonText: "OK",
+                        });
+                    });
+            }
+        });
+    };
+
     const statusColor =
         submission.status === "Approved by Direktur"
             ? " text-green-700"
             : submission.status === "rejected"
             ? " text-rose-700"
+            : submission.status === "cancelled"
+            ? " text-gray-600"
             : " text-amber-500";
 
     const dataMap = useMemo(() => {
@@ -647,6 +854,8 @@ export default function Show({
                                                             )
                                                         )
                                                             return "• Ditolak";
+                                                        if (raw === "cancelled")
+                                                            return "• Dibatalkan";
                                                         return `• Waiting confirmation${
                                                             who
                                                                 ? ` to ${who}`
@@ -713,6 +922,22 @@ export default function Show({
                                                 Alasan Penolakan:
                                             </span>{" "}
                                             {rejectedNote.note}
+                                        </div>
+                                    )}
+                                    {submission.cancel_reason && (
+                                        <div className="text-sm mt-1 rounded-md border border-orange-200 bg-orange-50 text-orange-800 px-3 py-2">
+                                            <span className="font-semibold">
+                                                Alasan Pembatalan:
+                                            </span>{" "}
+                                            {submission.cancel_reason}
+                                        </div>
+                                    )}
+                                    {submission.amend_reason && (
+                                        <div className="text-sm mt-1 rounded-md border border-blue-200 bg-blue-50 text-blue-800 px-3 py-2">
+                                            <span className="font-semibold">
+                                                Alasan Revisi:
+                                            </span>{" "}
+                                            {submission.amend_reason}
                                         </div>
                                     )}
                                 </div>
@@ -861,6 +1086,8 @@ export default function Show({
                                             status.includes("approved");
                                         const isRejected =
                                             status.includes("rejected");
+                                        const isCancelled =
+                                            status === "cancelled";
 
                                         const isOwner =
                                             auth?.user?.id ===
@@ -877,17 +1104,37 @@ export default function Show({
                                         const showEdit =
                                             !isApproved &&
                                             !isRejected &&
+                                            !isCancelled &&
                                             (isOwner ||
                                                 (sameDivision &&
                                                     canEditGlobal));
                                         const showDelete =
                                             !isApproved &&
                                             !isRejected &&
+                                            !isCancelled &&
                                             (isOwner ||
                                                 (sameDivision &&
                                                     canDeleteGlobal));
+                                        const showCancel =
+                                            !isCancelled &&
+                                            isApproved &&
+                                            (isOwner || 
+                                             submission.approved_by === auth?.user?.id ||
+                                             (submission.workflow_steps && 
+                                              submission.workflow_steps.some(step => 
+                                                step.approver_id === auth?.user?.id && 
+                                                step.status === 'approved'
+                                              )));
 
-                                        return showEdit || showDelete;
+                                        const showAmend =
+                                            (isCancelled || isRejected) && isOwner;
+
+                                        return (
+                                            showEdit ||
+                                            showDelete ||
+                                            showCancel ||
+                                            showAmend
+                                        );
                                     })() && (
                                         <DropdownMenu>
                                             <DropdownMenuTrigger asChild>
@@ -949,7 +1196,7 @@ export default function Show({
                                                     </DropdownMenuItem>
                                                 )}
 
-                                                {/* Delete */}
+                                                {/* Cancel */}
                                                 {(() => {
                                                     const status = String(
                                                         submission.status || ""
@@ -962,31 +1209,59 @@ export default function Show({
                                                         status.includes(
                                                             "rejected"
                                                         );
+                                                    const isCancelled =
+                                                        status === "cancelled";
 
                                                     const isOwner =
                                                         auth?.user?.id ===
                                                         submission?.user_id;
-                                                    const sameDivision =
-                                                        userDivisionId &&
-                                                        submission?.division_id ===
-                                                            userDivisionId;
-                                                    const canDeleteGlobal =
-                                                        !!permissionForMe?.can_delete;
 
                                                     return (
-                                                        !isApproved &&
-                                                        !isRejected &&
-                                                        (isOwner ||
-                                                            (sameDivision &&
-                                                                canDeleteGlobal))
+                                                        !isCancelled &&
+                                                        isApproved &&
+                                                        (isOwner || 
+                                                         submission.approved_by === auth?.user?.id ||
+                                                         (submission.workflow_steps && 
+                                                          submission.workflow_steps.some(step => 
+                                                            step.approver_id === auth?.user?.id && 
+                                                            step.status === 'approved'
+                                                          )))
                                                     );
                                                 })() && (
                                                     <DropdownMenuItem
-                                                        onClick={handleDelete}
-                                                        className="flex items-center gap-2 text-red-600"
+                                                        onClick={() => setShowCancelModal(true)}
+                                                        className="flex items-center gap-2 text-orange-600"
                                                     >
-                                                        <Trash2 className="w-4 h-4" />{" "}
-                                                        Hapus
+                                                        <X className="w-4 h-4" />{" "}
+                                                        Cancel
+                                                    </DropdownMenuItem>
+                                                )}
+
+                                                {/* Amend/Revise */}
+                                                {(() => {
+                                                    const status = String(
+                                                        submission.status || ""
+                                                    ).toLowerCase();
+                                                    const isCancelled =
+                                                        status === "cancelled";
+                                                    const isRejected =
+                                                        status.includes("rejected");
+
+                                                    const isOwner =
+                                                        auth?.user?.id ===
+                                                        submission?.user_id;
+
+                                                    return (
+                                                        (isCancelled && isOwner) || 
+                                                        (isRejected && isOwner)
+                                                    );
+                                                })() && (
+                                                    <DropdownMenuItem
+                                                        onClick={() => setShowAmendModal(true)}
+                                                        className="flex items-center gap-2 text-blue-600"
+                                                    >
+                                                        <RefreshCw className="w-4 h-4" />{" "}
+                                                        Revisi
                                                     </DropdownMenuItem>
                                                 )}
                                             </DropdownMenuContent>
@@ -1334,6 +1609,83 @@ export default function Show({
                                 disabled={processing}
                             >
                                 Tolak
+                            </Button>
+                        </div>
+                    </Card>
+                </div>
+            )}
+
+            {/* Modal Cancel */}
+            {showCancelModal && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4">
+                    <Card className="w-full max-w-md p-6 rounded-2xl shadow-lg">
+                        <h3 className="text-lg font-semibold mb-3">
+                            Batalkan Pengajuan
+                        </h3>
+
+                        <Textarea
+                            placeholder="Tuliskan alasan pembatalan..."
+                            value={data.cancel_reason}
+                            onChange={(e) =>
+                                setData("cancel_reason", e.target.value)
+                            }
+                            rows={3}
+                            required
+                            className="mb-4"
+                        />
+                        <div className="flex justify-end gap-2">
+                            <Button
+                                style={{ borderRadius: "15px" }}
+                                variant="outline"
+                                onClick={() => setShowCancelModal(false)}
+                            >
+                                Batal
+                            </Button>
+                            <Button
+                                style={{ borderRadius: "15px" }}
+                                variant="destructive"
+                                onClick={handleCancel}
+                                disabled={processing}
+                            >
+                                Batalkan Pengajuan
+                            </Button>
+                        </div>
+                    </Card>
+                </div>
+            )}
+
+            {/* Modal Amend */}
+            {showAmendModal && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4">
+                    <Card className="w-full max-w-md p-6 rounded-2xl shadow-lg">
+                        <h3 className="text-lg font-semibold mb-3">
+                            Buat Pengajuan Revisi
+                        </h3>
+                        
+                        <Textarea
+                            placeholder="Tuliskan alasan revisi..."
+                            value={data.amend_reason}
+                            onChange={(e) =>
+                                setData("amend_reason", e.target.value)
+                            }
+                            rows={3}
+                            required
+                            className="mb-4"
+                        />
+                        <div className="flex justify-end gap-2">
+                            <Button
+                                style={{ borderRadius: "15px" }}
+                                variant="outline"
+                                onClick={() => setShowAmendModal(false)}
+                            >
+                                Batal
+                            </Button>
+                            <Button
+                                style={{ borderRadius: "15px" }}
+                                onClick={handleAmend}
+                                disabled={processing}
+                            >
+                                Buat Revisi
                             </Button>
                         </div>
                     </Card>

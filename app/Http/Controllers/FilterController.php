@@ -64,6 +64,7 @@ class FilterController extends Controller
                     'options' => [
                         ['value' => 'approved', 'label' => 'Approved'],
                         ['value' => 'rejected', 'label' => 'Rejected'],
+                        ['value' => 'cancelled', 'label' => 'Cancelled'],
                     ]
                 ]);
                 
