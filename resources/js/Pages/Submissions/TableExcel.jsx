@@ -26,12 +26,12 @@ export default function TableExcel({
     updateCellData,
     existingTableData = [],
 }) {
+    const [editValue, setEditValue] = React.useState("");
+
     return (
         <div className="mt-10">
             <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold">
-                    Data Tambahan (Tabel Dinamis)
-                </h3>
+                <h3 className="text-lg font-semibold">Data Tambahan</h3>
                 <div className="flex items-center gap-2">
                     <input
                         type="checkbox"
@@ -53,10 +53,9 @@ export default function TableExcel({
             </div>
 
             <p className="text-sm text-gray-600 mb-4">
-                {existingTableData.length > 0 
+                {existingTableData.length > 0
                     ? "Pengajuan ini memiliki data table. Centang untuk mengedit atau hapus centang untuk menghapus data table."
-                    : "Centang 'Gunakan Data Table' jika ingin menyertakan data tabel dalam pengajuan ini."
-                }
+                    : "Centang 'Gunakan Data Table' jika ingin menyertakan data tabel dalam pengajuan ini."}
             </p>
 
             {data.useTableData && (
@@ -96,20 +95,26 @@ export default function TableExcel({
                                 >
                                     {editingColumn === column.id ? (
                                         <Input
-                                            value={column.name}
+                                            value={editValue}
                                             onChange={(e) =>
+                                                setEditValue(e.target.value)
+                                            }
+                                            onBlur={() => {
                                                 updateColumnName(
                                                     column.id,
-                                                    e.target.value
-                                                )
-                                            }
-                                            onBlur={() =>
-                                                setEditingColumn(null)
-                                            }
-                                            onKeyPress={(e) =>
-                                                e.key === "Enter" &&
-                                                setEditingColumn(null)
-                                            }
+                                                    editValue
+                                                );
+                                                setEditingColumn(null);
+                                            }}
+                                            onKeyDown={(e) => {
+                                                if (e.key === "Enter") {
+                                                    updateColumnName(
+                                                        column.id,
+                                                        editValue
+                                                    );
+                                                    setEditingColumn(null);
+                                                }
+                                            }}
                                             style={{
                                                 borderRadius: "4px",
                                                 width: "120px",
@@ -118,23 +123,25 @@ export default function TableExcel({
                                             autoFocus
                                         />
                                     ) : (
-                                        <div className="flex items-center gap-1">
-                                            <span
-                                                onClick={() =>
-                                                    setEditingColumn(column.id)
-                                                }
-                                                className="cursor-pointer hover:text-blue-600 text-sm"
-                                            >
-                                                {column.name}
-                                            </span>
+                                        <div
+                                            className="flex items-center gap-1 cursor-pointer hover:text-blue-600 text-sm"
+                                            onClick={() => {
+                                                setEditingColumn(column.id);
+                                                setEditValue(column.name); // isi nilai awal saat mulai edit
+                                            }}
+                                        >
+                                            <span>{column.name}</span>
                                             <div className="flex items-center gap-1 text-xs text-gray-500">
                                                 <span>({column.type})</span>
                                                 {column.required && (
-                                                    <span className="text-red-500">*</span>
+                                                    <span className="text-red-500">
+                                                        *
+                                                    </span>
                                                 )}
                                             </div>
                                         </div>
                                     )}
+
                                     {data.tableColumns.length > 1 && (
                                         <Button
                                             type="button"
@@ -166,7 +173,9 @@ export default function TableExcel({
                                             <div className="flex items-center gap-1">
                                                 {column.name}
                                                 {column.required && (
-                                                    <span className="text-red-500 text-xs">*</span>
+                                                    <span className="text-red-500 text-xs">
+                                                        *
+                                                    </span>
                                                 )}
                                             </div>
                                         </th>
@@ -185,10 +194,15 @@ export default function TableExcel({
                                                 key={column.id}
                                                 className="border p-2"
                                             >
-                                                {column.type === 'select' ? (
+                                                {column.type === "select" ? (
                                                     <Select
-                                                        value={row[column.key] || ""}
-                                                        onValueChange={(value) =>
+                                                        value={
+                                                            row[column.key] ||
+                                                            ""
+                                                        }
+                                                        onValueChange={(
+                                                            value
+                                                        ) =>
                                                             updateCellData(
                                                                 row.id,
                                                                 column.key,
@@ -197,19 +211,34 @@ export default function TableExcel({
                                                         }
                                                     >
                                                         <SelectTrigger className="w-full">
-                                                            <SelectValue placeholder={`Pilih ${column.name.toLowerCase()}...`} />
+                                                            <SelectValue
+                                                                placeholder={`Pilih ${column.name.toLowerCase()}...`}
+                                                            />
                                                         </SelectTrigger>
                                                         <SelectContent>
-                                                            {column.options?.map((option, index) => (
-                                                                <SelectItem key={`${column.key}-option-${index}-${option}`} value={option}>
-                                                                    {option}
-                                                                </SelectItem>
-                                                            ))}
+                                                            {column.options?.map(
+                                                                (
+                                                                    option,
+                                                                    index
+                                                                ) => (
+                                                                    <SelectItem
+                                                                        key={`${column.key}-option-${index}-${option}`}
+                                                                        value={
+                                                                            option
+                                                                        }
+                                                                    >
+                                                                        {option}
+                                                                    </SelectItem>
+                                                                )
+                                                            )}
                                                         </SelectContent>
                                                     </Select>
                                                 ) : (
                                                     <Input
-                                                        value={row[column.key] || ""}
+                                                        value={
+                                                            row[column.key] ||
+                                                            ""
+                                                        }
                                                         onChange={(e) =>
                                                             updateCellData(
                                                                 row.id,
@@ -221,9 +250,18 @@ export default function TableExcel({
                                                         style={{
                                                             borderRadius: "8px",
                                                         }}
-                                                        type={column.type === 'number' ? 'number' : 
-                                                              column.type === 'date' ? 'date' : 'text'}
-                                                        required={column.required}
+                                                        type={
+                                                            column.type ===
+                                                            "number"
+                                                                ? "number"
+                                                                : column.type ===
+                                                                  "date"
+                                                                ? "date"
+                                                                : "text"
+                                                        }
+                                                        required={
+                                                            column.required
+                                                        }
                                                     />
                                                 )}
                                             </td>

@@ -1,4 +1,4 @@
-import React, { useMemo, useEffect, useState } from "react";
+import React, { useMemo, useEffect, useState, useRef } from "react";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
 import { Head, useForm, router } from "@inertiajs/react";
 import { Card } from "@/Components/ui/card";
@@ -22,16 +22,38 @@ import { fetchWithCsrf } from "@/utils/csrfToken";
 
 export default function Create({ auth, userDivision, workflows }) {
     const { showLoading, hideLoading } = useLoading();
-    
+    const saveBtnRef = useRef(null);
+
     // Separate state for file object to prevent serialization issues
     const [selectedFile, setSelectedFile] = useState(null);
 
     // Default columns configuration
     const getDefaultColumns = (workflowId = null) => {
         const defaultColumns = [
-            { id: 1, name: "Item", key: "item", type: "text", required: false, options: [] },
-            { id: 2, name: "Jumlah", key: "jumlah", type: "number", required: true, options: [] },
-            { id: 3, name: "Keterangan", key: "keterangan", type: "text", required: false, options: [] },
+            {
+                id: 1,
+                name: "Item",
+                key: "item",
+                type: "text",
+                required: false,
+                options: [],
+            },
+            {
+                id: 2,
+                name: "Jumlah",
+                key: "jumlah",
+                type: "number",
+                required: true,
+                options: [],
+            },
+            {
+                id: 3,
+                name: "Keterangan",
+                key: "keterangan",
+                type: "text",
+                required: false,
+                options: [],
+            },
         ];
 
         // Get selected workflow and document
@@ -45,9 +67,9 @@ export default function Create({ auth, userDivision, workflows }) {
                         id: index + 1,
                         name: col.name || `Column ${index + 1}`,
                         key: col.key || `col_${index + 1}`,
-                        type: col.type || 'text',
+                        type: col.type || "text",
                         required: col.required || false,
-                        options: col.options || []
+                        options: col.options || [],
                     })
                 );
             }
@@ -379,7 +401,7 @@ export default function Create({ auth, userDivision, workflows }) {
             setData("file", null);
             return;
         }
-        
+
         if (file.size > 10 * 1024 * 1024) {
             Swal.fire({
                 icon: "warning",
@@ -387,12 +409,12 @@ export default function Create({ auth, userDivision, workflows }) {
                 text: "Ukuran maksimal file adalah 10MB.",
             });
             // Clear file input
-            e.target.value = '';
+            e.target.value = "";
             setSelectedFile(null);
             setData("file", null);
             return;
         }
-        
+
         // Store file in separate state and update form data
         setSelectedFile(file);
         setData("file", file); // Keep for validation compatibility
@@ -444,15 +466,22 @@ export default function Create({ auth, userDivision, workflows }) {
 
         // Validate required table columns if table data is used
         if (data.useTableData && data.tableData && data.tableData.length > 0) {
-            const requiredColumns = data.tableColumns.filter(col => col.required);
+            const requiredColumns = data.tableColumns.filter(
+                (col) => col.required
+            );
             const missingTableColumns = [];
 
             for (const column of requiredColumns) {
                 for (let i = 0; i < data.tableData.length; i++) {
                     const row = data.tableData[i];
                     const value = row[column.key];
-                    if (!value || (typeof value === "string" && value.trim() === "")) {
-                        missingTableColumns.push(`${column.name} (baris ${i + 1})`);
+                    if (
+                        !value ||
+                        (typeof value === "string" && value.trim() === "")
+                    ) {
+                        missingTableColumns.push(
+                            `${column.name} (baris ${i + 1})`
+                        );
                     }
                 }
             }
@@ -461,7 +490,9 @@ export default function Create({ auth, userDivision, workflows }) {
                 Swal.fire({
                     icon: "warning",
                     title: "Validation Error",
-                    text: `Kolom tabel berikut wajib diisi: ${missingTableColumns.join(", ")}`,
+                    text: `Kolom tabel berikut wajib diisi: ${missingTableColumns.join(
+                        ", "
+                    )}`,
                 });
                 return;
             }
@@ -508,7 +539,10 @@ export default function Create({ auth, userDivision, workflows }) {
                     // Add file if exists - use selectedFile state instead of data.file
                     if (selectedFile) {
                         // Validate file is still a valid File object
-                        if (selectedFile instanceof File && selectedFile.size > 0) {
+                        if (
+                            selectedFile instanceof File &&
+                            selectedFile.size > 0
+                        ) {
                             formData.append("file", selectedFile);
                         } else {
                             console.error("Invalid file object:", selectedFile);
@@ -661,6 +695,33 @@ export default function Create({ auth, userDivision, workflows }) {
         });
     };
 
+    useEffect(() => {
+        const handleShortcutSave = (e) => {
+            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") {
+                e.preventDefault();
+
+                // panggil fungsi save
+                handleSaveLocal();
+
+                // efek tombol kedip
+                if (saveBtnRef.current) {
+                    saveBtnRef.current.style.opacity = "0.4";
+                    setTimeout(() => {
+                        if (saveBtnRef.current) {
+                            saveBtnRef.current.style.opacity = "1";
+                        }
+                    }, 200);
+                }
+            }
+        };
+
+        window.addEventListener("keydown", handleShortcutSave);
+
+        return () => {
+            window.removeEventListener("keydown", handleShortcutSave);
+        };
+    }, [data]);
+
     return (
         <AuthenticatedLayout
             user={auth.user}
@@ -691,11 +752,12 @@ export default function Create({ auth, userDivision, workflows }) {
                                     • {isSaved ? "Saved" : "Not Saved"}
                                 </span>
                                 <Button
+                                    ref={saveBtnRef}
                                     type="button"
                                     onClick={handleSaveLocal}
                                     disabled={processing}
                                     style={{ borderRadius: "10px" }}
-                                    className="bg-blue-600 hover:bg-blue-700 text-xs text-white p-2"
+                                    className="bg-blue-600 hover:bg-blue-700 text-xs text-white p-2 transition-opacity duration-150"
                                 >
                                     Save
                                 </Button>
@@ -914,11 +976,22 @@ export default function Create({ auth, userDivision, workflows }) {
                                                     accept=".pdf,.jpg,.jpeg,.png"
                                                     className="mt-1"
                                                     // Clear file input when selectedFile is reset
-                                                    key={selectedFile ? selectedFile.name : 'file-input'}
+                                                    key={
+                                                        selectedFile
+                                                            ? selectedFile.name
+                                                            : "file-input"
+                                                    }
                                                 />
                                                 {selectedFile && (
                                                     <p className="text-xs text-green-600 mt-1">
-                                                        File terpilih: {selectedFile.name} ({(selectedFile.size / 1024 / 1024).toFixed(2)} MB)
+                                                        File terpilih:{" "}
+                                                        {selectedFile.name} (
+                                                        {(
+                                                            selectedFile.size /
+                                                            1024 /
+                                                            1024
+                                                        ).toFixed(2)}{" "}
+                                                        MB)
                                                     </p>
                                                 )}
                                                 <p className="text-xs text-gray-500 mt-1">

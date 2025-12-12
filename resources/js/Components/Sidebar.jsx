@@ -58,9 +58,9 @@ export default function Sidebar({ open }) {
         };
 
         // Register Inertia event listeners and store unsubscribe functions
-        const unsubscribeStart = router.on('start', handleStart);
-        const unsubscribeSuccess = router.on('success', handleSuccess);
-        const unsubscribeError = router.on('error', handleError);
+        const unsubscribeStart = router.on("start", handleStart);
+        const unsubscribeSuccess = router.on("success", handleSuccess);
+        const unsubscribeError = router.on("error", handleError);
 
         // Cleanup event listeners
         return () => {
@@ -73,7 +73,7 @@ export default function Sidebar({ open }) {
     const confirmLogout = () => {
         showLogoutAnimation();
         setLogoutDialog(false);
-        
+
         // Immediately trigger logout request
         router.post(route("logout"));
     };
@@ -100,22 +100,28 @@ export default function Sidebar({ open }) {
         ...(user.role === "employee" || user.role === "direktur"
             ? [
                   {
-                      label: "Lihat List Persetujuan",
+                      label: "Pengajuan Masuk",
                       href: route("submissions.forDivision"),
                       active: route().current("submissions.forDivision"),
                       icon: <ListCheck className="h-5 w-5" />,
                   },
-                  
-                            {
-                                label: "Lihat Pengajuan",
-                                href: route("submissions.index"),
-                                active: route().current("submissions.index"),
-                                icon: <FileTextIcon className="h-5 w-5" />,
-                            },
-                     
 
                   {
-                      label: "Riwayat Pengajuan",
+                      label: "Pengajuan Keluar",
+                      href: route("submissions.outgoing"),
+                      active: route().current("submissions.outgoing"),
+                      icon: <FileTextIcon className="h-5 w-5" />,
+                  },
+
+                  {
+                      label: "Lihat Pengajuan",
+                      href: route("submissions.index"),
+                      active: route().current("submissions.index"),
+                      icon: <FileTextIcon className="h-5 w-5" />,
+                  },
+
+                  {
+                      label: "Riwayat Persetujuan",
                       href: route("submissions.history"),
                       active: route().current("submissions.history"),
                       icon: <CheckLineIcon className="h-5 w-5" />,
@@ -213,58 +219,58 @@ export default function Sidebar({ open }) {
                 </nav>
             </aside>
 
-   <Dialog open={logoutDialog} onOpenChange={setLogoutDialog}>
-    <DialogContent
-        style={{ borderRadius: "16px" }}
-        className="border border-gray-200 bg-white shadow-xl transition-all duration-300"
-    >
-        <DialogHeader>
-            <DialogTitle className="text-lg font-semibold text-gray-900 flex items-center gap-3">
-                <span
-                    style={{ borderRadius: "10px" }}
-                    className="p-2.5 bg-blue-50 text-blue-600"
+            <Dialog open={logoutDialog} onOpenChange={setLogoutDialog}>
+                <DialogContent
+                    style={{ borderRadius: "16px" }}
+                    className="border border-gray-200 bg-white shadow-xl transition-all duration-300"
                 >
-                    <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        className="h-5 w-5"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                        strokeWidth={2}
-                    >
-                        <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1m0-10V5m-3 6h-3"
-                        />
-                    </svg>
-                </span>
-                Konfirmasi Logout
-            </DialogTitle>
-        </DialogHeader>
+                    <DialogHeader>
+                        <DialogTitle className="text-lg font-semibold text-gray-900 flex items-center gap-3">
+                            <span
+                                style={{ borderRadius: "10px" }}
+                                className="p-2.5 bg-blue-50 text-blue-600"
+                            >
+                                <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    className="h-5 w-5"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                    strokeWidth={2}
+                                >
+                                    <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1m0-10V5m-3 6h-3"
+                                    />
+                                </svg>
+                            </span>
+                            Konfirmasi Logout
+                        </DialogTitle>
+                    </DialogHeader>
 
-        <p className="text-sm text-gray-600 mt-3 leading-relaxed">
-            Apakah Anda yakin ingin keluar dari aplikasi?
-        </p>
+                    <p className="text-sm text-gray-600 mt-3 leading-relaxed">
+                        Apakah Anda yakin ingin keluar dari aplikasi?
+                    </p>
 
-        <DialogFooter className="mt-6 flex gap-3 justify-end">
-            <Button
-                style={{ borderRadius: "10px" }}
-                className="px-4 py-2 border border-gray-300 text-gray-700 bg-white hover:bg-gray-50 transition-all duration-200 font-medium"
-                onClick={() => setLogoutDialog(false)}
-            >
-                Batal
-            </Button>
-            <Button
-                style={{ borderRadius: "10px" }}
-                className="px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 transition-all duration-200 font-medium shadow-sm hover:shadow-md"
-                onClick={confirmLogout}
-            >
-                Ya, Logout
-            </Button>
-        </DialogFooter>
-    </DialogContent>
-</Dialog>
+                    <DialogFooter className="mt-6 flex gap-3 justify-end">
+                        <Button
+                            style={{ borderRadius: "10px" }}
+                            className="px-4 py-2 border border-gray-300 text-gray-700 bg-white hover:bg-gray-50 transition-all duration-200 font-medium"
+                            onClick={() => setLogoutDialog(false)}
+                        >
+                            Batal
+                        </Button>
+                        <Button
+                            style={{ borderRadius: "10px" }}
+                            className="px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 transition-all duration-200 font-medium shadow-sm hover:shadow-md"
+                            onClick={confirmLogout}
+                        >
+                            Ya, Logout
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </TooltipProvider>
     );
 }

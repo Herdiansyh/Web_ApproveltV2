@@ -328,6 +328,128 @@ class SubmissionController extends Controller
         ]);
     }
 
+    /** ================================
+     *  PENGAJUAN KELUAR (Outgoing)
+     *  Pengajuan yg user buat tapi masih waiting approval
+     *  ================================ */
+    public function outgoing(Request $request)
+    {
+        $user = Auth::user();
+        $divisionId = $user->division_id;
+        $subdivisionId = $user->subdivision_id;
+        $statusFilter = $request->get('status', 'all');
+        $search = $request->get('search');
+        $startDate = $request->get('start_date');
+        $endDate = $request->get('end_date');
+        $prefixFilter = $request->get('prefix');
+        $doctypeFilter = $request->get('doctype');
+        $divisionFilter = $request->get('division');
+
+        // Pengajuan Keluar = Pengajuan yang user buat + status waiting
+        // Tapi user TIDAK punya permission approve/reject
+        // Dan user TIDAK terlibat dalam workflow step saat ini
+        
+        $canApprove = $subdivisionId
+            ? $this->permissionService->hasPermission($subdivisionId, 'can_approve')
+            : false;
+
+        $query = $this->queryService->baseQuery()
+            ->active()  // Only non-approved/non-rejected (waiting status)
+            ->where('user_id', $user->id)  // Dibuat oleh user sendiri
+            ->where(function ($q) use ($user, $canApprove, $divisionId) {
+                // Kondisi 1: User tidak punya permission approve
+                // Kondisi 2: User tidak terlibat dalam step workflow saat ini
+                if (!$canApprove) {
+                    // User tidak punya permission, jadi semua pengajuan dia masuk kategori outgoing
+                    $q->whereRaw('1=1');
+                } else {
+                    // User punya permission, filter hanya yang dia tidak terlibat
+                    $q->whereDoesntHave('workflow.steps', function ($q) use ($divisionId) {
+                        $q->whereColumn('workflow_steps.step_order', 'submissions.current_step')
+                          ->where('workflow_steps.division_id', $divisionId);
+                    });
+                }
+            })
+            ->when($statusFilter === 'pending', fn($q) => $q->where('status', 'pending'))
+            ->with([
+                'user:id,name,email,division_id',
+                'division:id,name',
+                'workflow:id,name,document_id',
+                'workflow.document:id,name',
+                'workflow.steps:id,workflow_id,step_order,division_id,role',
+                'workflow.steps.division:id,name',
+                'workflowSteps:id,submission_id,step_order,approver_id,status'
+            ]);
+
+        // Apply filters
+        if ($search) {
+            $query->where('submissions.title', 'like', '%' . $search . '%');
+        }
+        
+        if ($startDate) {
+            $query->whereDate('submissions.created_at', '>=', $startDate);
+        }
+        
+        if ($endDate) {
+            $query->whereDate('submissions.created_at', '<=', $endDate);
+        }
+
+        // Apply prefix filter if selected
+        if ($prefixFilter) {
+            $query->where('submissions.series_code', 'like', $prefixFilter . '%');
+        }
+
+        // Apply doctype filter if selected
+        if ($doctypeFilter) {
+            $query->whereHas('workflow.document', function ($q) use ($doctypeFilter) {
+                $q->where('documents.id', $doctypeFilter);
+            });
+        }
+
+        // Apply division filter if selected
+        if ($divisionFilter) {
+            $query->where('submissions.division_id', $divisionFilter);
+        }
+
+        $submissions = $query->latest()->paginate(10);
+
+        // Get all registered prefixes from DocumentNameSeries
+        $availablePrefixes = DocumentNameSeries::whereNotNull('prefix')
+            ->whereHas('document', function ($q) {
+                $q->where('is_active', true);
+            })
+            ->with('document:id,name')
+            ->get()
+            ->map(function ($series) {
+                return [
+                    'prefix' => $series->prefix,
+                    'document_name' => $series->document->name,
+                ];
+            })
+            ->sortBy('prefix')
+            ->values();
+
+        // Attach permission info (cached)
+        if ($subdivisionId) {
+            $permissions = $this->permissionService->getPermissionForSubdivision($subdivisionId);
+            foreach ($submissions as $s) {
+                if ($s->workflow) {
+                    $s->current_workflow_step = $s->workflow->steps
+                        ->where('step_order', $s->current_step)
+                        ->first();
+                }
+                $s->permission_for_me = $permissions;
+            }
+        }
+
+        return Inertia::render('Submissions/Outgoing', [
+            'submissions' => $submissions,
+            'userDivision' => $user->division,
+            'statusFilter' => $statusFilter,
+            'availablePrefixes' => $availablePrefixes,
+        ]);
+    }
+
     /** ------------------------
      *  FORM BUAT PENGAJUAN
      *  ------------------------ */

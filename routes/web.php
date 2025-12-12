@@ -178,6 +178,7 @@ Route::middleware(['auth'])->group(function () {
 
     // Submission routes (common)
     Route::get('/submissions/division', [SubmissionController::class, 'forDivision'])->name('submissions.forDivision');
+    Route::get('/submissions/outgoing', [SubmissionController::class, 'outgoing'])->name('submissions.outgoing');
     Route::get('/submissions', [SubmissionController::class, 'index'])->name('submissions.index');
     Route::get('/submissions/for-division', [SubmissionController::class, 'forDivision'])->name('submissions.for-division');
     Route::get('/submissions/history', [SubmissionController::class, 'history'])->name('submissions.history');

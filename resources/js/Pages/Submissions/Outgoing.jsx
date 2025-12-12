@@ -31,7 +31,7 @@ import {
     PopoverTrigger,
 } from "@/Components/ui/popover";
 
-export default function ForDivision({
+export default function Outgoing({
     auth,
     submissions,
     userDivision,
@@ -254,18 +254,18 @@ export default function ForDivision({
             user={auth.user}
             header={
                 <h2 className="font-semibold text-xl text-foreground">
-                    � Pengajuan Masuk
+                    📤 Pengajuan Keluar
                 </h2>
             }
         >
-            <Head title="Pengajuan Masuk" />
+            <Head title="Pengajuan Keluar" />
             <div className="flex min-h-screen bg-gradient-to-b from-background to-muted/30 text-foreground">
                 <Header />
                 <div className="w-full p-8">
                     <div className=" mx-auto bg-card shadow-sm rounded-2xl p-8 border border-border/50 backdrop-blur-sm">
                         <div className="flex flex-col gap-4 mb-6">
                             <div className="text-lg text-center font-medium">
-                                📥 Daftar Pengajuan yang Butuh Tindakan
+                                📤 Daftar Pengajuan Menunggu Persetujuan
                             </div>
                             <div className="flex flex-col md:flex-row justify-between  md:items-center gap-3">
                                 <div className="relative flex">
