@@ -172,11 +172,11 @@ export default function Index({ auth, documents }) {
     // Keep fieldDoc in sync with latest documents after reloads
     useEffect(() => {
         if (!fieldDoc) return;
-        const updated = (documents || []).find((d) => d.id === fieldDoc.id);
+        const updated = (documents?.data || []).find((d) => d.id === fieldDoc.id);
         if (updated) setFieldDoc(updated);
     }, [documents]);
 
-    const filteredDocuments = documents.filter((doc) => {
+    const filteredDocuments = (documents?.data || []).filter((doc) => {
         const matchText = doc.name.toLowerCase().includes(search.toLowerCase());
         const matchDocument =
             filterDocument === "all" || doc.name === filterDocument;

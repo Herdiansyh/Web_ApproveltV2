@@ -765,7 +765,7 @@ export default function Create({ auth, userDivision, workflows }) {
                         </div>
 
                         <Card
-                            className="p-8 shadow-sm "
+                            className="p-8 shadow-xl "
                             style={{ borderRadius: "15px" }}
                         >
                             <form

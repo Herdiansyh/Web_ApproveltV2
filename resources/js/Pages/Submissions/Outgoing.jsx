@@ -35,10 +35,10 @@ export default function Outgoing({
     auth,
     submissions,
     userDivision,
-    availablePrefixes = [],
+    // availablePrefixes = [],
 }) {
     const [filter, setFilter] = useState("");
-    const [prefixFilter, setPrefixFilter] = useState("");
+    // const [prefixFilter, setPrefixFilter] = useState("");
     const [dateFilter, setDateFilter] = useState({
         startDate: null,
         endDate: null,
@@ -50,23 +50,27 @@ export default function Outgoing({
     // Advanced filter states
     const [showAdvancedFilter, setShowAdvancedFilter] = useState(false);
     const [filters, setFilters] = useState([
-        { id: 1, type: '', value: '', options: [] }
+        { id: 1, type: "", value: "", options: [] },
     ]);
     const [loadingOptions, setLoadingOptions] = useState(false);
 
     // Check if any filters are active
-    const hasActiveFilters = filters.some(filter => filter.type && filter.value);
+    const hasActiveFilters = filters.some(
+        (filter) => filter.type && filter.value
+    );
 
     const handleFilterChange = (e) => setFilter(e.target.value);
 
     // Fetch filter options when filter type changes
     const handleFilterTypeChange = async (filterId, type) => {
-        setFilters(prev => prev.map(filter => 
-            filter.id === filterId 
-                ? { ...filter, type, value: '', options: [] }
-                : filter
-        ));
-        
+        setFilters((prev) =>
+            prev.map((filter) =>
+                filter.id === filterId
+                    ? { ...filter, type, value: "", options: [] }
+                    : filter
+            )
+        );
+
         if (type) {
             setLoadingOptions(true);
             try {
@@ -74,18 +78,22 @@ export default function Outgoing({
                     `/filter/options?filter_type=${type}`
                 );
                 const data = await response.json();
-                setFilters(prev => prev.map(filter => 
-                    filter.id === filterId 
-                        ? { ...filter, options: data.options || [] }
-                        : filter
-                ));
+                setFilters((prev) =>
+                    prev.map((filter) =>
+                        filter.id === filterId
+                            ? { ...filter, options: data.options || [] }
+                            : filter
+                    )
+                );
             } catch (error) {
                 console.error("Error fetching filter options:", error);
-                setFilters(prev => prev.map(filter => 
-                    filter.id === filterId 
-                        ? { ...filter, options: [] }
-                        : filter
-                ));
+                setFilters((prev) =>
+                    prev.map((filter) =>
+                        filter.id === filterId
+                            ? { ...filter, options: [] }
+                            : filter
+                    )
+                );
             } finally {
                 setLoadingOptions(false);
             }
@@ -94,24 +102,29 @@ export default function Outgoing({
 
     // Add new filter row
     const addFilter = () => {
-        const newId = Math.max(...filters.map(f => f.id), 0) + 1;
-        setFilters(prev => [...prev, { id: newId, type: '', value: '', options: [] }]);
+        const newId = Math.max(...filters.map((f) => f.id), 0) + 1;
+        setFilters((prev) => [
+            ...prev,
+            { id: newId, type: "", value: "", options: [] },
+        ]);
     };
-    
+
     // Remove filter row
     const removeFilter = (filterId) => {
         if (filters.length > 1) {
-            setFilters(prev => prev.filter(filter => filter.id !== filterId));
+            setFilters((prev) =>
+                prev.filter((filter) => filter.id !== filterId)
+            );
         }
     };
-    
+
     // Update filter value
     const updateFilterValue = (filterId, value) => {
-        setFilters(prev => prev.map(filter => 
-            filter.id === filterId 
-                ? { ...filter, value }
-                : filter
-        ));
+        setFilters((prev) =>
+            prev.map((filter) =>
+                filter.id === filterId ? { ...filter, value } : filter
+            )
+        );
     };
 
     // Apply all filters
@@ -124,7 +137,7 @@ export default function Outgoing({
         params.delete("division");
 
         // Apply all active filters
-        filters.forEach(filter => {
+        filters.forEach((filter) => {
             if (filter.type && filter.value) {
                 params.set(filter.type, filter.value);
             }
@@ -137,7 +150,7 @@ export default function Outgoing({
 
     // Clear all filters
     const handleClearAdvancedFilter = () => {
-        setFilters([{ id: 1, type: '', value: '', options: [] }]);
+        setFilters([{ id: 1, type: "", value: "", options: [] }]);
 
         const params = new URLSearchParams(window.location.search);
         params.delete("doctype");
@@ -175,23 +188,38 @@ export default function Outgoing({
 
         const initialFilters = [];
         let filterId = 1;
-        
+
         if (prefixParam) {
-            initialFilters.push({ id: filterId++, type: 'prefix', value: prefixParam, options: [] });
+            initialFilters.push({
+                id: filterId++,
+                type: "prefix",
+                value: prefixParam,
+                options: [],
+            });
         }
-        
+
         if (doctypeParam) {
-            initialFilters.push({ id: filterId++, type: 'doctype', value: doctypeParam, options: [] });
+            initialFilters.push({
+                id: filterId++,
+                type: "doctype",
+                value: doctypeParam,
+                options: [],
+            });
         }
-        
+
         if (divisionParam) {
-            initialFilters.push({ id: filterId++, type: 'division', value: divisionParam, options: [] });
+            initialFilters.push({
+                id: filterId++,
+                type: "division",
+                value: divisionParam,
+                options: [],
+            });
         }
-        
+
         if (initialFilters.length > 0) {
             setFilters(initialFilters);
             // Fetch options for each filter type
-            initialFilters.forEach(filter => {
+            initialFilters.forEach((filter) => {
                 handleFilterTypeChange(filter.id, filter.type);
             });
         }
@@ -262,10 +290,10 @@ export default function Outgoing({
             <div className="flex min-h-screen bg-gradient-to-b from-background to-muted/30 text-foreground">
                 <Header />
                 <div className="w-full p-8">
-                    <div className=" mx-auto bg-card shadow-sm rounded-2xl p-8 border border-border/50 backdrop-blur-sm">
+                    <div className=" mx-auto bg-card shadow-xl rounded-2xl p-8 border border-border/50 backdrop-blur-sm">
                         <div className="flex flex-col gap-4 mb-6">
                             <div className="text-lg text-center font-medium">
-                                📤 Daftar Pengajuan Menunggu Persetujuan
+                                📤 Daftar Pengajuan Keluar
                             </div>
                             <div className="flex flex-col md:flex-row justify-between  md:items-center gap-3">
                                 <div className="relative flex">
@@ -282,190 +310,267 @@ export default function Outgoing({
 
                                 {/* Advanced Filter Button */}
                                 <div className="sm:flex gap-1 items-center  ">
-                                     <DateFilter
-                                    onFilterChange={handleDateFilterChange}
-                                    placeholder="Pilih tanggal..."
-                                    label="Filter Tanggal"
-                                />
-                                <Popover
-                                    open={showAdvancedFilter}
-                                    onOpenChange={setShowAdvancedFilter}
-                                >
-                                    <PopoverTrigger asChild>
-                                        <Button
-                                           variant="outline"
-                                            style={{ borderRadius: "15px" }}
-                                            className={`flex ${hasActiveFilters ? "bg-blue-100" : ""}  items-center w-full sm:mt-0 mt-3 gap-2 text-xs sm:text-sm`}
-                                        >
-                                            <Filter className="w-4 h-4" />
-                                            Filter
-                                        </Button>
-                                    </PopoverTrigger>
-
-                                    <PopoverContent
-                                        className="mr-5 w-[90vw] sm:w-[400px] md:w-[600px] p-4 max-h-[80vh] overflow-y-auto"
-                                        align="start"
-                                        sideOffset={8}
-                                        style={{ borderRadius: "15px" }}
+                                    <DateFilter
+                                        onFilterChange={handleDateFilterChange}
+                                        placeholder="Pilih tanggal..."
+                                        label="Filter Tanggal"
+                                    />
+                                    <Popover
+                                        open={showAdvancedFilter}
+                                        onOpenChange={setShowAdvancedFilter}
                                     >
-                                        <div className="flex items-center justify-between mb-4">
-                                            <h3 className="text-sm font-medium">
-                                                Filter Lanjutan
-                                            </h3>
+                                        <PopoverTrigger asChild>
                                             <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                onClick={() =>
-                                                    setShowAdvancedFilter(false)
-                                                }
+                                                variant="outline"
+                                                style={{ borderRadius: "15px" }}
+                                                className={`flex ${
+                                                    hasActiveFilters
+                                                        ? "bg-blue-100"
+                                                        : ""
+                                                }  items-center w-full sm:mt-0 mt-3 gap-2 text-xs sm:text-sm`}
                                             >
-                                                <X className="w-4 h-4" />
+                                                <Filter className="w-4 h-4" />
+                                                Filter
                                             </Button>
-                                        </div>
+                                        </PopoverTrigger>
 
-                                        <div className="space-y-3">
-                                            {filters.map((filter, index) => (
-                                                <div key={filter.id} className="grid grid-cols-1 sm:grid-cols-3 gap-2 items-end">
-                                                    {/* Tipe Filter */}
-                                                    <div>
-                                                        <label className="block text-xs font-medium text-muted-foreground mb-1">
-                                                            Tipe Filter
-                                                        </label>
-                                                        <DropdownMenu>
-                                                            <DropdownMenuTrigger asChild>
-                                                                <Button
-                                                                    variant="outline"
-                                                                    className="w-full justify-between text-xs"
-                                                                    style={{ borderRadius: "15px" }}
-                                                                >
-                                                                    {filter.type === "doctype"
-                                                                        ? "Doctype"
-                                                                        : filter.type === "prefix"
-                                                                        ? "Prefix"
-                                                                        : filter.type === "division"
-                                                                        ? "Divisi"
-                                                                        : "Pilih tipe"}
-                                                                </Button>
-                                                            </DropdownMenuTrigger>
-                                                            <DropdownMenuContent className="w-44">
-                                                                <DropdownMenuItem
-                                                                    onClick={() =>
-                                                                        handleFilterTypeChange(filter.id, "doctype")
-                                                                    }
-                                                                >
-                                                                    Doctype
-                                                                </DropdownMenuItem>
-                                                                <DropdownMenuItem
-                                                                    onClick={() =>
-                                                                        handleFilterTypeChange(filter.id, "prefix")
-                                                                    }
-                                                                >
-                                                                    Prefix
-                                                                </DropdownMenuItem>
-                                                                <DropdownMenuItem
-                                                                    onClick={() =>
-                                                                        handleFilterTypeChange(filter.id, "division")
-                                                                    }
-                                                                >
-                                                                    Divisi
-                                                                </DropdownMenuItem>
-                                                            </DropdownMenuContent>
-                                                        </DropdownMenu>
-                                                    </div>
+                                        <PopoverContent
+                                            className="mr-5 w-[90vw] sm:w-[400px] md:w-[600px] p-4 max-h-[80vh] overflow-y-auto"
+                                            align="start"
+                                            sideOffset={8}
+                                            style={{ borderRadius: "15px" }}
+                                        >
+                                            <div className="flex items-center justify-between mb-4">
+                                                <h3 className="text-sm font-medium">
+                                                    Filter Lanjutan
+                                                </h3>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    onClick={() =>
+                                                        setShowAdvancedFilter(
+                                                            false
+                                                        )
+                                                    }
+                                                >
+                                                    <X className="w-4 h-4" />
+                                                </Button>
+                                            </div>
 
-                                                    {/* Nilai Filter */}
-                                                    <div>
-                                                        <label className="block text-xs font-medium text-muted-foreground mb-1">
-                                                            Nilai Filter
-                                                        </label>
-                                                        <DropdownMenu>
-                                                            <DropdownMenuTrigger asChild>
-                                                                <Button
-                                                                    variant="outline"
-                                                                    className="w-full justify-between overflow-hidden text-xs"
-                                                                    disabled={!filter.type || loadingOptions}
-                                                                    style={{ borderRadius: "15px" }}
-                                                                >
-                                                                    {loadingOptions
-                                                                        ? "Loading..."
-                                                                        : filter.value
-                                                                        ? filter.options.find((o) => o.value === filter.value)?.label
-                                                                        : "Pilih nilai"}
-                                                                </Button>
-                                                            </DropdownMenuTrigger>
-                                                            <DropdownMenuContent className="w-52 max-h-40 overflow-y-auto">
-                                                                {filter.options.map((option) => (
-                                                                    <DropdownMenuItem
-                                                                        key={option.value}
-                                                                        onClick={() =>
-                                                                            updateFilterValue(filter.id, option.value)
-                                                                        }
-                                                                        className={
-                                                                            filter.value === option.value
-                                                                                ? "bg-accent"
-                                                                                : ""
-                                                                        }
+                                            <div className="space-y-3">
+                                                {filters.map(
+                                                    (filter, index) => (
+                                                        <div
+                                                            key={filter.id}
+                                                            className="grid grid-cols-1 sm:grid-cols-3 gap-2 items-end"
+                                                        >
+                                                            {/* Tipe Filter */}
+                                                            <div>
+                                                                <label className="block text-xs font-medium text-muted-foreground mb-1">
+                                                                    Tipe Filter
+                                                                </label>
+                                                                <DropdownMenu>
+                                                                    <DropdownMenuTrigger
+                                                                        asChild
                                                                     >
-                                                                        {option.label}
-                                                                    </DropdownMenuItem>
-                                                                ))}
-                                                            </DropdownMenuContent>
-                                                        </DropdownMenu>
-                                                    </div>
+                                                                        <Button
+                                                                            variant="outline"
+                                                                            className="w-full justify-between text-xs"
+                                                                            style={{
+                                                                                borderRadius:
+                                                                                    "15px",
+                                                                            }}
+                                                                        >
+                                                                            {filter.type ===
+                                                                            "doctype"
+                                                                                ? "Doctype"
+                                                                                : filter.type ===
+                                                                                  "prefix"
+                                                                                ? "Prefix"
+                                                                                : filter.type ===
+                                                                                  "division"
+                                                                                ? "Divisi"
+                                                                                : "Pilih tipe"}
+                                                                        </Button>
+                                                                    </DropdownMenuTrigger>
+                                                                    <DropdownMenuContent className="w-44">
+                                                                        <DropdownMenuItem
+                                                                            onClick={() =>
+                                                                                handleFilterTypeChange(
+                                                                                    filter.id,
+                                                                                    "doctype"
+                                                                                )
+                                                                            }
+                                                                        >
+                                                                            Doctype
+                                                                        </DropdownMenuItem>
+                                                                        <DropdownMenuItem
+                                                                            onClick={() =>
+                                                                                handleFilterTypeChange(
+                                                                                    filter.id,
+                                                                                    "prefix"
+                                                                                )
+                                                                            }
+                                                                        >
+                                                                            Prefix
+                                                                        </DropdownMenuItem>
+                                                                        <DropdownMenuItem
+                                                                            onClick={() =>
+                                                                                handleFilterTypeChange(
+                                                                                    filter.id,
+                                                                                    "division"
+                                                                                )
+                                                                            }
+                                                                        >
+                                                                            Divisi
+                                                                        </DropdownMenuItem>
+                                                                    </DropdownMenuContent>
+                                                                </DropdownMenu>
+                                                            </div>
 
-                                                    {/* Remove Button */}
-                                                    <div className="flex gap-1">
-                                                        {filters.length > 1 && (
-                                                            <Button
-                                                                variant="outline"
-                                                                size="sm"
-                                                                onClick={() => removeFilter(filter.id)}
-                                                                className="px-2"
-                                                                style={{ borderRadius: "15px" }}
-                                                            >
-                                                                <X className="w-3 h-3" />
-                                                            </Button>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
+                                                            {/* Nilai Filter */}
+                                                            <div>
+                                                                <label className="block text-xs font-medium text-muted-foreground mb-1">
+                                                                    Nilai Filter
+                                                                </label>
+                                                                <DropdownMenu>
+                                                                    <DropdownMenuTrigger
+                                                                        asChild
+                                                                    >
+                                                                        <Button
+                                                                            variant="outline"
+                                                                            className="w-full justify-between overflow-hidden text-xs"
+                                                                            disabled={
+                                                                                !filter.type ||
+                                                                                loadingOptions
+                                                                            }
+                                                                            style={{
+                                                                                borderRadius:
+                                                                                    "15px",
+                                                                            }}
+                                                                        >
+                                                                            {loadingOptions
+                                                                                ? "Loading..."
+                                                                                : filter.value
+                                                                                ? filter.options.find(
+                                                                                      (
+                                                                                          o
+                                                                                      ) =>
+                                                                                          o.value ===
+                                                                                          filter.value
+                                                                                  )
+                                                                                      ?.label
+                                                                                : "Pilih nilai"}
+                                                                        </Button>
+                                                                    </DropdownMenuTrigger>
+                                                                    <DropdownMenuContent className="w-52 max-h-40 overflow-y-auto">
+                                                                        {filter.options.map(
+                                                                            (
+                                                                                option
+                                                                            ) => (
+                                                                                <DropdownMenuItem
+                                                                                    key={
+                                                                                        option.value
+                                                                                    }
+                                                                                    onClick={() =>
+                                                                                        updateFilterValue(
+                                                                                            filter.id,
+                                                                                            option.value
+                                                                                        )
+                                                                                    }
+                                                                                    className={
+                                                                                        filter.value ===
+                                                                                        option.value
+                                                                                            ? "bg-accent"
+                                                                                            : ""
+                                                                                    }
+                                                                                >
+                                                                                    {
+                                                                                        option.label
+                                                                                    }
+                                                                                </DropdownMenuItem>
+                                                                            )
+                                                                        )}
+                                                                    </DropdownMenuContent>
+                                                                </DropdownMenu>
+                                                            </div>
 
-                                        {/* Add Filter Button */}
-                                      <div className="mt-3 w-full flex justify-end">
-                                            <button
-                                                variant="outline"
-                                                onClick={addFilter}
-                                                className=" text-xs border border-gray-200 py-1 px-2 hover:bg-gray-200"
-                                                style={{ borderRadius: "15px" }}
-                                            >
-                                                + Add Filter
-                                            </button>
-                                        </div>
+                                                            {/* Remove Button */}
+                                                            <div className="flex gap-1">
+                                                                {filters.length >
+                                                                    1 && (
+                                                                    <Button
+                                                                        variant="outline"
+                                                                        size="sm"
+                                                                        onClick={() =>
+                                                                            removeFilter(
+                                                                                filter.id
+                                                                            )
+                                                                        }
+                                                                        className="px-2"
+                                                                        style={{
+                                                                            borderRadius:
+                                                                                "15px",
+                                                                        }}
+                                                                    >
+                                                                        <X className="w-3 h-3" />
+                                                                    </Button>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    )
+                                                )}
+                                            </div>
 
-                                        {/* Action Buttons */}
-                                        <div className="flex justify-end gap-2 mt-4 pt-3 border-t">
-                                            <Button
-                                                onClick={handleAdvancedFilter}
-                                                disabled={!filters.some(f => f.type && f.value)}
-                                                className="text-xs"
-                                                style={{ borderRadius: "15px" }}
-                                            >
-                                                Apply Filter
-                                            </Button>
-                                            <Button
-                                                variant="outline"
-                                                onClick={handleClearAdvancedFilter}
-                                                className="text-sm"
-                                                style={{ borderRadius: "15px" }}
-                                            >
-                                                Clear
-                                            </Button>
-                                        </div>
-                                    </PopoverContent>
-                                </Popover>
+                                            {/* Add Filter Button */}
+                                            <div className="mt-3 w-full flex justify-end">
+                                                <button
+                                                    variant="outline"
+                                                    onClick={addFilter}
+                                                    className=" text-xs border border-gray-200 py-1 px-2 hover:bg-gray-200"
+                                                    style={{
+                                                        borderRadius: "15px",
+                                                    }}
+                                                >
+                                                    + Add Filter
+                                                </button>
+                                            </div>
 
-                               
+                                            {/* Action Buttons */}
+                                            <div className="flex justify-end gap-2 mt-4 pt-3 border-t">
+                                                <Button
+                                                    onClick={
+                                                        handleAdvancedFilter
+                                                    }
+                                                    disabled={
+                                                        !filters.some(
+                                                            (f) =>
+                                                                f.type &&
+                                                                f.value
+                                                        )
+                                                    }
+                                                    className="text-xs"
+                                                    style={{
+                                                        borderRadius: "15px",
+                                                    }}
+                                                >
+                                                    Apply Filter
+                                                </Button>
+                                                <Button
+                                                    variant="outline"
+                                                    onClick={
+                                                        handleClearAdvancedFilter
+                                                    }
+                                                    className="text-sm"
+                                                    style={{
+                                                        borderRadius: "15px",
+                                                    }}
+                                                >
+                                                    Clear
+                                                </Button>
+                                            </div>
+                                        </PopoverContent>
+                                    </Popover>
                                 </div>
                             </div>
                         </div>

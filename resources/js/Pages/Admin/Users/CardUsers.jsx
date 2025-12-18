@@ -34,7 +34,7 @@ export default function CardUsers({
     setShowCreateModal,
 }) {
     return (
-        <Card style={{ borderRadius: "15px" }} className="p-6">
+        <Card style={{ borderRadius: "15px" }} className="shadow-xl p-6">
             {/* Filter & Add */}
             <div className="flex flex-col md:flex-row justify-between gap-3 mb-4">
                 <div className="flex flex-col md:flex-row gap-2 w-full">

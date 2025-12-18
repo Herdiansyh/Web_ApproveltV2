@@ -108,7 +108,7 @@
             display: flex;
             justify-content: space-between;
             align-items: flex-end;
-            gap: 20pt;
+            gap: 5pt;
         }
 
         .qr-block {
@@ -137,7 +137,7 @@
 
         /* Approval */
         .approval-stamp {
-            padding: 12pt 16pt;
+            padding: 10pt 14pt;
             border-radius: 8pt;
             border: 1.5px solid #10b981;
             background: #ecfdf5;
@@ -166,6 +166,11 @@
         .approval-stamp .approver-name {
             color: #065f46;
             font-size: 8pt;
+        }
+
+        .box-approval {
+            display: flex;
+            gap: 4pt
         }
 
         .approval-stamp .approver-role {
@@ -270,7 +275,7 @@
             </tr>
             <tr>
                 <td class="label">Divisi</td>
-                <td class="value">{{ $submission->user?->division?->name ?? '-' }}</td>
+                <td class="value">{{ $submission->user?->division?->subdivision?->name ?? '-' }}</td>
             </tr>
         </table>
     </div>
@@ -371,23 +376,48 @@
         </div>
 
         <!-- APPROVAL -->
-        @if (!empty($approvers))
-            <div class="approval-stamp">
-                <span class="label">Approved by:</span>
-                <div style="text-align: center; margin-top:5pt">
-                    @foreach ($approvers as $approver)
-                        <div class="approver-item">
-                            <span class="approver-name">{{ $approver['name'] }}</span>
+        <div class="box-approval">
+            @if (!empty($approvers))
+                @php
+                    // Group approvers by action_type
+                    $stampsByAction = [];
+                    foreach ($approvers as $approver) {
+                        $actionType = $approver['action_type'] ?? 'approve';
+                        if (!isset($stampsByAction[$actionType])) {
+                            $stampsByAction[$actionType] = [];
+                        }
+                        $stampsByAction[$actionType][] = $approver;
+                    }
+                @endphp
 
-                            @if (!empty($approver['approved_at']))
-                                <span
-                                    class="approver-date">{{ \Carbon\Carbon::parse($approver['approved_at'])->format('d M Y, H:i') }}</span>
-                            @endif
+                @foreach ($stampsByAction as $actionType => $approversByAction)
+                    <div class="approval-stamp">
+                        @php
+                            // Determine label based on action_type
+                            $label = 'Approved by:'; // default
+                            if ($actionType === 'request_next') {
+                                $label = 'Mengetahui:';
+                            } elseif ($actionType === 'approve') {
+                                $label = 'Disetujui oleh:';
+                            }
+                        @endphp
+                        <span class="label">{{ $label }}</span>
+                        <div style="text-align: center; margin-top:5pt">
+                            @foreach ($approversByAction as $approver)
+                                <div class="approver-item">
+                                    <span class="approver-name">{{ $approver['name'] }}</span>
+
+                                    @if (!empty($approver['approved_at']))
+                                        <span
+                                            class="approver-date">{{ \Carbon\Carbon::parse($approver['approved_at'])->format('d M Y, H:i') }}</span>
+                                    @endif
+                                </div>
+                            @endforeach
                         </div>
-                    @endforeach
-                </div>
-            </div>
-        @endif
+                    </div>
+                @endforeach
+            @endif
+        </div>
     </div>
 
 </body>

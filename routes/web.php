@@ -69,9 +69,17 @@ Route::get('/dashboard', function () {
     // Statistik spesifik untuk user yang login
     $role = strtolower((string) $user->role);
 
-    // Permission global untuk banner alert (tetap)
-    $canApproveGlobal = $user->role === 'admin' ? true : ($user->subdivision_id
-        ? (bool) SubdivisionPermission::where('subdivision_id', $user->subdivision_id)->value('can_approve')
+    // Permission global untuk banner alert
+    // Check if user has ANY action permission (can_approve, can_reject, or can_request_next)
+    // Admin & direktur always can, others check their subdivision permissions
+    $canApproveGlobal = $user->role === 'admin' || $user->role === 'direktur' ? true : ($user->subdivision_id
+        ? (bool) SubdivisionPermission::where('subdivision_id', $user->subdivision_id)
+            ->where(function ($q) {
+                $q->where('can_approve', true)
+                  ->orWhere('can_reject', true)
+                  ->orWhere('can_request_next', true);
+            })
+            ->first()
         : false);
 
     if ($role === 'direktur') {
@@ -176,7 +184,7 @@ Route::middleware(['auth'])->group(function () {
         Route::post('submissions', [SubmissionController::class, 'store'])->name('submissions.store');
     });
 
-    // Submission routes (common)
+    // Submisszzion routes (common)
     Route::get('/submissions/division', [SubmissionController::class, 'forDivision'])->name('submissions.forDivision');
     Route::get('/submissions/outgoing', [SubmissionController::class, 'outgoing'])->name('submissions.outgoing');
     Route::get('/submissions', [SubmissionController::class, 'index'])->name('submissions.index');

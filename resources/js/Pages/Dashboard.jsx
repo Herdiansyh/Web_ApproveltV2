@@ -47,11 +47,8 @@ export default function Dashboard({
                     {/* Welcome Section */}
                     <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                         <div>
-                            <h1 className="sm:text-4xl text-2xl font-bold text-foreground">
-                                Hai {auth.user.name}! 👋
-                            </h1>
                             <p className="text-muted-foreground text-base mt-2">
-                                Selamat datang kembali di sistem e-Approval.
+                                Selamat datang kembali di sistem E-Approval.
                             </p>
                         </div>
                         <div
@@ -73,7 +70,9 @@ export default function Dashboard({
                     {canApprove && (pendingItems?.length || 0) > 0 && (
                         <Card
                             className="relative overflow-hidden border-2 border-blue-500/30 bg-gradient-to-br from-blue-500/5 via-card to-blue-500/5 shadow-lg hover:shadow-xl transition-all duration-300"
-                            style={{ borderRadius: "16px" }}
+                            style={{
+                                borderRadius: "16px",
+                            }}
                         >
                             {/* Decorative elements */}
                             <div className="absolute -top-10 -right-10 h-40 w-40 rounded-full bg-blue-500/10 blur-3xl" />
@@ -128,7 +127,7 @@ export default function Dashboard({
                         {auth.user.role !== "direktur" && (
                             <Card
                                 style={{ borderRadius: "16px" }}
-                                className="group border border-border hover:border-blue/50 hover:shadow-xl transition-all duration-300 bg-card overflow-hidden relative"
+                                className="group border shadow-xl  border-border hover:border-blue/50 hover:shadow-xl transition-all duration-300 bg-card overflow-hidden relative"
                             >
                                 <div className="absolute top-0 right-0 w-32 h-32 bg-blue/5 rounded-full -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-500" />
                                 <CardHeader className="flex flex-row items-center justify-between pb-2 relative z-10">
@@ -150,43 +149,51 @@ export default function Dashboard({
                             </Card>
                         )}
 
-                        {/* Menunggu Persetujuan */}
-                        <Card
-                            style={{ borderRadius: "16px" }}
-                            className="group border border-border hover:border-blue-500/50 hover:shadow-xl transition-all duration-300 bg-card overflow-hidden relative cursor-pointer hover:scale-[1.02]"
-                            onClick={() => router.get(route('submissions.forDivision'))}
-                        >
-                            <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-500" />
-                            <CardHeader className="flex flex-row items-center justify-between pb-2 relative z-10">
-                                <CardTitle className="text-sm font-semibold text-muted-foreground">
-                                    Menunggu Persetujuan
-                                </CardTitle>
-                                <div className="p-2.5 bg-primary-500/10 rounded-lg group-hover:bg-primary-500/20 transition-colors">
-                                    <Clock className="w-5 h-5 text-primary-600 dark:text-blue-400 group-hover:scale-110 transition-transform" />
-                                </div>
-                            </CardHeader>
-                            <CardContent className="relative z-10">
-                                <div className="text-4xl font-bold text-primary-600 dark:text-primary-400">
-                                    {stats.waiting}
-                                </div>
-                                <p className="text-xs text-muted-foreground mt-2">
-                                    Masih dalam proses review
-                                </p>
-                                <div className="mt-3 text-xs text-primary-600/60 dark:text-primary-400/60 group-hover:text-primary-600/80 dark:group-hover:text-primary-400/80 transition-colors">
-                                    Klik untuk review →
-                                </div>
-                            </CardContent>
-                        </Card>
+                        {/* Menunggu Persetujuan - Hanya tampilkan jika user punya action permission */}
+                        {canApprove && (
+                            <Card
+                                style={{ borderRadius: "16px" }}
+                                className="group border shadow-xl border-border hover:border-blue-500/50 hover:shadow-xl transition-all duration-300 bg-card overflow-hidden relative cursor-pointer hover:scale-[1.02]"
+                                onClick={() =>
+                                    router.get(route("submissions.forDivision"))
+                                }
+                            >
+                                <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-500" />
+                                <CardHeader className="flex flex-row items-center justify-between pb-2 relative z-10">
+                                    <CardTitle className="text-sm font-semibold text-muted-foreground">
+                                        Menunggu Persetujuan
+                                    </CardTitle>
+                                    <div className="p-2.5 bg-primary-500/10 rounded-lg group-hover:bg-primary-500/20 transition-colors">
+                                        <Clock className="w-5 h-5 text-primary-600 dark:text-blue-400 group-hover:scale-110 transition-transform" />
+                                    </div>
+                                </CardHeader>
+                                <CardContent className="relative z-10">
+                                    <div className="text-4xl font-bold text-primary-600 dark:text-primary-400">
+                                        {stats.waiting}
+                                    </div>
+                                    <p className="text-xs text-muted-foreground mt-2">
+                                        Masih dalam proses review
+                                    </p>
+                                    <div className="mt-3 text-xs text-primary-600/60 dark:text-primary-400/60 group-hover:text-primary-600/80 dark:group-hover:text-primary-400/80 transition-colors">
+                                        Klik untuk review →
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        )}
 
                         {/* Disetujui */}
                         <Card
                             style={{ borderRadius: "16px" }}
-                            className="group border border-border hover:border-emerald-500/50 hover:shadow-xl transition-all duration-300 bg-card overflow-hidden relative cursor-pointer hover:scale-[1.02]"
-                            onClick={() => router.get(route('submissions.index'), { status: 'approved' })}
+                            className="group border shadow-xl border-border hover:border-emerald-500/50 hover:shadow-xl transition-all duration-300 bg-card overflow-hidden relative cursor-pointer hover:scale-[1.02]"
+                            onClick={() =>
+                                router.get(route("submissions.index"), {
+                                    status: "approved",
+                                })
+                            }
                         >
                             <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 rounded-full -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-500" />
                             <CardHeader className="flex flex-row items-center justify-between pb-2 relative z-10">
-                                <CardTitle className="text-sm font-semibold text-muted-foreground">
+                                <CardTitle className="text-sm font-semibold text-emerald-400">
                                     Disetujui
                                 </CardTitle>
                                 <div className="p-2.5 bg-emerald-500/10 rounded-lg group-hover:bg-emerald-500/20 transition-colors">
@@ -198,10 +205,10 @@ export default function Dashboard({
                                     {stats.approved}
                                 </div>
                                 <p className="text-xs text-muted-foreground mt-2">
-                                    Dokumen yang sudah{" "}
+                                    Dokumen sudah{" "}
                                     {auth.user.role === "direktur"
                                         ? "anda setujui"
-                                        : "disetujui atasan"}
+                                        : "disetujui "}
                                 </p>
                                 <div className="mt-3 text-xs text-emerald-600/60 dark:text-emerald-400/60 group-hover:text-emerald-600/80 dark:group-hover:text-emerald-400/80 transition-colors">
                                     Klik untuk melihat detail →
@@ -212,12 +219,16 @@ export default function Dashboard({
                         {/* Ditolak */}
                         <Card
                             style={{ borderRadius: "16px" }}
-                            className="group border border-border hover:border-red/50 hover:shadow-xl transition-all duration-300 bg-card overflow-hidden relative cursor-pointer hover:scale-[1.02]"
-                            onClick={() => router.get(route('submissions.index'), { status: 'rejected' })}
+                            className="group border shadow-xl border-border hover:border-red-500/50 hover:shadow-xl transition-all duration-300 bg-card overflow-hidden relative cursor-pointer hover:scale-[1.02]"
+                            onClick={() =>
+                                router.get(route("submissions.index"), {
+                                    status: "rejected",
+                                })
+                            }
                         >
                             <div className="absolute top-0 right-0 w-32 h-32 bg-red-500/5 rounded-full -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-500" />
                             <CardHeader className="flex flex-row items-center justify-between pb-2 relative z-10">
-                                <CardTitle className="text-sm font-semibold text-muted-foreground">
+                                <CardTitle className="text-sm font-semibold text-red-500">
                                     Ditolak
                                 </CardTitle>
                                 <div className="p-2.5 bg-destructive/10 rounded-lg group-hover:bg-destructive/20 transition-colors">
@@ -229,12 +240,12 @@ export default function Dashboard({
                                     {stats.rejected}
                                 </div>
                                 <p className="text-xs text-muted-foreground mt-2">
-                                    Dokumen yang sudah{" "}
+                                    Dokumen sudah{" "}
                                     {auth.user.role === "direktur"
                                         ? "Anda tolak"
-                                        : "Ditolak atasan"}
+                                        : "Ditolak "}
                                 </p>
-                                <div className="mt-3 text-xs text-destructive/60 group-hover:text-destructive/80 transition-colors">
+                                <div className="mt-3 text-xs text-red-400 group-hover:text-destructive/80 transition-colors">
                                     Klik untuk melihat detail →
                                 </div>
                             </CardContent>
@@ -243,8 +254,12 @@ export default function Dashboard({
                         {/* Dibatalkan */}
                         <Card
                             style={{ borderRadius: "16px" }}
-                            className="group border border-border hover:border-gray-500/50 hover:shadow-xl transition-all duration-300 bg-card overflow-hidden relative cursor-pointer hover:scale-[1.02]"
-                            onClick={() => router.get(route('submissions.index'), { status: 'cancelled' })}
+                            className="group border shadow-xl border-border hover:border-gray-500/50 hover:shadow-xl transition-all duration-300 bg-card overflow-hidden relative cursor-pointer hover:scale-[1.02]"
+                            onClick={() =>
+                                router.get(route("submissions.index"), {
+                                    status: "cancelled",
+                                })
+                            }
                         >
                             <div className="absolute top-0 right-0 w-32 h-32 bg-gray-500/5 rounded-full -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-500" />
                             <CardHeader className="flex flex-row items-center justify-between pb-2 relative z-10">

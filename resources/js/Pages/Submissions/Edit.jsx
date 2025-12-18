@@ -15,20 +15,20 @@ import DynamicFields from "./DynamicFields";
 
 export default function Edit({ auth, submission, documentFields = [] }) {
     const { showLoading, hideLoading } = useLoading();
-    
+
     // Extract existing table data from submission
     const existingData = submission.data_json || {};
     const existingTableData = existingData.tableData || [];
     const existingTableColumns = existingData.tableColumns || [];
     const existingUseTableData = existingData.useTableData || false;
-    
+
     // Default columns configuration
     const getDefaultColumns = () => {
         // If there are existing table columns, use them
         if (existingTableColumns.length > 0) {
             return existingTableColumns;
         }
-        
+
         // Get default columns from document configuration
         if (submission?.workflow?.document?.default_columns) {
             return submission.workflow.document.default_columns.map(
@@ -36,21 +36,42 @@ export default function Edit({ auth, submission, documentFields = [] }) {
                     id: index + 1,
                     name: col.name || `Column ${index + 1}`,
                     key: col.key || `col_${index + 1}`,
-                    type: col.type || 'text',
+                    type: col.type || "text",
                     required: col.required || false,
-                    options: col.options || []
+                    options: col.options || [],
                 })
             );
         }
-        
+
         // Fallback to hardcoded defaults
         return [
-            { id: 1, name: "Item", key: "item", type: "text", required: false, options: [] },
-            { id: 2, name: "Jumlah", key: "jumlah", type: "number", required: true, options: [] },
-            { id: 3, name: "Keterangan", key: "keterangan", type: "text", required: false, options: [] },
+            {
+                id: 1,
+                name: "Item",
+                key: "item",
+                type: "text",
+                required: false,
+                options: [],
+            },
+            {
+                id: 2,
+                name: "Jumlah",
+                key: "jumlah",
+                type: "number",
+                required: true,
+                options: [],
+            },
+            {
+                id: 3,
+                name: "Keterangan",
+                key: "keterangan",
+                type: "text",
+                required: false,
+                options: [],
+            },
         ];
     };
-    
+
     const { data, setData, post, processing, errors, reset, transform } =
         useForm({
             title: submission.title || "",
@@ -59,28 +80,31 @@ export default function Edit({ auth, submission, documentFields = [] }) {
             data: existingData,
             useTableData: existingUseTableData,
             tableData: existingTableData,
-            tableColumns: existingTableColumns.length > 0 ? existingTableColumns : getDefaultColumns(),
+            tableColumns:
+                existingTableColumns.length > 0
+                    ? existingTableColumns
+                    : getDefaultColumns(),
         });
-    
+
     // Initialize table states
     const [nextId, setNextId] = useState(() => {
         if (existingTableData.length > 0) {
-            return Math.max(...existingTableData.map(r => r.id)) + 1;
+            return Math.max(...existingTableData.map((r) => r.id)) + 1;
         }
         return (existingTableData.length || 0) + 1;
     });
-    
+
     const [nextColumnId, setNextColumnId] = useState(() => {
         if (existingTableColumns.length > 0) {
-            return Math.max(...existingTableColumns.map(c => c.id)) + 1;
+            return Math.max(...existingTableColumns.map((c) => c.id)) + 1;
         }
         return 4;
     });
-    
+
     const [newColumnName, setNewColumnName] = useState("");
     const [editingColumn, setEditingColumn] = useState(null);
     const [isSaved, setIsSaved] = useState(true); // Start as true since data is loaded
-    
+
     // Initialize tableData with default columns if empty
     useEffect(() => {
         if (data.tableData?.length === 0 && data.tableColumns?.length > 0) {
@@ -93,14 +117,14 @@ export default function Edit({ auth, submission, documentFields = [] }) {
             setData("tableData", initialData);
         }
     }, [data.tableColumns]);
-    
+
     // Auto-enable table data if there's existing table data
     useEffect(() => {
         if (existingTableData.length > 0 && !data.useTableData) {
             setData("useTableData", true);
         }
     }, [existingTableData.length]);
-    
+
     // Initialize default columns when checkbox is checked and no existing columns
     useEffect(() => {
         if (data.useTableData && data.tableColumns.length === 0) {
@@ -108,7 +132,7 @@ export default function Edit({ auth, submission, documentFields = [] }) {
             setData("tableColumns", defaultCols);
         }
     }, [data.useTableData]);
-    
+
     // Table functions
     const addRow = () => {
         const newRow = { id: nextId };
@@ -119,14 +143,17 @@ export default function Edit({ auth, submission, documentFields = [] }) {
         setNextId(nextId + 1);
         setIsSaved(false);
     };
-    
+
     const deleteRow = (id) => {
         if (data.tableData.length > 1) {
-            setData("tableData", data.tableData.filter((row) => row.id !== id));
+            setData(
+                "tableData",
+                data.tableData.filter((row) => row.id !== id)
+            );
             setIsSaved(false);
         }
     };
-    
+
     const addColumn = () => {
         if (newColumnName.trim()) {
             const newKey = newColumnName.toLowerCase().replace(/\s+/g, "_");
@@ -136,24 +163,24 @@ export default function Edit({ auth, submission, documentFields = [] }) {
                 key: newKey,
                 type: "text",
                 required: false,
-                options: []
+                options: [],
             };
-            
+
             setData("tableColumns", [...data.tableColumns, newColumn]);
-            
+
             // Add new column data to existing rows
             const updatedData = data.tableData.map((row) => ({
                 ...row,
                 [newKey]: "",
             }));
             setData("tableData", updatedData);
-            
+
             setNewColumnName("");
             setNextColumnId(nextColumnId + 1);
             setIsSaved(false);
         }
     };
-    
+
     const deleteColumn = (columnId) => {
         if (data.tableColumns.length > 1) {
             const columnToDelete = data.tableColumns.find(
@@ -162,38 +189,41 @@ export default function Edit({ auth, submission, documentFields = [] }) {
             const updatedColumns = data.tableColumns.filter(
                 (col) => col.id !== columnId
             );
-            
+
             setData("tableColumns", updatedColumns);
-            
+
             // Remove column data from all rows
             const updatedData = data.tableData.map((row) => {
                 const { [columnToDelete.key]: removed, ...rest } = row;
                 return rest;
             });
             setData("tableData", updatedData);
-            
+
             setIsSaved(false);
         }
     };
-    
+
     const updateCellData = (rowId, columnKey, value) => {
-        setData("tableData", data.tableData.map((row) =>
-            row.id === rowId ? { ...row, [columnKey]: value } : row
-        ));
+        setData(
+            "tableData",
+            data.tableData.map((row) =>
+                row.id === rowId ? { ...row, [columnKey]: value } : row
+            )
+        );
         setIsSaved(false);
     };
-    
+
     const updateColumnName = (columnId, newName) => {
         const column = data.tableColumns.find((col) => col.id === columnId);
         const newKey = newName.toLowerCase().replace(/\s+/g, "_");
         const oldKey = column.key;
-        
+
         // Update column name and key
         const updatedColumns = data.tableColumns.map((col) =>
             col.id === columnId ? { ...col, name: newName, key: newKey } : col
         );
         setData("tableColumns", updatedColumns);
-        
+
         // Update all row data with new key
         const updatedData = data.tableData.map((row) => {
             const { [oldKey]: oldValue, ...rest } = row;
@@ -222,26 +252,25 @@ export default function Edit({ auth, submission, documentFields = [] }) {
         }
         // Show custom loading animation
         showLoading("Memperbarui pengajuan...");
-        
+
         // Create FormData for file upload
         const formData = new FormData();
-        formData.append('_method', 'PUT');
-        formData.append('title', (data.title || "").trim());
-        formData.append('description', data.description || '');
-        
+        formData.append("_method", "PUT");
+        formData.append("title", (data.title || "").trim());
+        formData.append("description", data.description || "");
+
         if (data.file instanceof File) {
-            formData.append('file', data.file);
+            formData.append("file", data.file);
         }
-        
+
         // Add data object if it exists
         if (data.data || data.tableData || data.tableColumns) {
-            
             // Prepare data for submission - merge all data
             const dataToSend = {
                 ...data.data,
                 useTableData: data.useTableData,
             };
-            
+
             // Only include table data if useTableData is true
             if (data.useTableData) {
                 dataToSend.tableData = data.tableData || [];
@@ -251,79 +280,94 @@ export default function Edit({ auth, submission, documentFields = [] }) {
                 delete dataToSend.tableData;
                 delete dataToSend.tableColumns;
             }
-            
-            formData.append('data', JSON.stringify(dataToSend));
+
+            formData.append("data", JSON.stringify(dataToSend));
         }
-        
+
         for (let [key, value] of formData.entries()) {
         }
-        
+
         // Get CSRF token and set up headers manually for FormData
-        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-        
+        const csrfToken = document
+            .querySelector('meta[name="csrf-token"]')
+            ?.getAttribute("content");
+
         fetch(route("submissions.update", submission.id), {
-            method: 'POST',
+            method: "POST",
             headers: {
-                'X-CSRF-TOKEN': csrfToken,
-                'Accept': 'application/json',
-                'X-Requested-With': 'XMLHttpRequest',
+                "X-CSRF-TOKEN": csrfToken,
+                Accept: "application/json",
+                "X-Requested-With": "XMLHttpRequest",
             },
-            body: formData
+            body: formData,
         })
-        .then(response => {
-            
-            if (!response.ok) {
-                // Handle HTTP errors
-                if (response.status === 422) {
-                    return response.json().then(data => {
-                        const errorMessage = data.message || 'Validation failed';
-                        const errors = data.errors || {};
-                        const errorText = Object.values(errors).join(', ') || errorMessage;
-                        throw new Error(errorText);
-                    });
-                } else if (response.status === 419) {
-                    throw new Error('CSRF token mismatch. Silakan refresh halaman.');
-                } else if (response.status === 403) {
-                    throw new Error('Anda tidak memiliki izin untuk mengubah pengajuan ini.');
-                } else {
-                    throw new Error(`Server error: ${response.status}`);
+            .then((response) => {
+                if (!response.ok) {
+                    // Handle HTTP errors
+                    if (response.status === 422) {
+                        return response.json().then((data) => {
+                            const errorMessage =
+                                data.message || "Validation failed";
+                            const errors = data.errors || {};
+                            const errorText =
+                                Object.values(errors).join(", ") ||
+                                errorMessage;
+                            throw new Error(errorText);
+                        });
+                    } else if (response.status === 419) {
+                        throw new Error(
+                            "CSRF token mismatch. Silakan refresh halaman."
+                        );
+                    } else if (response.status === 403) {
+                        throw new Error(
+                            "Anda tidak memiliki izin untuk mengubah pengajuan ini."
+                        );
+                    } else {
+                        throw new Error(`Server error: ${response.status}`);
+                    }
                 }
-            }
-            
-            return response.json();
-        })
-        .then(responseData => {
-            hideLoading(responseData.success); // Hide loading animation with success status
-            if (responseData.success) {
-                Swal.fire({
-                    icon: "success",
-                    title: "Berhasil",
-                    text: "Pengajuan berhasil diperbarui.",
-                    timer: 2000,
-                    showConfirmButton: false,
-                }).then(() => {
-                    // Redirect back to show submission
-                    window.location.href = route("submissions.show", submission.id);
-                });
-            } else {
+
+                return response.json();
+            })
+            .then((responseData) => {
+                hideLoading(responseData.success); // Hide loading animation with success status
+                if (responseData.success) {
+                    Swal.fire({
+                        icon: "success",
+                        title: "Berhasil",
+                        text: "Pengajuan berhasil diperbarui.",
+                        timer: 2000,
+                        showConfirmButton: false,
+                    }).then(() => {
+                        // Redirect back to show submission
+                        window.location.href = route(
+                            "submissions.show",
+                            submission.id
+                        );
+                    });
+                } else {
+                    Swal.fire({
+                        icon: "error",
+                        title: "Gagal!",
+                        text:
+                            responseData.message ||
+                            "Gagal memperbarui pengajuan.",
+                        confirmButtonText: "OK",
+                    });
+                }
+            })
+            .catch((error) => {
+                console.error("Update error:", error);
+                hideLoading(false); // Hide loading animation on error
                 Swal.fire({
                     icon: "error",
-                    title: "Gagal!",
-                    text: responseData.message || "Gagal memperbarui pengajuan.",
+                    title: "Error!",
+                    text:
+                        error.message ||
+                        "Terjadi kesalahan jaringan. Silakan coba lagi.",
                     confirmButtonText: "OK",
                 });
-            }
-        })
-        .catch(error => {
-            console.error("Update error:", error);
-            hideLoading(false); // Hide loading animation on error
-            Swal.fire({
-                icon: "error",
-                title: "Error!",
-                text: error.message || "Terjadi kesalahan jaringan. Silakan coba lagi.",
-                confirmButtonText: "OK",
             });
-        });
     };
 
     return (
@@ -342,7 +386,7 @@ export default function Edit({ auth, submission, documentFields = [] }) {
                     <div className="mx-auto sm:px-6 lg:px-8">
                         <Card
                             style={{ borderRadius: "15px" }}
-                            className="p-6 mt-6 shadow-md"
+                            className="p-6 mt-6 shadow-xl"
                         >
                             <form
                                 onSubmit={onSubmit}
@@ -459,229 +503,236 @@ export default function Edit({ auth, submission, documentFields = [] }) {
                                                                     f.name
                                                                 }
                                                             >
-                                                                {type === "label" ? (
+                                                                {type ===
+                                                                "label" ? (
                                                                     // For label type, only show the label as a separator
                                                                     <div className="col-span-full">
                                                                         <div className="border-t border-gray-300 dark:border-gray-600 my-4"></div>
                                                                         <h4 className="font-semibold text-lg text-gray-800 dark:text-gray-200 mt-2">
-                                                                            {f.label}
+                                                                            {
+                                                                                f.label
+                                                                            }
                                                                         </h4>
                                                                     </div>
                                                                 ) : (
                                                                     <>
                                                                         <Label>
-                                                                            {f.label}
-                                                                        </Label>
-                                                                        {type ===
-                                                                        "textarea" ? (
-                                                                    <Textarea
-                                                                        style={{
-                                                                            borderRadius:
-                                                                                "10px",
-                                                                        }}
-                                                                        value={
-                                                                            value
-                                                                        }
-                                                                        onChange={(
-                                                                            e
-                                                                        ) =>
-                                                                            setVal(
-                                                                                e
-                                                                                    .target
-                                                                                    .value
-                                                                            )
-                                                                        }
-                                                                        rows={3}
-                                                                        className="mt-1"
-                                                                    />
-                                                                ) : type ===
-                                                                  "date" ? (
-                                                                    <Input
-                                                                        style={{
-                                                                            borderRadius:
-                                                                                "10px",
-                                                                        }}
-                                                                        type="date"
-                                                                        value={
-                                                                            value
-                                                                        }
-                                                                        onChange={(
-                                                                            e
-                                                                        ) =>
-                                                                            setVal(
-                                                                                e
-                                                                                    .target
-                                                                                    .value
-                                                                            )
-                                                                        }
-                                                                        className="mt-1"
-                                                                    />
-                                                                ) : type ===
-                                                                  "select" ? (
-                                                                    <select
-                                                                        style={{
-                                                                            borderRadius:
-                                                                                "10px",
-                                                                        }}
-                                                                        className="w-full border rounded px-2 py-1 mt-1"
-                                                                        value={
-                                                                            value ??
-                                                                            ""
-                                                                        }
-                                                                        onChange={(
-                                                                            e
-                                                                        ) =>
-                                                                            setVal(
-                                                                                e
-                                                                                    .target
-                                                                                    .value
-                                                                            )
-                                                                        }
-                                                                    >
-                                                                        <option
-                                                                            value=""
-                                                                            disabled
-                                                                        >
-                                                                            Pilih{" "}
                                                                             {
                                                                                 f.label
                                                                             }
-                                                                        </option>
-                                                                        {(Array.isArray(
-                                                                            f.options
-                                                                        )
-                                                                            ? f.options
-                                                                            : []
-                                                                        ).map(
-                                                                            (
-                                                                                opt,
-                                                                                idx
-                                                                            ) => {
-                                                                                if (
-                                                                                    opt &&
-                                                                                    typeof opt ===
-                                                                                        "object"
-                                                                                ) {
-                                                                                    const val =
-                                                                                        String(
-                                                                                            opt.value ??
-                                                                                                opt.id ??
-                                                                                                ""
-                                                                                        );
-                                                                                    const label =
-                                                                                        opt.label ??
-                                                                                        String(
-                                                                                            opt.name ??
-                                                                                                val
-                                                                                        );
-                                                                                    return (
-                                                                                        <option
-                                                                                            key={
-                                                                                                val ||
-                                                                                                idx
-                                                                                            }
-                                                                                            value={
-                                                                                                val
-                                                                                            }
-                                                                                        >
-                                                                                            {
-                                                                                                label
-                                                                                            }
-                                                                                        </option>
-                                                                                    );
+                                                                        </Label>
+                                                                        {type ===
+                                                                        "textarea" ? (
+                                                                            <Textarea
+                                                                                style={{
+                                                                                    borderRadius:
+                                                                                        "10px",
+                                                                                }}
+                                                                                value={
+                                                                                    value
                                                                                 }
-                                                                                const val =
-                                                                                    String(
-                                                                                        opt ??
-                                                                                            ""
+                                                                                onChange={(
+                                                                                    e
+                                                                                ) =>
+                                                                                    setVal(
+                                                                                        e
+                                                                                            .target
+                                                                                            .value
+                                                                                    )
+                                                                                }
+                                                                                rows={
+                                                                                    3
+                                                                                }
+                                                                                className="mt-1"
+                                                                            />
+                                                                        ) : type ===
+                                                                          "date" ? (
+                                                                            <Input
+                                                                                style={{
+                                                                                    borderRadius:
+                                                                                        "10px",
+                                                                                }}
+                                                                                type="date"
+                                                                                value={
+                                                                                    value
+                                                                                }
+                                                                                onChange={(
+                                                                                    e
+                                                                                ) =>
+                                                                                    setVal(
+                                                                                        e
+                                                                                            .target
+                                                                                            .value
+                                                                                    )
+                                                                                }
+                                                                                className="mt-1"
+                                                                            />
+                                                                        ) : type ===
+                                                                          "select" ? (
+                                                                            <select
+                                                                                style={{
+                                                                                    borderRadius:
+                                                                                        "10px",
+                                                                                }}
+                                                                                className="w-full border rounded px-2 py-1 mt-1"
+                                                                                value={
+                                                                                    value ??
+                                                                                    ""
+                                                                                }
+                                                                                onChange={(
+                                                                                    e
+                                                                                ) =>
+                                                                                    setVal(
+                                                                                        e
+                                                                                            .target
+                                                                                            .value
+                                                                                    )
+                                                                                }
+                                                                            >
+                                                                                <option
+                                                                                    value=""
+                                                                                    disabled
+                                                                                >
+                                                                                    Pilih{" "}
+                                                                                    {
+                                                                                        f.label
+                                                                                    }
+                                                                                </option>
+                                                                                {(Array.isArray(
+                                                                                    f.options
+                                                                                )
+                                                                                    ? f.options
+                                                                                    : []
+                                                                                ).map(
+                                                                                    (
+                                                                                        opt,
+                                                                                        idx
+                                                                                    ) => {
+                                                                                        if (
+                                                                                            opt &&
+                                                                                            typeof opt ===
+                                                                                                "object"
+                                                                                        ) {
+                                                                                            const val =
+                                                                                                String(
+                                                                                                    opt.value ??
+                                                                                                        opt.id ??
+                                                                                                        ""
+                                                                                                );
+                                                                                            const label =
+                                                                                                opt.label ??
+                                                                                                String(
+                                                                                                    opt.name ??
+                                                                                                        val
+                                                                                                );
+                                                                                            return (
+                                                                                                <option
+                                                                                                    key={
+                                                                                                        val ||
+                                                                                                        idx
+                                                                                                    }
+                                                                                                    value={
+                                                                                                        val
+                                                                                                    }
+                                                                                                >
+                                                                                                    {
+                                                                                                        label
+                                                                                                    }
+                                                                                                </option>
+                                                                                            );
+                                                                                        }
+                                                                                        const val =
+                                                                                            String(
+                                                                                                opt ??
+                                                                                                    ""
+                                                                                            );
+                                                                                        return (
+                                                                                            <option
+                                                                                                key={
+                                                                                                    val ||
+                                                                                                    idx
+                                                                                                }
+                                                                                                value={
+                                                                                                    val
+                                                                                                }
+                                                                                            >
+                                                                                                {
+                                                                                                    val
+                                                                                                }
+                                                                                            </option>
+                                                                                        );
+                                                                                    }
+                                                                                )}
+                                                                            </select>
+                                                                        ) : type ===
+                                                                          "number" ? (
+                                                                            <Input
+                                                                                style={{
+                                                                                    borderRadius:
+                                                                                        "10px",
+                                                                                }}
+                                                                                type="number"
+                                                                                value={
+                                                                                    value
+                                                                                }
+                                                                                onChange={(
+                                                                                    e
+                                                                                ) =>
+                                                                                    setVal(
+                                                                                        e
+                                                                                            .target
+                                                                                            .value
+                                                                                    )
+                                                                                }
+                                                                                className="mt-1"
+                                                                            />
+                                                                        ) : type ===
+                                                                          "file" ? (
+                                                                            <Input
+                                                                                style={{
+                                                                                    borderRadius:
+                                                                                        "10px",
+                                                                                }}
+                                                                                type="file"
+                                                                                onChange={(
+                                                                                    e
+                                                                                ) => {
+                                                                                    const file =
+                                                                                        e
+                                                                                            .target
+                                                                                            .files &&
+                                                                                        e
+                                                                                            .target
+                                                                                            .files[0];
+                                                                                    setVal(
+                                                                                        file
+                                                                                            ? file.name
+                                                                                            : ""
                                                                                     );
-                                                                                return (
-                                                                                    <option
-                                                                                        key={
-                                                                                            val ||
-                                                                                            idx
-                                                                                        }
-                                                                                        value={
-                                                                                            val
-                                                                                        }
-                                                                                    >
-                                                                                        {
-                                                                                            val
-                                                                                        }
-                                                                                    </option>
-                                                                                );
-                                                                            }
+                                                                                }}
+                                                                                className="mt-1"
+                                                                            />
+                                                                        ) : (
+                                                                            <Input
+                                                                                style={{
+                                                                                    borderRadius:
+                                                                                        "10px",
+                                                                                }}
+                                                                                value={
+                                                                                    value
+                                                                                }
+                                                                                onChange={(
+                                                                                    e
+                                                                                ) =>
+                                                                                    setVal(
+                                                                                        e
+                                                                                            .target
+                                                                                            .value
+                                                                                    )
+                                                                                }
+                                                                                className="mt-1"
+                                                                            />
                                                                         )}
-                                                                    </select>
-                                                                ) : type ===
-                                                                  "number" ? (
-                                                                    <Input
-                                                                        style={{
-                                                                            borderRadius:
-                                                                                "10px",
-                                                                        }}
-                                                                        type="number"
-                                                                        value={
-                                                                            value
-                                                                        }
-                                                                        onChange={(
-                                                                            e
-                                                                        ) =>
-                                                                            setVal(
-                                                                                e
-                                                                                    .target
-                                                                                    .value
-                                                                            )
-                                                                        }
-                                                                        className="mt-1"
-                                                                    />
-                                                                ) : type ===
-                                                                  "file" ? (
-                                                                    <Input
-                                                                        style={{
-                                                                            borderRadius:
-                                                                                "10px",
-                                                                        }}
-                                                                        type="file"
-                                                                        onChange={(
-                                                                            e
-                                                                        ) => {
-                                                                            const file =
-                                                                                e
-                                                                                    .target
-                                                                                    .files &&
-                                                                                e
-                                                                                    .target
-                                                                                    .files[0];
-                                                                            setVal(
-                                                                                file
-                                                                                    ? file.name
-                                                                                    : ""
-                                                                            );
-                                                                        }}
-                                                                        className="mt-1"
-                                                                    />
-                                                                ) : (
-                                                                    <Input
-                                                                        style={{
-                                                                            borderRadius:
-                                                                                "10px",
-                                                                        }}
-                                                                        value={
-                                                                            value
-                                                                        }
-                                                                        onChange={(
-                                                                            e
-                                                                        ) =>
-                                                                            setVal(
-                                                                                e
-                                                                                    .target
-                                                                                    .value
-                                                                            )
-                                                                        }
-                                                                        className="mt-1"
-                                                                    />
-                                                                )}
                                                                     </>
                                                                 )}
                                                             </div>
@@ -715,8 +766,10 @@ export default function Edit({ auth, submission, documentFields = [] }) {
                                             variant="secondary"
                                             style={{ borderRadius: "15px" }}
                                             onClick={() =>
-                                                (window.location.href =
-                                                    route("submissions.show", submission.id))
+                                                (window.location.href = route(
+                                                    "submissions.show",
+                                                    submission.id
+                                                ))
                                             }
                                         >
                                             Batal
@@ -729,9 +782,11 @@ export default function Edit({ auth, submission, documentFields = [] }) {
                                         >
                                             {processing
                                                 ? "Menyimpan..."
-                                                : submission.original_submission_id && submission.original_submission_id !== null
-                                                    ? "Kirim Ulang" 
-                                                    : "Simpan Perubahan"}
+                                                : submission.original_submission_id &&
+                                                  submission.original_submission_id !==
+                                                      null
+                                                ? "Kirim Ulang"
+                                                : "Simpan Perubahan"}
                                         </Button>
                                     </div>
                                 </div>

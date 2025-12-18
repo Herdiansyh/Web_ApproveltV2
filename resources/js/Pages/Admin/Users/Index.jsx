@@ -136,7 +136,7 @@ export default function Index({ auth, users, divisions, subdivisions, roles }) {
 
     const handleEdit = (user) => {
         setEditingUser(user);
-        
+
         // Set data user sekaligus - React akan handle urutan rendering dengan benar
         setData({
             name: user.name,
@@ -202,7 +202,7 @@ export default function Index({ auth, users, divisions, subdivisions, roles }) {
             window.removeEventListener("error", handleGlobalError);
         };
     }, []);
-    
+
     return (
         <AuthenticatedLayout
             user={auth.user}
@@ -238,22 +238,32 @@ export default function Index({ auth, users, divisions, subdivisions, roles }) {
             <Footer />
             {/* Create/Edit Modal */}
             {(showCreateModal || editingUser) && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
-                    <CardCreate
-                        data={data}
-                        setData={setData}
-                        handleSubmit={handleSubmit}
-                        processing={processing}
-                        errors={errors}
-                        divisions={divisions}
-                        roles={roles}
-                        filteredSubdivisions={filteredSubdivisions}
-                        editingUser={editingUser}
-                        setShowCreateModal={setShowCreateModal}
-                        setEditingUser={setEditingUser}
-                        reset={reset}
-                    />
-                </div>
+                <>
+                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[50]">
+                        <CardCreate
+                            data={data}
+                            setData={setData}
+                            handleSubmit={handleSubmit}
+                            processing={processing}
+                            errors={errors}
+                            divisions={divisions}
+                            roles={roles}
+                            filteredSubdivisions={filteredSubdivisions}
+                            editingUser={editingUser}
+                            setShowCreateModal={setShowCreateModal}
+                            setEditingUser={setEditingUser}
+                            reset={reset}
+                        />
+                    </div>
+                    <style jsx global>{`
+                        aside {
+                            pointer-events: none !important;
+                        }
+                        aside * {
+                            pointer-events: none !important;
+                        }
+                    `}</style>
+                </>
             )}
         </AuthenticatedLayout>
     );

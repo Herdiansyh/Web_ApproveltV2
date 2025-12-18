@@ -12,7 +12,7 @@ class DivisionController extends Controller
  public function index()
 {
     return Inertia::render('Admin/Division/Index', [
-        'divisions' => Division::with('subdivisions')->get(),
+        'divisions' => Division::with('subdivisions')->paginate(20),
     ]);
 }
 

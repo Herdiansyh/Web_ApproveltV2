@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { usePage, Link, router } from "@inertiajs/react";
 import {
-    FileText,
     ListCheck,
     User2,
     UserCircle2,
@@ -10,7 +9,6 @@ import {
     Workflow,
     DockIcon,
     Layers,
-    CheckCircleIcon,
     CheckLineIcon,
     FileTextIcon,
     LayoutDashboard,
@@ -42,27 +40,22 @@ export default function Sidebar({ open }) {
     const { navigateWithCache } = useOptimizedNavigation();
 
     useEffect(() => {
-        // Listen for Inertia events to handle logout animation
         const handleStart = () => {
             // Animation already shown by confirmLogout
         };
 
         const handleSuccess = () => {
-            // Hide animation when logout is successful
             hideLogoutAnimation();
         };
 
         const handleError = () => {
-            // Hide animation if there's an error
             hideLogoutAnimation();
         };
 
-        // Register Inertia event listeners and store unsubscribe functions
         const unsubscribeStart = router.on("start", handleStart);
         const unsubscribeSuccess = router.on("success", handleSuccess);
         const unsubscribeError = router.on("error", handleError);
 
-        // Cleanup event listeners
         return () => {
             unsubscribeStart();
             unsubscribeSuccess();
@@ -73,8 +66,6 @@ export default function Sidebar({ open }) {
     const confirmLogout = () => {
         showLogoutAnimation();
         setLogoutDialog(false);
-
-        // Immediately trigger logout request
         router.post(route("logout"));
     };
 
@@ -106,22 +97,26 @@ export default function Sidebar({ open }) {
                       icon: <ListCheck className="h-5 w-5" />,
                   },
 
-                  {
-                      label: "Pengajuan Keluar",
-                      href: route("submissions.outgoing"),
-                      active: route().current("submissions.outgoing"),
-                      icon: <FileTextIcon className="h-5 w-5" />,
-                  },
+                  ...(user.role === "employee"
+                      ? [
+                            {
+                                label: "Pengajuan Keluar",
+                                href: route("submissions.outgoing"),
+                                active: route().current("submissions.outgoing"),
+                                icon: <FileTextIcon className="h-5 w-5" />,
+                            },
+                        ]
+                      : []),
 
                   {
-                      label: "Lihat Pengajuan",
+                      label: "Pengajuan Selesai",
                       href: route("submissions.index"),
                       active: route().current("submissions.index"),
                       icon: <FileTextIcon className="h-5 w-5" />,
                   },
 
                   {
-                      label: "Riwayat Persetujuan",
+                      label: "Riwayat",
                       href: route("submissions.history"),
                       active: route().current("submissions.history"),
                       icon: <CheckLineIcon className="h-5 w-5" />,
@@ -174,20 +169,29 @@ export default function Sidebar({ open }) {
         <TooltipProvider delayDuration={0}>
             <aside
                 className={cn(
-                    "flex flex-col transition-all duration-300 border-r bg-sidebar text-sidebar-foreground font-sans", // <--- font ABeeZee aktif di sini
-                    open
-                        ? "min-w-64 px-4 py-5"
-                        : "w-0 hidden items-center px-2 py-5"
+                    "mr-4 flex flex-col z-50 relative border-r bg-sidebar text-sidebar-foreground font-sans overflow-hidden",
+                    open ? "px-4 py-5" : "px-0 py-5"
                 )}
+                style={{
+                    width: open ? "256px" : "0px",
+                    minWidth: open ? "256px" : "0px",
+                    opacity: open ? 1 : 0,
+                    boxShadow: "5px 0px 15px rgba(0,0,0,0.1) ",
+                    transition:
+                        "width 0.3s cubic-bezier(0.4, 0, 0.2, 1), min-width 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1), padding 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+                }}
             >
-                <nav className="flex flex-col gap-3">
+                <nav
+                    className="flex flex-col gap-3 "
+                    style={{ minWidth: "224px" }}
+                >
                     {navItems.map((item) => (
                         <Tooltip key={item.label}>
                             <TooltipTrigger asChild>
                                 <div
                                     onClick={() => navigateWithCache(item.href)}
                                     className={cn(
-                                        "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-all cursor-pointer",
+                                        " flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-all duration-200 cursor-pointer",
                                         item.active
                                             ? "bg-sidebar-accent text-sidebar-accent-foreground shadow-sm"
                                             : "text-muted-foreground hover:bg-sidebar-accent/50 hover:text-foreground"
@@ -197,11 +201,11 @@ export default function Sidebar({ open }) {
                                     {open && <span>{item.label}</span>}
                                 </div>
                             </TooltipTrigger>
-                            {!open && (
+                            {/* {!open && (
                                 <TooltipContent side="right">
                                     {item.label}
                                 </TooltipContent>
-                            )}
+                            )} */}
                         </Tooltip>
                     ))}
 
@@ -210,7 +214,7 @@ export default function Sidebar({ open }) {
                     <Button
                         variant="ghost"
                         style={{ borderRadius: "15px" }}
-                        className="justify-start gap-3 text-muted-foreground hover:bg-blue-400 hover:text-destructive-foreground transition-all"
+                        className="justify-start gap-3 text-muted-foreground hover:bg-blue-400 hover:text-destructive-foreground transition-all duration-200"
                         onClick={() => setLogoutDialog(true)}
                     >
                         <LogOut className="h-5 w-5" />

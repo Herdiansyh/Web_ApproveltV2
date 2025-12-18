@@ -18,7 +18,8 @@ class SubmissionWorkflowStep extends Model
         'status',       // pending, approved, rejected
         'approver_id',  // user yang approve step
         'approved_at',
-        'note'
+        'note',
+        'action_type'   // approve, request_next, reject
     ];
 
     public function submission()

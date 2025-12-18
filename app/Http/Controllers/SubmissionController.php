@@ -186,12 +186,30 @@ class SubmissionController extends Controller
         // Attach permission info (cached) and current_workflow_step
         if ($user->subdivision_id) {
             $permissions = $this->permissionService->getPermissionForSubdivision($user->subdivision_id);
+            
+            // Optimized: Load all workflow steps in single query to avoid N+1
+            $workflowStepIds = $submissions->pluck('workflow_id')->filter();
+            $workflowStepsMap = [];
+            
+            if ($workflowStepIds->isNotEmpty()) {
+                $workflowSteps = \App\Models\WorkflowStep::whereIn('workflow_id', $workflowStepIds)
+                    ->whereIn('step_order', $submissions->pluck('current_step'))
+                    ->with(['workflow'])
+                    ->get()
+                    ->groupBy(function ($step) {
+                        return $step->workflow_id . '_' . $step->step_order;
+                    });
+                
+                foreach ($workflowSteps as $key => $steps) {
+                    $workflowStepsMap[$key] = $steps->first();
+                }
+            }
+            
             foreach ($submissions as $s) {
                 $s->permission_for_me = $permissions;
-                if ($s->workflow) {
-                    $s->current_workflow_step = $s->workflow->steps
-                        ->where('step_order', $s->current_step)
-                        ->first();
+                if ($s->workflow_id && $s->current_step) {
+                    $key = $s->workflow_id . '_' . $s->current_step;
+                    $s->current_workflow_step = $workflowStepsMap[$key] ?? null;
                 }
             }
         }
@@ -224,25 +242,41 @@ class SubmissionController extends Controller
         // ========================================================
         // Kriteria:
         // 1. Status: active/waiting
-        // 2. User punya permission approve/reject
-        // 3. User terlibat dalam step workflow yang sedang aktif
+        // 2. User punya permission action (approve/reject/request_next)
+        // 3. Step saat ini adalah milik divisi user
         // ========================================================
         
-        $canApprove = $subdivisionId
-            ? $this->permissionService->hasPermission($subdivisionId, 'can_approve')
-            : false;
+        // Check if user has any action permission (approve, reject, or request_next)
+        // For admin/direktur, they have implicit action permission on their division
+        $hasActionPermission = false;
+        if ($user->role === 'admin') {
+            $hasActionPermission = true;
+        } elseif ($user->role === 'direktur') {
+            // Direktur selalu bisa melakukan aksi di divisi mereka
+            $hasActionPermission = true;
+        } elseif ($subdivisionId) {
+            // Check explicit permission dari subdivision
+            $actionPerms = $this->permissionService->getMultiplePermissions(
+                $subdivisionId, 
+                ['can_approve', 'can_reject', 'can_request_next']
+            );
+            $hasActionPermission = in_array(true, $actionPerms);
+        }
 
         $query = $this->queryService->baseQuery()
             ->active()  // Only non-approved/non-rejected
-            ->where(function ($q) use ($user, $divisionId, $canApprove) {
-                // Hanya tampilkan jika user bisa approve/reject
-                if ($user->role === 'admin' || $canApprove) {
-                    // DAN user terlibat di step yang sedang aktif
+            ->where(function ($q) use ($user, $divisionId, $hasActionPermission) {
+                // Jika user punya action permission, tampilkan submission yang:
+                // 1. Step saat ini adalah milik divisi user (bisa dibuat oleh siapa saja)
+                if ($user->role === 'admin' || $hasActionPermission) {
                     $q->whereNotNull('workflow_id')
                       ->whereHas('workflow.steps', function ($subQ) use ($divisionId) {
                           $subQ->whereColumn('workflow_steps.step_order', 'submissions.current_step')
                                ->where('workflow_steps.division_id', $divisionId);
                       });
+                } else {
+                    // User tidak punya permission, tampilkan hasil kosong
+                    $q->whereRaw('1=0');
                 }
             })
             ->when($statusFilter === 'pending', fn($q) => $q->where('status', 'pending'))
@@ -307,11 +341,29 @@ class SubmissionController extends Controller
         // Attach permission info (cached)
         if ($subdivisionId) {
             $permissions = $this->permissionService->getPermissionForSubdivision($subdivisionId);
+            
+            // Optimized: Load all workflow steps in single query to avoid N+1
+            $workflowStepIds = $submissions->pluck('workflow_id')->filter();
+            $workflowStepsMap = [];
+            
+            if ($workflowStepIds->isNotEmpty()) {
+                $workflowSteps = \App\Models\WorkflowStep::whereIn('workflow_id', $workflowStepIds)
+                    ->whereIn('step_order', $submissions->pluck('current_step'))
+                    ->with(['workflow'])
+                    ->get()
+                    ->groupBy(function ($step) {
+                        return $step->workflow_id . '_' . $step->step_order;
+                    });
+                
+                foreach ($workflowSteps as $key => $steps) {
+                    $workflowStepsMap[$key] = $steps->first();
+                }
+            }
+            
             foreach ($submissions as $s) {
-                if ($s->workflow) {
-                    $s->current_workflow_step = $s->workflow->steps
-                        ->where('step_order', $s->current_step)
-                        ->first();
+                if ($s->workflow_id && $s->current_step) {
+                    $key = $s->workflow_id . '_' . $s->current_step;
+                    $s->current_workflow_step = $workflowStepsMap[$key] ?? null;
                 }
                 $s->permission_for_me = $permissions;
             }
@@ -328,8 +380,8 @@ class SubmissionController extends Controller
     /** ================================
      *  PENGAJUAN KELUAR (Outgoing)
      *  ================================
-     *  Pengajuan yang dibuat oleh user
-     *  Tapi user TIDAK terlibat dalam step workflow yang sedang aktif
+     *  Pengajuan yang dibuat oleh user atau
+     *  Pengajuan dari divisi yang sama dengan can_view permission
      *  ================================ */
     public function outgoing(Request $request)
     {
@@ -345,21 +397,45 @@ class SubmissionController extends Controller
         $divisionFilter = $request->get('division');
 
         // ========================================================
-        // PENGAJUAN KELUAR: Submission dibuat user, user tunggu approval
+        // PENGAJUAN KELUAR: Submission dibuat user atau divisi yang sama
         // ========================================================
         // Kriteria:
         // 1. Status: active/waiting
-        // 2. Dibuat oleh user sendiri (user_id = auth user)
-        // 3. User TIDAK terlibat dalam step workflow yang sedang aktif
+        // 2. Dibuat oleh user sendiri (user_id = auth user) ATAU
+        // 3. Dibuat oleh user divisi yang sama + user punya can_view permission
+        // 
+        // CATATAN: Jika pembuat submission memiliki action permission di step saat ini,
+        // submission akan tampil di KEDUA tempat (Pengajuan Masuk & Pengajuan Keluar)
         // ========================================================
+
+        // Check if user has can_view permission
+        $canView = $subdivisionId
+            ? $this->permissionService->hasPermission($subdivisionId, 'can_view')
+            : false;
 
         $query = $this->queryService->baseQuery()
             ->active()  // Only non-approved/non-rejected (waiting status)
-            ->where('user_id', $user->id)  // Dibuat oleh user sendiri
-            ->whereDoesntHave('workflow.steps', function ($q) use ($divisionId) {
-                // User TIDAK terlibat di step yang sedang aktif
-                $q->whereColumn('workflow_steps.step_order', 'submissions.current_step')
-                  ->where('workflow_steps.division_id', $divisionId);
+            ->where(function ($q) use ($user, $divisionId, $canView) {
+                // Pengajuan dibuat oleh user sendiri - SELALU tampilkan
+                $q->where('user_id', $user->id);
+                
+                // ATAU pengajuan dari divisi yang sama dengan can_view permission
+                if ($canView) {
+                    $q->orWhere(function ($or) use ($divisionId, $user) {
+                        $or->where('division_id', $divisionId)
+                           ->where('user_id', '!=', $user->id)  // Bukan pembuat
+                           ->whereNotNull('workflow_id');
+                    });
+                }
+            })
+            // EXCLUDE jika: bukan pembuat AND terlibat di step saat ini
+            ->where(function ($q) use ($user, $divisionId) {
+                $q->where('user_id', $user->id)  // Pembuat SELALU muncul di outgoing
+                  ->orWhereDoesntHave('workflow.steps', function ($subQ) use ($divisionId) {
+                      // Bukan pembuat: exclude jika terlibat di step saat ini
+                      $subQ->whereColumn('workflow_steps.step_order', 'submissions.current_step')
+                           ->where('workflow_steps.division_id', $divisionId);
+                  });
             })
             ->when($statusFilter === 'pending', fn($q) => $q->where('status', 'pending'))
             ->with([
@@ -862,7 +938,7 @@ class SubmissionController extends Controller
             ]);
         }
 
-        return redirect()->route('submissions.forDivision')->with('success', 'Pengajuan berhasil dibuat.');
+        return redirect()->route('submissions.OutGoing.jsx')->with('success', 'Pengajuan berhasil dibuat.');
     }
 
     /** ------------------------
@@ -931,7 +1007,7 @@ class SubmissionController extends Controller
                     if ($user->role === 'admin') return true;
                     if (str_contains($a, 'approve')) return (bool) $permission->can_approve;
                     if (str_contains($a, 'reject')) return (bool) $permission->can_reject;
-                    if (str_contains($a, 'request')) return (bool) $permission->can_request_next;
+                    if (str_contains($a, 'reviewed')) return (bool) $permission->can_request_next;
                     return true; // actions lain dibiarkan
                 }));
             }
@@ -1029,7 +1105,8 @@ class SubmissionController extends Controller
                     $approvers[] = [
                         'name' => $step->approver->name,
                         'role' => $step->division->name ?? $step->role ?? 'Unknown',
-                        'approved_at' => (string) $step->approved_at
+                        'approved_at' => (string) $step->approved_at,
+                        'action_type' => $step->action_type ?? 'approve'
                     ];
                 }
             }
@@ -1097,6 +1174,22 @@ class SubmissionController extends Controller
                     return $ws->approved_at ?: $ws->updated_at;
                 })
                 ->first();
+            
+            // Tambahkan action_description berdasarkan action_type
+            if ($myStep) {
+                $actionType = $myStep->action_type ?? 'approve';
+                
+                // Map action_type ke deskripsi yang user-friendly
+                $actionDescriptions = [
+                    'approve' => 'approve',
+                    'reviewed' => 'reviewed',
+                    'request_next' => 'reviewed',  // request_next adalah reviewed
+                    'reject' => 'reject',
+                ];
+                
+                $myStep->action_description = $actionDescriptions[$actionType] ?? $actionType;
+            }
+            
             $s->my_history_step = $myStep;
         }
 
@@ -1158,6 +1251,7 @@ class SubmissionController extends Controller
         $currentStep->status = 'approved';
         $currentStep->approver_id = $user->id;
         $currentStep->approved_at = now();
+        $currentStep->action_type = 'approve';
         $currentStep->save();
 
         $maxStepOrder = $submission->workflowSteps->max('step_order');
@@ -1189,7 +1283,8 @@ class SubmissionController extends Controller
                     $approvers[] = [
                         'name' => $step->approver->name,
                         'role' => $step->division->name ?? $step->role ?? 'Unknown',
-                        'approved_at' => (string) $step->approved_at
+                        'approved_at' => (string) $step->approved_at,
+                        'action_type' => $step->action_type ?? 'approve'
                     ];
                 }
             }
@@ -1256,6 +1351,7 @@ public function requestNext(Request $request, Submission $submission)
     $currentSubmissionStep->status = 'approved';
     $currentSubmissionStep->approver_id = $user->id;
     $currentSubmissionStep->approved_at = now();
+    $currentSubmissionStep->action_type = 'request_next';
     $currentSubmissionStep->save();
 
     $maxStepOrder = $submission->workflowSteps->max('step_order');
@@ -1332,6 +1428,7 @@ public function reject(Request $request, Submission $submission)
     $currentStep->status = 'rejected';
     $currentStep->approver_id = $user->id;
     $currentStep->approved_at = now();
+    $currentStep->action_type = 'reject';
     // Save rejection note if provided
     if ($request->filled('approval_note')) {
         $currentStep->note = $request->input('approval_note');
@@ -1345,7 +1442,8 @@ public function reject(Request $request, Submission $submission)
     $rejectApprovers = [[
         'name' => $user->name,
         'role' => $currentStep->division->name ?? $user->role ?? 'Unknown',
-        'approved_at' => now()->toDateTimeString()
+        'approved_at' => now()->toDateTimeString(),
+        'action_type' => 'reject'
     ]];
     
     dispatch(new StampPdfOnDecision($submission->id, 'rejected', $rejectApprovers));

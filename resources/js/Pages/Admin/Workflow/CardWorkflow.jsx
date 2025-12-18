@@ -34,7 +34,7 @@ export default function CardWorkflow({
     handleDelete,
 }) {
     return (
-        <Card style={{ borderRadius: "15px" }} className="p-6 shadow-sm">
+        <Card style={{ borderRadius: "15px" }} className="p-6 shadow-xl">
             {/* Filters & Create Button */}
             <div className="flex flex-col md:flex-row justify-between mb-6 gap-4">
                 <div className="flex flex-col lg:flex-row gap-2 flex-1">

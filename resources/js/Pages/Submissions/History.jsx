@@ -102,12 +102,12 @@ export default function History({ auth, submissions }) {
                 <Header />
 
                 <div className="w-full p-8">
-                    <div className="mx-auto bg-card shadow-sm rounded-2xl p-8 border border-border/50 backdrop-blur-sm">
+                    <div className="mx-auto bg-card shadow-xl rounded-2xl p-8 border border-border/50 backdrop-blur-sm">
                         <div className="flex flex-col gap-4 mb-6">
                             <div className="text-lg font-medium">
                                 Riwayat Pengajuan
                             </div>
-                            <div className="flex flex-col md:flex-row justify-between items-stretch md:items-center gap-3">
+                            <div className="flex flex-col md:flex-row justify-end items-stretch md:items-center gap-3">
                                 <DateFilter
                                     onFilterChange={handleDateFilterChange}
                                     placeholder="Pilih tanggal..."
@@ -204,9 +204,13 @@ export default function History({ auth, submissions }) {
                                                 <td className="py-3 px-6 flex">
                                                     <span
                                                         className="px-2 py-1 rounded-full text-xs bg-gray-100 text-gray-700"
-                                                        title="Pengajuan ini muncul karena Anda pernah memprosesnya"
+                                                        title={`Aksi yang dilakukan: ${
+                                                            myStep?.action_description ||
+                                                            "diproses"
+                                                        }`}
                                                     >
-                                                        Sudah diproses
+                                                        {myStep?.action_description ||
+                                                            "diproses"}
                                                     </span>
                                                 </td>
                                             </tr>

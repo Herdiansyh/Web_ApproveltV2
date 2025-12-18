@@ -32,7 +32,7 @@ export default function CardDivision({
     setEditingDivision,
 }) {
     return (
-        <Card className="p-6" style={{ borderRadius: "15px" }}>
+        <Card className="p-6 shadow-xl" style={{ borderRadius: "15px" }}>
             {/* Filter & Add Button */}
             <div className="flex flex-col md:flex-row justify-between gap-3 mb-4">
                 <div className="flex flex-col lg:flex-row gap-2 w-full">
@@ -62,7 +62,7 @@ export default function CardDivision({
                                 {" "}
                                 {/* ✅ UBAH DARI "" KE "all" */} All Divisions
                             </SelectItem>
-                            {divisions.map((d) => (
+                            {(divisions?.data || []).map((d) => (
                                 <SelectItem
                                     key={d.id}
                                     value={d.name.toLowerCase()} // ✅ PASTIKAN VALUE TIDAK KOSONG

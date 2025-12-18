@@ -26,7 +26,7 @@ export default function CardCreate({
     setEditingUser,
 }) {
     return (
-        <Card className="w-full max-w-md p-6">
+        <Card className=" w-full max-w-md p-6 fixed z-[100]">
             <h3 className="text-lg font-semibold mb-4">
                 {editingUser ? "Edit User" : "Create New User"}
             </h3>

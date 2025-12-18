@@ -31,7 +31,7 @@ export default function CardSubDivision({
     setEditingSubdivision,
 }) {
     return (
-        <Card style={{ borderRadius: "15px" }} className="p-6">
+        <Card style={{ borderRadius: "15px" }} className="p-6 shadow-xl">
             {/* Filter dan tombol tambah */}
             <div className="flex  md:flex-row justify-between gap-3 mb-4">
                 <div className="flex flex-col md:flex-row gap-2 w-full">

@@ -40,6 +40,9 @@ export default function Show({
     userDivisionId = null,
     hasStamped = false,
 }) {
+    // Debug log untuk melihat data yang diterima
+    console.log(currentStep);
+
     const { showLoading, hideLoading } = useLoading();
     const [showApproveModal, setShowApproveModal] = useState(false);
     const [showRejectModal, setShowRejectModal] = useState(false);
@@ -400,7 +403,7 @@ export default function Show({
         if (!canApprove) return handleNoAccess();
 
         Swal.fire({
-            title: "Teruskan ke langkah berikutnya?",
+            title: "Selesai review?",
             icon: "question",
             showCancelButton: true,
             confirmButtonText: "Ya, lanjutkan",
@@ -479,18 +482,19 @@ export default function Show({
         const status = String(submission.status || "").toLowerCase();
         const isApproved = status.includes("approved");
         const isCancelled = status === "cancelled";
-        
+
         // Updated authorization logic to match dropdown
         const canCancel =
             !isCancelled &&
             isApproved &&
-            (isOwner || 
-             submission.approved_by === auth?.user?.id ||
-             (submission.workflow_steps && 
-              submission.workflow_steps.some(step => 
-                step.approver_id === auth?.user?.id && 
-                step.status === 'approved'
-              )));
+            (isOwner ||
+                submission.approved_by === auth?.user?.id ||
+                (submission.workflow_steps &&
+                    submission.workflow_steps.some(
+                        (step) =>
+                            step.approver_id === auth?.user?.id &&
+                            step.status === "approved"
+                    )));
 
         if (!canCancel) {
             Swal.fire({
@@ -579,7 +583,7 @@ export default function Show({
         const status = String(submission.status || "").toLowerCase();
         const isCancelled = status === "cancelled";
         const isRejected = status.includes("rejected");
-        
+
         const canAmend = isOwner && (isCancelled || isRejected);
 
         if (!canAmend) {
@@ -780,6 +784,7 @@ export default function Show({
                 approver: step.approver,
                 approved_at: step.approved_at,
                 note: step.note,
+                action_type: step.action_type,
             }))
             .sort((a, b) => a.step_order - b.step_order);
     }, [workflowSteps]);
@@ -855,7 +860,7 @@ export default function Show({
                                                         )
                                                             return "• Ditolak";
                                                         if (raw === "cancelled")
-                                                            return "• Dibatalkan";
+                                                            return "• cancelled";
                                                         return `• Waiting confirmation${
                                                             who
                                                                 ? ` to ${who}`
@@ -863,7 +868,7 @@ export default function Show({
                                                         }`;
                                                     })()}
                                                 </span>
-                                                {isApprovedFinal && (
+                                                {/* {isApprovedFinal && (
                                                     <span
                                                         style={{
                                                             borderRadius:
@@ -874,7 +879,7 @@ export default function Show({
                                                     >
                                                         Final
                                                     </span>
-                                                )}
+                                                )} */}
                                             </div>
                                         </div>
                                     </div>
@@ -1010,6 +1015,7 @@ export default function Show({
                                                                 String(
                                                                     action
                                                                 ).toLowerCase();
+
                                                             if (
                                                                 a.includes(
                                                                     "approve"
@@ -1033,6 +1039,26 @@ export default function Show({
                                                                 );
                                                             if (
                                                                 a.includes(
+                                                                    "reviewed"
+                                                                )
+                                                            )
+                                                                return (
+                                                                    <DropdownMenuItem
+                                                                        key={
+                                                                            index
+                                                                        }
+                                                                        onClick={
+                                                                            handleRequestNext
+                                                                        }
+                                                                        className="hover:text-blue-600 cursor-pointer"
+                                                                    >
+                                                                        ✔️
+                                                                        Reviewed
+                                                                    </DropdownMenuItem>
+                                                                );
+
+                                                            if (
+                                                                a.includes(
                                                                     "reject"
                                                                 )
                                                             )
@@ -1050,25 +1076,6 @@ export default function Show({
                                                                     >
                                                                         ❌
                                                                         Reject
-                                                                    </DropdownMenuItem>
-                                                                );
-                                                            if (
-                                                                a.includes(
-                                                                    "next"
-                                                                )
-                                                            )
-                                                                return (
-                                                                    <DropdownMenuItem
-                                                                        key={
-                                                                            index
-                                                                        }
-                                                                        onClick={
-                                                                            handleRequestNext
-                                                                        }
-                                                                        className="hover:text-blue-600 cursor-pointer"
-                                                                    >
-                                                                        🔁 Next
-                                                                        Step
                                                                     </DropdownMenuItem>
                                                                 );
                                                             return null;
@@ -1118,16 +1125,22 @@ export default function Show({
                                         const showCancel =
                                             !isCancelled &&
                                             isApproved &&
-                                            (isOwner || 
-                                             submission.approved_by === auth?.user?.id ||
-                                             (submission.workflow_steps && 
-                                              submission.workflow_steps.some(step => 
-                                                step.approver_id === auth?.user?.id && 
-                                                step.status === 'approved'
-                                              )));
+                                            (isOwner ||
+                                                submission.approved_by ===
+                                                    auth?.user?.id ||
+                                                (submission.workflow_steps &&
+                                                    submission.workflow_steps.some(
+                                                        (step) =>
+                                                            step.approver_id ===
+                                                                auth?.user
+                                                                    ?.id &&
+                                                            step.status ===
+                                                                "approved"
+                                                    )));
 
                                         const showAmend =
-                                            (isCancelled || isRejected) && isOwner;
+                                            (isCancelled || isRejected) &&
+                                            isOwner;
 
                                         return (
                                             showEdit ||
@@ -1219,17 +1232,28 @@ export default function Show({
                                                     return (
                                                         !isCancelled &&
                                                         isApproved &&
-                                                        (isOwner || 
-                                                         submission.approved_by === auth?.user?.id ||
-                                                         (submission.workflow_steps && 
-                                                          submission.workflow_steps.some(step => 
-                                                            step.approver_id === auth?.user?.id && 
-                                                            step.status === 'approved'
-                                                          )))
+                                                        (isOwner ||
+                                                            submission.approved_by ===
+                                                                auth?.user
+                                                                    ?.id ||
+                                                            (submission.workflow_steps &&
+                                                                submission.workflow_steps.some(
+                                                                    (step) =>
+                                                                        step.approver_id ===
+                                                                            auth
+                                                                                ?.user
+                                                                                ?.id &&
+                                                                        step.status ===
+                                                                            "approved"
+                                                                )))
                                                     );
                                                 })() && (
                                                     <DropdownMenuItem
-                                                        onClick={() => setShowCancelModal(true)}
+                                                        onClick={() =>
+                                                            setShowCancelModal(
+                                                                true
+                                                            )
+                                                        }
                                                         className="flex items-center gap-2 text-orange-600"
                                                     >
                                                         <X className="w-4 h-4" />{" "}
@@ -1245,19 +1269,26 @@ export default function Show({
                                                     const isCancelled =
                                                         status === "cancelled";
                                                     const isRejected =
-                                                        status.includes("rejected");
+                                                        status.includes(
+                                                            "rejected"
+                                                        );
 
                                                     const isOwner =
                                                         auth?.user?.id ===
                                                         submission?.user_id;
 
                                                     return (
-                                                        (isCancelled && isOwner) || 
+                                                        (isCancelled &&
+                                                            isOwner) ||
                                                         (isRejected && isOwner)
                                                     );
                                                 })() && (
                                                     <DropdownMenuItem
-                                                        onClick={() => setShowAmendModal(true)}
+                                                        onClick={() =>
+                                                            setShowAmendModal(
+                                                                true
+                                                            )
+                                                        }
                                                         className="flex items-center gap-2 text-blue-600"
                                                     >
                                                         <RefreshCw className="w-4 h-4" />{" "}
@@ -1449,7 +1480,7 @@ export default function Show({
                                             >
                                                 <div className="flex items-center w-full">
                                                     <span className="px-2 py-1 rounded text-xs font-semibold bg-blue-100 text-blue-700">
-                                                        Yang mengajukan
+                                                        Diajukan
                                                     </span>
                                                 </div>
                                                 {submission.user && (
@@ -1497,9 +1528,15 @@ export default function Show({
                                                         }`}
                                                     >
                                                         {step.status ===
-                                                        "approved"
+                                                        "rejected"
+                                                            ? "Ditolak"
+                                                            : step.action_type ===
+                                                              "request_next"
+                                                            ? "Diketahui"
+                                                            : step.action_type ===
+                                                              "approve"
                                                             ? "Disetujui"
-                                                            : "Ditolak"}
+                                                            : "Disetujui"}
                                                     </span>
                                                 </div>
                                                 {step.approver && (
@@ -1551,7 +1588,7 @@ export default function Show({
             <Footer />
             {/* Modal Approve */}
             {showApproveModal && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4">
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
                     <Card className="w-full max-w-md p-6 rounded-2xl shadow-lg">
                         <h3 className="text-lg font-semibold mb-3">
                             Setujui Pengajuan
@@ -1579,7 +1616,7 @@ export default function Show({
 
             {/* Modal Reject */}
             {showRejectModal && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4">
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
                     <Card className="w-full max-w-md p-6 rounded-2xl shadow-lg">
                         <h3 className="text-lg font-semibold mb-3">
                             Tolak Pengajuan
@@ -1617,7 +1654,7 @@ export default function Show({
 
             {/* Modal Cancel */}
             {showCancelModal && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4">
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
                     <Card className="w-full max-w-md p-6 rounded-2xl shadow-lg">
                         <h3 className="text-lg font-semibold mb-3">
                             Batalkan Pengajuan
@@ -1656,12 +1693,12 @@ export default function Show({
 
             {/* Modal Amend */}
             {showAmendModal && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4">
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
                     <Card className="w-full max-w-md p-6 rounded-2xl shadow-lg">
                         <h3 className="text-lg font-semibold mb-3">
                             Buat Pengajuan Revisi
                         </h3>
-                        
+
                         <Textarea
                             placeholder="Tuliskan alasan revisi..."
                             value={data.amend_reason}

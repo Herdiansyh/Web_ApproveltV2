@@ -36,7 +36,7 @@ export default function CardFormDocument({
     setEditingDocument,
 }) {
     return (
-        <Card className="p-6" style={{ borderRadius: "15px" }}>
+        <Card className="p-6 shadow-xl" style={{ borderRadius: "15px" }}>
             {/* Filter & Add Button */}
             <div className="flex flex-col md:flex-row justify-between gap-3 mb-4">
                 <div className="flex flex-col md:flex-row gap-2 w-full">
@@ -59,7 +59,7 @@ export default function CardFormDocument({
                         </SelectTrigger>
                         <SelectContent>
                             <SelectItem value="all">All Documents</SelectItem>
-                            {documents.map((doc) => (
+                            {(documents?.data || []).map((doc) => (
                                 <SelectItem key={doc.id} value={doc.name}>
                                     {doc.name}
                                 </SelectItem>

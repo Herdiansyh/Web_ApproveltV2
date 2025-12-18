@@ -128,7 +128,7 @@ export default function Index({
         setShowModal(true);
     };
     // Tambahkan actions statis sementara atau ambil dari props
-    const availableActions = ["Request To Next", "Approve", "Reject"];
+    const availableActions = ["Reviewed", "Approve", "Reject"];
     // CRUD operations - SAMA PERSIS DENGAN USER MANAGEMENT
     const handleDelete = (id) => {
         Swal.fire({

@@ -53,7 +53,10 @@ export const fetchFreshCsrfToken = async () => {
 
         return data.token;
     } catch (error) {
-        console.error('Error fetching fresh CSRF token:', error);
+        // Optimized: Remove console.error in production
+        if (process.env.NODE_ENV === 'development') {
+            console.error('Error fetching fresh CSRF token:', error);
+        }
         throw error;
     }
 };

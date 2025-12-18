@@ -1,8 +1,9 @@
-import React, { useState, useMemo, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
+import { Head, router, usePage, Link } from "@inertiajs/react";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
-import { Head, Link, router } from "@inertiajs/react";
 import { Input } from "@/Components/ui/input";
 import { Button } from "@/Components/ui/button";
+import { Textarea } from "@/Components/ui/textarea";
 import {
     Dialog,
     DialogContent,
@@ -11,36 +12,50 @@ import {
     DialogHeader,
     DialogTitle,
 } from "@/Components/ui/dialog";
-import { Textarea } from "@/Components/ui/textarea";
-import Header from "@/Components/Header";
+import {
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+} from "@/Components/ui/popover";
+// import {
+//     Select,
+//     SelectContent,
+//     SelectItem,
+//     SelectTrigger,
+//     SelectValue,
+// } from "@/Components/ui/select";
 import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from "@/Components/ui/dropdown-menu";
+import { Separator } from "@/Components/ui/separator";
+// import { Badge } from "@/Components/ui/badge";
 import {
-    Eye,
-    MoreVertical,
-    Pencil,
-    Trash2,
     Search,
     Filter,
+    Calendar,
     X,
-    X as CancelIcon,
-    RefreshCw,
+    ChevronDown,
+    MoreHorizontal,
+    FileText,
+    Clock,
+    CheckCircle,
+    XCircle,
+    AlertCircle,
+    Download,
+    Edit,
+    Trash2,
+    RotateCcw,
 } from "lucide-react";
-import PrimaryButton from "@/Components/PrimaryButton";
-import { Separator } from "@/Components/ui/separator";
-import Footer from "@/Components/Footer";
-import DateFilter from "@/Components/DateFilter";
-import { isWithinInterval, parseISO } from "date-fns";
-import {
-    Popover,
-    PopoverContent,
-    PopoverTrigger,
-} from "@/Components/ui/popover";
 import { useForm } from "@inertiajs/react";
+import { format, parseISO, isWithinInterval } from "date-fns";
+// import { id } from "date-fns/locale";
+import DateFilter from "@/Components/DateFilter";
+import Header from "@/Components/Header";
+import Footer from "@/Components/Footer";
+import { useDebounce } from "@/Hooks/useDebounce";
 
 export default function Index({
     auth,
@@ -49,28 +64,32 @@ export default function Index({
     availablePrefixes = [],
 }) {
     const [filter, setFilter] = useState("");
-    const [prefixFilter, setPrefixFilter] = useState("");
+    // const [prefixFilter, setPrefixFilter] = useState("");
     const [dateFilter, setDateFilter] = useState({
+        mode: "off",
         startDate: null,
         endDate: null,
-        mode: null,
     });
-    const [confirmOpen, setConfirmOpen] = useState(false);
     const [toDeleteId, setToDeleteId] = useState(null);
+    const [selectedSubmission, setSelectedSubmission] = useState(null);
+    // const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+    const [confirmOpen, setConfirmOpen] = useState(false);
     const [showCancelModal, setShowCancelModal] = useState(false);
     const [showAmendModal, setShowAmendModal] = useState(false);
-    const [selectedSubmission, setSelectedSubmission] = useState(null);
-    const { data, setData, post, processing, reset } = useForm({
-        cancel_reason: "",
-        amend_reason: "",
-    });
-
-    // Advanced filter states
     const [showAdvancedFilter, setShowAdvancedFilter] = useState(false);
     const [filters, setFilters] = useState([
         { id: 1, type: "", value: "", options: [] },
     ]);
     const [loadingOptions, setLoadingOptions] = useState(false);
+
+    // Optimized: Debounce search filter to reduce re-renders
+    const debouncedFilter = useDebounce(filter, 300);
+
+    // Form for cancel/amend operations
+    const { data, setData, post, processing, reset } = useForm({
+        cancel_reason: "",
+        amend_reason: "",
+    });
 
     // Check if any filters are active
     const hasActiveFilters = filters.some(
@@ -315,9 +334,10 @@ export default function Index({
         initializeFilters();
     }, []);
 
+    // Optimized: Use debounced filter in useMemo to reduce re-renders
     const filteredSubmissions = useMemo(() => {
         let result = submissions.data.filter((s) =>
-            s.title.toLowerCase().includes(filter.toLowerCase())
+            s.title.toLowerCase().includes(debouncedFilter.toLowerCase())
         );
 
         // Apply date filter
@@ -342,7 +362,7 @@ export default function Index({
         }
 
         return result;
-    }, [filter, dateFilter, submissions.data]);
+    }, [debouncedFilter, dateFilter, submissions.data]);
 
     return (
         <AuthenticatedLayout
@@ -357,7 +377,7 @@ export default function Index({
             <div className="flex min-h-screen bg-gradient-to-b from-background to-muted/30 text-foreground">
                 <Header />
                 <div className="w-full p-8">
-                    <div className=" mx-auto bg-card shadow-sm rounded-2xl p-8 border border-border/50 backdrop-blur-sm">
+                    <div className=" mx-auto  bg-card shadow-xl rounded-2xl p-8 border border-border/50 backdrop-blur-sm">
                         <div className="flex flex-col gap-4 mb-6">
                             <h1 className="md:text-2xl text-sm font-semibold text-gray-800">
                                 📁 Daftar Pengajuan Selesai
@@ -808,7 +828,7 @@ export default function Index({
                                                     })()}
                                                 </span>
 
-                                                {String(submission.status)
+                                                {/* {String(submission.status)
                                                     .toLowerCase()
                                                     .includes("approved") && (
                                                     <span
@@ -817,7 +837,7 @@ export default function Index({
                                                     >
                                                         Final
                                                     </span>
-                                                )}
+                                                )} */}
                                             </td>
                                             <td className="py-2 px-6 text-muted-foreground">
                                                 {new Date(
@@ -909,15 +929,27 @@ export default function Index({
                                                                     const showCancel =
                                                                         !isCancelled &&
                                                                         isApproved &&
-                                                                        (isOwner || 
-                                                                         submission.approved_by === auth.user.id ||
-                                                                         (submission.workflow_steps && 
-                                                                          submission.workflow_steps.some(step => 
-                                                                            step.approver_id === auth.user.id && 
-                                                                            step.status === 'approved'
-                                                                          )));
+                                                                        (isOwner ||
+                                                                            submission.approved_by ===
+                                                                                auth
+                                                                                    .user
+                                                                                    .id ||
+                                                                            (submission.workflow_steps &&
+                                                                                submission.workflow_steps.some(
+                                                                                    (
+                                                                                        step
+                                                                                    ) =>
+                                                                                        step.approver_id ===
+                                                                                            auth
+                                                                                                .user
+                                                                                                .id &&
+                                                                                        step.status ===
+                                                                                            "approved"
+                                                                                )));
                                                                     const showAmend =
-                                                                        (isCancelled || isRejected) && isOwner;
+                                                                        (isCancelled ||
+                                                                            isRejected) &&
+                                                                        isOwner;
 
                                                                     return (
                                                                         showEdit ||
@@ -973,13 +1005,23 @@ export default function Index({
                                                                     return (
                                                                         !isCancelled &&
                                                                         isApproved &&
-                                                                        (isOwner || 
-                                                                         submission.approved_by === auth.user.id ||
-                                                                         (submission.workflow_steps && 
-                                                                          submission.workflow_steps.some(step => 
-                                                                            step.approver_id === auth.user.id && 
-                                                                            step.status === 'approved'
-                                                                          )))
+                                                                        (isOwner ||
+                                                                            submission.approved_by ===
+                                                                                auth
+                                                                                    .user
+                                                                                    .id ||
+                                                                            (submission.workflow_steps &&
+                                                                                submission.workflow_steps.some(
+                                                                                    (
+                                                                                        step
+                                                                                    ) =>
+                                                                                        step.approver_id ===
+                                                                                            auth
+                                                                                                .user
+                                                                                                .id &&
+                                                                                        step.status ===
+                                                                                            "approved"
+                                                                                )))
                                                                     );
                                                                 })() && (
                                                                     <DropdownMenuItem
@@ -1021,8 +1063,10 @@ export default function Index({
                                                                         submission.user_id;
 
                                                                     return (
-                                                                        (isCancelled && isOwner) ||
-                                                                        (isRejected && isOwner)
+                                                                        (isCancelled &&
+                                                                            isOwner) ||
+                                                                        (isRejected &&
+                                                                            isOwner)
                                                                     );
                                                                 })() && (
                                                                     <DropdownMenuItem

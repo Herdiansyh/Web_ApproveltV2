@@ -118,7 +118,7 @@ export default function AdminDashboard({ auth, stats }) {
 
                         <Card
                             style={{ borderRadius: "16px" }}
-                            className="group border border-border hover:border-emerald-500/50 hover:shadow-xl transition-all duration-300 bg-card overflow-hidden relative"
+                            className="group border  border-border hover:border-emerald-500/50 hover:shadow-xl transition-all duration-300 bg-card overflow-hidden relative"
                         >
                             <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 rounded-full -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-500" />
                             <CardHeader className="flex flex-row items-center justify-between pb-2 relative z-10">
@@ -129,7 +129,7 @@ export default function AdminDashboard({ auth, stats }) {
                                     <Activity className="w-5 h-5 text-emerald-600 dark:text-emerald-400 group-hover:scale-110 transition-transform" />
                                 </div>
                             </CardHeader>
-                            <CardContent className="relative z-10">
+                            <CardContent className="relative z-10 ">
                                 <p className="text-3xl font-bold text-foreground">
                                     {stats.today_activities}
                                 </p>
@@ -142,7 +142,7 @@ export default function AdminDashboard({ auth, stats }) {
 
                     {/* Overview Section */}
                     <Card
-                        className="border border-border shadow-sm bg-card hover:shadow-md transition-shadow duration-300"
+                        className="border shadow-lg border-border  bg-card hover:shadow-xl transition-shadow duration-300"
                         style={{ borderRadius: "16px" }}
                     >
                         <CardHeader className="border-b border-border pb-4">

@@ -19,7 +19,7 @@ class DocumentController extends Controller
     public function index()
     {
         return Inertia::render('Admin/Documents/Index', [
-            'documents' => Document::with(['fields', 'nameSeries'])->get(),
+            'documents' => Document::with(['fields', 'nameSeries'])->paginate(20),
         ]);
     }
 
