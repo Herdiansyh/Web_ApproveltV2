@@ -906,11 +906,14 @@ export default function Create({ auth, userDivision, workflows }) {
                                                             >
                                                                 Tidak ada
                                                                 workflow yang
-                                                                tersedia. Minta
-                                                                admin
-                                                                mengaktifkan
-                                                                Document
-                                                                Type/Workflow.
+                                                                tersedia untuk
+                                                                divisi Anda.
+                                                                Pastikan
+                                                                Document Type
+                                                                sudah
+                                                                dikonfigurasi
+                                                                untuk divisi/
+                                                                subdivisi Anda.
                                                             </SelectItem>
                                                         )}
                                                     </SelectContent>

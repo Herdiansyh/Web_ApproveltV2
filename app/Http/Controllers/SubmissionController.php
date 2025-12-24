@@ -522,22 +522,70 @@ class SubmissionController extends Controller
      *  ------------------------ */
     public function create()
     {
-        $user = Auth::user();
-        $division = $user->division;
+        try {
+            $user = Auth::user();
+            
+            // Debug: Log user info
+            \Log::info('SubmissionController::create - User Info', [
+                'user_id' => $user->id,
+                'user_role' => $user->role,
+                'user_division_id' => $user->division_id,
+                'user_subdivision_id' => $user->subdivision_id
+            ]);
+            
+            $division = $user->division;
 
-        $workflows = Workflow::where('is_active', true)
-            ->whereHas('document', function ($q) {
-                $q->where('is_active', true);
-            })
-            ->with(['steps', 'steps.division', 'document.fields', 'document' => function($query) {
-                $query->select('id', 'name', 'description', 'is_active', 'default_columns');
-            }])
-            ->get();
+            $workflows = Workflow::where('is_active', true)
+                ->whereHas('document', function ($q) {
+                    $q->where('is_active', true);
+                })
+                ->where(function($query) use ($user) {
+                    // Filter berdasarkan divisi user WAJIB
+                    $query->whereHas('document.divisions', function($q) use ($user) {
+                        $q->where('division_id', $user->division_id);
+                    });
+                    
+                    // Jika user memiliki subdivision, maka document juga harus memiliki subdivision yang cocok
+                    if ($user->subdivision_id) {
+                        $query->whereHas('document.subdivisions', function($q) use ($user) {
+                            $q->where('subdivision_id', $user->subdivision_id);
+                        });
+                    } else {
+                        // Jika user tidak memiliki subdivision, pastikan document tidak memiliki subdivision restriction
+                        // atau document memiliki subdivision yang null/empty (berlaku untuk semua subdivisi di divisi tersebut)
+                        $query->whereDoesntHave('document.subdivisions')
+                              ->orWhereHas('document.subdivisions', function($q) {
+                                  $q->whereNull('subdivision_id'); // Document yang berlaku untuk semua subdivisi
+                              });
+                    }
+                })
+                ->with(['steps', 'steps.division', 'document.fields', 'document' => function($query) {
+                    $query->select('id', 'name', 'description', 'is_active', 'default_columns');
+                }])
+                ->get();
 
-        return Inertia::render('Submissions/Create', [
-            'userDivision' => $division,
-            'workflows' => $workflows,
-        ]);
+            // Debug: Log workflows found
+            \Log::info('SubmissionController::create - Workflows Found', [
+                'total_workflows' => $workflows->count(),
+                'workflow_ids' => $workflows->pluck('id')->toArray(),
+                'user_division_id' => $user->division_id,
+                'user_subdivision_id' => $user->subdivision_id,
+                'filter_logic' => 'Division WAJIB cocok + Subdivision harus cocok (jika user punya subdivision)'
+            ]);
+
+            return Inertia::render('Submissions/Create', [
+                'userDivision' => $division,
+                'workflows' => $workflows,
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error in SubmissionController::create', [
+                'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTrace()
+            ]);
+            throw $e;
+        }
     }
 
     /**

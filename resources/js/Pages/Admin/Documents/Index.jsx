@@ -49,7 +49,13 @@ export default function Index({ auth, documents }) {
     const handleSearch = (e) => setSearch(e.target.value);
 
     const handleEdit = (doc) => {
-        setEditingDocument(doc);
+        // Format document data for edit mode
+        const formattedDoc = {
+            ...doc,
+            division_id: doc.divisions && doc.divisions.length > 0 ? doc.divisions[0].id : null,
+            subdivision_ids: doc.subdivisions ? doc.subdivisions.map(sub => sub.id) : [],
+        };
+        setEditingDocument(formattedDoc);
         setIsModalOpen(true);
     };
 

@@ -59,6 +59,37 @@ class DivisionController extends Controller
             ->with('success', 'Division berhasil diperbarui');
     }
 
+    // API endpoints untuk dropdown dinamis
+    public function getDivisions()
+    {
+        $divisions = Division::all()->map(function ($division) {
+            return [
+                'id' => $division->id,
+                'name' => $division->name,
+            ];
+        });
+
+        return response()->json($divisions);
+    }
+
+    public function getSubdivisions($divisionId)
+    {
+        try {
+            $division = Division::findOrFail($divisionId);
+            $subdivisions = $division->subdivisions()->get()->map(function ($subdivision) {
+                return [
+                    'id' => $subdivision->id,
+                    'name' => $subdivision->name,
+                ];
+            });
+
+            return response()->json($subdivisions);
+        } catch (\Exception $e) {
+            \Log::error('Error fetching subdivisions: ' . $e->getMessage());
+            return response()->json(['error' => 'Failed to fetch subdivisions'], 500);
+        }
+    }
+
     // Hapus division
     public function destroy(Division $division)
     {

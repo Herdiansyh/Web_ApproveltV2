@@ -86,6 +86,8 @@ export default function CardFormDocument({
                     <TableRow>
                         <TableHead>Name</TableHead>
                         <TableHead>Description</TableHead>
+                        <TableHead>Division</TableHead>
+                        <TableHead>Subdivisions</TableHead>
                         <TableHead>Status</TableHead>
                         <TableHead>Actions</TableHead>
                     </TableRow>
@@ -96,6 +98,16 @@ export default function CardFormDocument({
                             <TableRow key={doc.id}>
                                 <TableCell>{doc.name}</TableCell>
                                 <TableCell>{doc.description || "-"}</TableCell>
+                                <TableCell>
+                                    {doc.divisions && doc.divisions.length > 0 
+                                        ? doc.divisions[0].name 
+                                        : "-"}
+                                </TableCell>
+                                <TableCell>
+                                    {doc.subdivisions && doc.subdivisions.length > 0 
+                                        ? doc.subdivisions.map(sub => sub.name).join(", ")
+                                        : "-"}
+                                </TableCell>
                                 <TableCell>
                                     <span
                                         className={`inline-flex items-center px-2 py-1 rounded-full text-xs ${
@@ -135,6 +147,9 @@ export default function CardFormDocument({
                                                             "",
                                                         is_active:
                                                             !doc.is_active,
+                                                        division_id: doc.divisions && doc.divisions.length > 0 ? doc.divisions[0].id : null,
+                                                        subdivision_ids: doc.subdivisions ? doc.subdivisions.map(sub => sub.id) : [],
+                                                        default_columns: doc.default_columns || [],
                                                     };
                                                     router.put(
                                                         route(
@@ -154,6 +169,13 @@ export default function CardFormDocument({
                                                                     "success"
                                                                 );
                                                             },
+                                                            onError: (errors) => {
+                                                                Swal.fire(
+                                                                    "Error",
+                                                                    "Failed to update document status",
+                                                                    "error"
+                                                                );
+                                                            }
                                                         }
                                                     );
                                                 }}

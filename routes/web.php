@@ -170,21 +170,27 @@ Route::get('/dashboard', function () {
 })->middleware(['auth', 'verified'])->name('dashboard');
 
 
+// Public API endpoints untuk dropdown dinamis (no auth required)
+Route::get('api/divisions', [DivisionController::class, 'getDivisions'])->name('api.divisions');
+Route::get('api/divisions/{divisionId}/subdivisions', [DivisionController::class, 'getSubdivisions'])->name('api.divisions.subdivisions');
+
 // Authenticated routes
-Route::middleware(['auth'])->group(function () {
+Route::middleware(['auth', 'verified'])->group(function () {
 
-    // Profile routes
-    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
-    Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
-    Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+    // User routes
+    Route::middleware('role:employee|admin')->group(function () {
+        Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
+        Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
+        Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
-    // Employee-only routes
-    Route::middleware('role:employee')->group(function () {
-        Route::get('submissions/create', [SubmissionController::class, 'create'])->name('submissions.create');
-        Route::post('submissions', [SubmissionController::class, 'store'])->name('submissions.store');
+        // Employee-only routes  
+        Route::middleware('role:employee|admin')->group(function () {
+            Route::get('submissions/create', [SubmissionController::class, 'create'])->name('submissions.create');
+            Route::post('submissions', [SubmissionController::class, 'store'])->name('submissions.store');
+        });
     });
 
-    // Submisszzion routes (common)
+    // Submissions routes (common)
     Route::get('/submissions/division', [SubmissionController::class, 'forDivision'])->name('submissions.forDivision');
     Route::get('/submissions/outgoing', [SubmissionController::class, 'outgoing'])->name('submissions.outgoing');
     Route::get('/submissions', [SubmissionController::class, 'index'])->name('submissions.index');

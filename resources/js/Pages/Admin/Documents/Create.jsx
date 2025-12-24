@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useForm } from "@inertiajs/react";
 import {
     Dialog,
@@ -10,83 +10,270 @@ import {
 import { Input } from "@/Components/ui/input";
 import { Label } from "@/Components/ui/label";
 import { Button } from "@/Components/ui/button";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/Components/ui/select";
 import Swal from "sweetalert2";
 import DefaultColumnsManager from "@/Components/DefaultColumnsManager";
 
 export default function Create({ isOpen, onClose, document }) {
+    const [divisions, setDivisions] = useState([]);
+    const [subdivisions, setSubdivisions] = useState([]);
+    const [selectedDivision, setSelectedDivision] = useState("");
+    const [selectedSubdivisions, setSelectedSubdivisions] = useState([]);
+    const [loading, setLoading] = useState(false);
+
     const { data, setData, post, put, processing, errors, reset } = useForm({
         name: "",
         description: "",
         is_active: true,
+        division_id: "",
+        subdivision_ids: [],
         default_columns: [
-            { 
-                name: "Item", 
-                key: "item", 
-                type: "text", 
-                required: false, 
-                options: [] 
+            {
+                name: "Item",
+                key: "item",
+                type: "text",
+                required: false,
+                options: [],
             },
-            { 
-                name: "Jumlah", 
-                key: "jumlah", 
-                type: "number", 
-                required: true, 
-                options: [] 
+            {
+                name: "Jumlah",
+                key: "jumlah",
+                type: "number",
+                required: true,
+                options: [],
             },
-            { 
-                name: "Keterangan", 
-                key: "keterangan", 
-                type: "text", 
-                required: false, 
-                options: [] 
+            {
+                name: "Keterangan",
+                key: "keterangan",
+                type: "text",
+                required: false,
+                options: [],
             },
         ],
     });
 
+    // Fetch divisions saat component mount
+    useEffect(() => {
+        fetchDivisions();
+    }, []);
+
+    // Fetch subdivisions saat division berubah
+    useEffect(() => {
+        console.log("Selected division changed:", selectedDivision);
+        console.log("Current subdivisions:", subdivisions);
+        console.log("Current selected subdivisions:", selectedSubdivisions);
+
+        if (selectedDivision) {
+            fetchSubdivisions(selectedDivision);
+        } else {
+            setSubdivisions([]);
+            setSelectedSubdivisions([]);
+            setData("subdivision_ids", []);
+        }
+    }, [selectedDivision]);
+
+    // Initialize form data saat document berubah
     useEffect(() => {
         if (document) {
+            console.log("Document data for edit:", document);
+
             // Handle backward compatibility for old format
             const defaultColumns = document.default_columns || [];
-            const enhancedColumns = defaultColumns.map(col => ({
-                name: col.name || '',
-                key: col.key || '',
-                type: col.type || 'text',
+            const enhancedColumns = defaultColumns.map((col) => ({
+                name: col.name || "",
+                key: col.key || "",
+                type: col.type || "text",
                 required: col.required || false,
-                options: col.options || []
+                options: col.options || [],
             }));
+
+            // Get the first division ID (for simplicity, using first division)
+            const divisionId =
+                document.division_id ||
+                (document.divisions && document.divisions.length > 0
+                    ? document.divisions[0].id
+                    : null);
+
+            // Get subdivision IDs that belong to the selected division
+            const subdivisionIds = document.subdivision_ids || [];
+
+            console.log("Division ID:", divisionId);
+            console.log("Subdivision IDs:", subdivisionIds);
 
             setData({
                 name: document.name,
                 description: document.description || "",
-                is_active: typeof document.is_active === "boolean" ? document.is_active : true,
-                default_columns: enhancedColumns.length > 0 ? enhancedColumns : [
-                    { 
-                        name: "Item", 
-                        key: "item", 
-                        type: "text", 
-                        required: false, 
-                        options: [] 
-                    },
-                    { 
-                        name: "Jumlah", 
-                        key: "jumlah", 
-                        type: "number", 
-                        required: true, 
-                        options: [] 
-                    },
-                    { 
-                        name: "Keterangan", 
-                        key: "keterangan", 
-                        type: "text", 
-                        required: false, 
-                        options: [] 
-                    },
-                ],
+                is_active:
+                    typeof document.is_active === "boolean"
+                        ? document.is_active
+                        : true,
+                division_id: divisionId || "",
+                subdivision_ids: subdivisionIds,
+                default_columns:
+                    enhancedColumns.length > 0
+                        ? enhancedColumns
+                        : [
+                              {
+                                  name: "Item",
+                                  key: "item",
+                                  type: "text",
+                                  required: false,
+                                  options: [],
+                              },
+                              {
+                                  name: "Jumlah",
+                                  key: "jumlah",
+                                  type: "number",
+                                  required: true,
+                                  options: [],
+                              },
+                              {
+                                  name: "Keterangan",
+                                  key: "keterangan",
+                                  type: "text",
+                                  required: false,
+                                  options: [],
+                              },
+                          ],
             });
+
+            // Set selected division dan subdivisions
+            if (divisionId) {
+                const divisionIdStr = divisionId.toString();
+                setSelectedDivision(divisionIdStr);
+                setSelectedSubdivisions(
+                    subdivisionIds.map((id) => id.toString())
+                );
+
+                console.log("Set selected division:", divisionIdStr);
+                console.log(
+                    "Set selected subdivisions:",
+                    subdivisionIds.map((id) => id.toString())
+                );
+
+                // Fetch subdivisions untuk division yang dipilih
+                fetchSubdivisions(divisionIdStr);
+            }
         } else {
             reset();
+            setSelectedDivision("");
+            setSelectedSubdivisions([]);
         }
     }, [document]);
+
+    const fetchDivisions = async () => {
+        try {
+            setLoading(true);
+            const response = await fetch("/api/divisions", {
+                method: "GET",
+                headers: {
+                    Accept: "application/json",
+                    "Content-Type": "application/json",
+                },
+                credentials: "include",
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+
+                if (response.status === 401 || response.status === 403) {
+                    throw new Error(
+                        "Authentication required. Please make sure you are logged in."
+                    );
+                }
+
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const data = await response.json();
+
+            if (data.error) {
+                throw new Error(data.error);
+            }
+
+            setDivisions(data);
+        } catch (error) {
+            console.error("Error fetching divisions:", error);
+            Swal.fire(
+                "Error",
+                `Gagal mengambil data divisi: ${error.message}`,
+                "error"
+            );
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const fetchSubdivisions = async (divisionId) => {
+        try {
+            setLoading(true);
+            const response = await fetch(
+                `/api/divisions/${divisionId}/subdivisions`,
+                {
+                    method: "GET",
+                    headers: {
+                        Accept: "application/json",
+                        "Content-Type": "application/json",
+                    },
+                    credentials: "include",
+                }
+            );
+
+            if (!response.ok) {
+                const errorText = await response.text();
+
+                if (response.status === 401 || response.status === 403) {
+                    throw new Error(
+                        "Authentication required. Please make sure you are logged in."
+                    );
+                }
+
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const data = await response.json();
+            console.log("Fetched subdivisions:", data);
+
+            if (data.error) {
+                throw new Error(data.error);
+            }
+
+            setSubdivisions(data);
+        } catch (error) {
+            console.error("Error fetching subdivisions:", error);
+            Swal.fire(
+                "Error",
+                `Gagal mengambil data subdivisi: ${error.message}`,
+                "error"
+            );
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleDivisionChange = (divisionId) => {
+        setSelectedDivision(divisionId);
+        setData("division_id", divisionId);
+        setSelectedSubdivisions([]);
+        setData("subdivision_ids", []);
+    };
+
+    const handleSubdivisionToggle = (subdivisionId) => {
+        const newSelectedSubdivisions = selectedSubdivisions.includes(
+            subdivisionId
+        )
+            ? selectedSubdivisions.filter((id) => id !== subdivisionId)
+            : [...selectedSubdivisions, subdivisionId];
+
+        setSelectedSubdivisions(newSelectedSubdivisions);
+        setData("subdivision_ids", newSelectedSubdivisions);
+    };
 
     const handleSubmit = (e) => {
         e.preventDefault();
@@ -106,8 +293,9 @@ export default function Create({ isOpen, onClose, document }) {
                 },
                 onError: (errors) => {
                     // Handle validation errors from backend
-                    let errorMessage = "Terjadi kesalahan saat memperbarui dokumen.";
-                    
+                    let errorMessage =
+                        "Terjadi kesalahan saat memperbarui dokumen.";
+
                     if (errors.prefix) {
                         errorMessage = errors.prefix;
                     } else if (errors.name) {
@@ -115,7 +303,7 @@ export default function Create({ isOpen, onClose, document }) {
                     } else if (errors.description) {
                         errorMessage = errors.description;
                     }
-                    
+
                     Swal.fire("Error", errorMessage, "error");
                 },
             });
@@ -134,8 +322,9 @@ export default function Create({ isOpen, onClose, document }) {
                 },
                 onError: (errors) => {
                     // Handle validation errors from backend
-                    let errorMessage = "Terjadi kesalahan saat membuat dokumen.";
-                    
+                    let errorMessage =
+                        "Terjadi kesalahan saat membuat dokumen.";
+
                     if (errors.prefix) {
                         errorMessage = errors.prefix;
                     } else if (errors.name) {
@@ -143,7 +332,7 @@ export default function Create({ isOpen, onClose, document }) {
                     } else if (errors.description) {
                         errorMessage = errors.description;
                     }
-                    
+
                     Swal.fire("Error", errorMessage, "error");
                 },
             });
@@ -191,20 +380,112 @@ export default function Create({ isOpen, onClose, document }) {
                             </p>
                         )}
                     </div>
+                    <div className="flex flex-col gap-3">
+                        <Label htmlFor="division">Division</Label>
+                        <Select
+                            value={selectedDivision}
+                            onValueChange={handleDivisionChange}
+                            disabled={loading}
+                        >
+                            <SelectTrigger
+                                className="border border-gray-500"
+                                style={{ borderRadius: "10px" }}
+                            >
+                                <SelectValue placeholder="Select Division" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {divisions.map((division) => (
+                                    <SelectItem
+                                        key={division.id}
+                                        value={division.id.toString()}
+                                    >
+                                        {division.name}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                        {errors.division_id && (
+                            <p className="text-sm text-red-600 mt-1">
+                                {errors.division_id}
+                            </p>
+                        )}
+                    </div>
+
+                    {selectedDivision && (
+                        <div className="flex flex-col gap-3">
+                            <Label htmlFor="subdivisions">Subdivisions</Label>
+                            <div
+                                className="border border-gray-500 rounded-lg p-3"
+                                style={{ borderRadius: "10px" }}
+                            >
+                                {subdivisions.length > 0 ? (
+                                    <div className="space-y-2">
+                                        {subdivisions.map((subdivision) => (
+                                            <div
+                                                key={subdivision.id}
+                                                className="flex items-center space-x-2"
+                                            >
+                                                <input
+                                                    type="checkbox"
+                                                    id={`subdivision-${subdivision.id}`}
+                                                    checked={selectedSubdivisions.includes(
+                                                        subdivision.id.toString()
+                                                    )}
+                                                    onChange={() =>
+                                                        handleSubdivisionToggle(
+                                                            subdivision.id.toString()
+                                                        )
+                                                    }
+                                                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                                />
+                                                <label
+                                                    htmlFor={`subdivision-${subdivision.id}`}
+                                                    className="text-sm font-medium text-gray-700 cursor-pointer"
+                                                >
+                                                    {subdivision.name}
+                                                </label>
+                                            </div>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <p className="text-sm text-gray-500">
+                                        {loading
+                                            ? "Loading subdivisions..."
+                                            : "No subdivisions available for this division"}
+                                    </p>
+                                )}
+                            </div>
+                            {selectedSubdivisions.length > 0 && (
+                                <p className="text-sm text-gray-600">
+                                    {selectedSubdivisions.length} subdivision(s)
+                                    selected
+                                </p>
+                            )}
+                            {errors.subdivision_ids && (
+                                <p className="text-sm text-red-600 mt-1">
+                                    {errors.subdivision_ids}
+                                </p>
+                            )}
+                        </div>
+                    )}
 
                     <div className="flex items-center gap-2">
                         <input
                             id="is_active"
                             type="checkbox"
                             checked={!!data.is_active}
-                            onChange={(e) => setData("is_active", e.target.checked)}
+                            onChange={(e) =>
+                                setData("is_active", e.target.checked)
+                            }
                         />
                         <Label htmlFor="is_active">Active</Label>
                     </div>
 
                     <DefaultColumnsManager
                         defaultColumns={data.default_columns || []}
-                        onChange={(columns) => setData("default_columns", columns)}
+                        onChange={(columns) =>
+                            setData("default_columns", columns)
+                        }
                     />
 
                     <DialogFooter className="flex justify-end gap-2">

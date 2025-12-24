@@ -15,7 +15,24 @@ class CheckRole
      */
     public function handle(Request $request, Closure $next, string $role): Response
     {
-        if (!$request->user() || $request->user()->role !== $role) {
+        if (!$request->user()) {
+            return redirect()->route('login');
+        }
+
+        // Support both single role and multiple roles (role1|role2|role3)
+        $allowedRoles = explode('|', $role);
+        $userRole = $request->user()->role;
+
+        // Debug: Log role check
+        \Log::info('CheckRole Middleware', [
+            'path' => $request->path(),
+            'user_id' => $request->user()->id,
+            'user_role' => $userRole,
+            'allowed_roles' => $allowedRoles,
+            'has_access' => in_array($userRole, $allowedRoles)
+        ]);
+
+        if (!in_array($userRole, $allowedRoles)) {
             if ($request->wantsJson()) {
                 return response()->json(['error' => 'Unauthorized'], 403);
             }

@@ -19,7 +19,7 @@ class DocumentController extends Controller
     public function index()
     {
         return Inertia::render('Admin/Documents/Index', [
-            'documents' => Document::with(['fields', 'nameSeries'])->paginate(20),
+            'documents' => Document::with(['fields', 'nameSeries', 'divisions', 'subdivisions'])->paginate(20),
         ]);
     }
 
@@ -41,6 +41,9 @@ class DocumentController extends Controller
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
             'is_active' => 'sometimes|boolean',
+            'division_id' => 'required|exists:divisions,id',
+            'subdivision_ids' => 'nullable|array',
+            'subdivision_ids.*' => 'exists:subdivisions,id',
             'default_columns' => 'nullable|array',
             'default_columns.*.name' => 'required|string|max:255',
             'default_columns.*.key' => 'required|string|max:255',
@@ -62,6 +65,12 @@ class DocumentController extends Controller
             'is_active' => array_key_exists('is_active', $data) ? (bool)$data['is_active'] : true,
             'default_columns' => $data['default_columns'] ?? null,
         ]);
+
+        // Attach division and subdivisions
+        $document->divisions()->attach($data['division_id']);
+        if (!empty($data['subdivision_ids'])) {
+            $document->subdivisions()->attach($data['subdivision_ids']);
+        }
 
         // if name series is provided at creation time, configure it here
         if (!empty($data['series_pattern'])) {
@@ -108,6 +117,9 @@ class DocumentController extends Controller
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
             'is_active' => 'sometimes|boolean',
+            'division_id' => 'required|exists:divisions,id',
+            'subdivision_ids' => 'nullable|array',
+            'subdivision_ids.*' => 'exists:subdivisions,id',
             'default_columns' => 'nullable|array',
             'default_columns.*.name' => 'required|string|max:255',
             'default_columns.*.key' => 'required|string|max:255',
@@ -129,6 +141,14 @@ class DocumentController extends Controller
             'is_active' => array_key_exists('is_active', $data) ? (bool)$data['is_active'] : $document->is_active,
             'default_columns' => $data['default_columns'] ?? $document->default_columns,
         ]);
+
+        // Update division and subdivisions
+        $document->divisions()->sync([$data['division_id']]);
+        if (!empty($data['subdivision_ids'])) {
+            $document->subdivisions()->sync($data['subdivision_ids']);
+        } else {
+            $document->subdivisions()->detach();
+        }
 
         // update name series if provided
         if (!empty($data['series_pattern'])) {
