@@ -128,7 +128,6 @@ export default function Index({
                         )
                     );
                 } catch (error) {
-                    console.error("Error fetching filter options:", error);
                     setFilters((prev) =>
                         prev.map((filter) =>
                             filter.id === filterId
@@ -309,10 +308,6 @@ export default function Index({
                                     )
                                 );
                             } catch (error) {
-                                console.error(
-                                    "Error fetching filter options:",
-                                    error
-                                );
                                 setFilters((prev) =>
                                     prev.map((f) =>
                                         f.id === filterId

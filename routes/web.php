@@ -11,6 +11,7 @@ use App\Http\Controllers\WorkflowController;
 use App\Http\Controllers\GlobalPermissionController;
 use App\Http\Controllers\VerificationController;
 use App\Http\Controllers\FilterController;
+use App\Http\Controllers\AdminActivityController;
 use App\Models\Document;
 use App\Models\Submission;
 use App\Models\SubmissionWorkflowStep;
@@ -356,14 +357,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
             'users' => User::count(),
             'submissions' => Submission::count(),
             'today_activities' => Submission::whereDate('created_at', today())->count(),
-            'recentActivities' => Submission::latest()
-                ->take(5)
-                ->get()
-                ->map(fn ($s) => [
-                    'user' => $s->user->name ?? 'Unknown',
-                    'action' => 'membuat atau mengubah pengajuan "' . $s->title . '"',
-                    'time' => $s->created_at->diffForHumans(),
-                ]),
         ];
 
         return Inertia::render('AdminDashboard', [
@@ -401,6 +394,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
         // Global Subdivision Permissions
         Route::get('/global-permissions', [GlobalPermissionController::class, 'index'])->name('global-permissions.index');
         Route::post('/global-permissions', [GlobalPermissionController::class, 'store'])->name('global-permissions.store');
+
+        // Admin Activity API
+        Route::get('/api/admin/activities', [AdminActivityController::class, 'index'])->name('admin.activities.index');
 
        // Deprecated Workflow Step Permission routes removed
 

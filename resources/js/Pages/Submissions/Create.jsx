@@ -137,7 +137,7 @@ export default function Create({ auth, userDivision, workflows }) {
             // Clear file state as well
             setSelectedFile(null);
         } catch (err) {
-            console.error("Gagal membersihkan localStorage:", err);
+            // Handle localStorage cleanup error silently
         }
     };
 
@@ -350,7 +350,6 @@ export default function Create({ auth, userDivision, workflows }) {
                     localStorage.removeItem("createFormData");
                 }
             } catch (e) {
-                console.error("Gagal memuat data dari localStorage:", e);
                 // Clear corrupted data
                 localStorage.removeItem("createFormData");
             }
@@ -545,7 +544,6 @@ export default function Create({ auth, userDivision, workflows }) {
                         ) {
                             formData.append("file", selectedFile);
                         } else {
-                            console.error("Invalid file object:", selectedFile);
                             Swal.fire({
                                 icon: "error",
                                 title: "File Error",
@@ -671,7 +669,6 @@ export default function Create({ auth, userDivision, workflows }) {
                             }
                         })
                         .catch((error) => {
-                            console.error("Create.jsx - fetch error:", error);
                             hideLoading(false); // Hide loading animation on error
                             Swal.fire({
                                 icon: "error",
@@ -681,15 +678,13 @@ export default function Create({ auth, userDivision, workflows }) {
                             });
                         });
                 } catch (error) {
-                    console.error(
-                        "Create.jsx - error during manual post:",
-                        error
-                    );
-                    hideLoading(false); // Hide loading animation on exception
-                    alert(
-                        "Terjadi kesalahan saat mengirim pengajuan: " +
-                            error.message
-                    );
+                    hideLoading(false); // Hide loading animation on error
+                    Swal.fire({
+                        icon: "error",
+                        title: "Error!",
+                        text: "Terjadi kesalahan saat mengirim pengajuan: " +
+                            (error.message || "Unknown error")
+                    });
                 }
             }
         });

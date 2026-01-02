@@ -1,3 +1,5 @@
+import React, { useState, useEffect } from "react";
+import { useForm } from "@inertiajs/react";
 import { Button } from "@/Components/ui/button";
 import { Card } from "@/Components/ui/card";
 import { Input } from "@/Components/ui/input";
@@ -10,17 +12,15 @@ import {
     SelectValue,
 } from "@/Components/ui/select";
 import { Plus } from "lucide-react";
-import React from "react";
 
 export default function ModalCreate({
-    setShowModal,
     data,
     setData,
-    errors,
     processing,
     handleSubmit,
     documents,
     divisions,
+    subdivisions,
     availableActions,
     addStep,
     removeStep,
@@ -28,7 +28,48 @@ export default function ModalCreate({
     updateStepDivision,
     editingWorkflow,
     reset,
+    errors,
+    setShowModal,
+    setEditingWorkflow,
 }) {
+    const [selectedDivision, setSelectedDivision] = useState("");
+    const [availableSubdivisions, setAvailableSubdivisions] = useState([]);
+
+    // Update available subdivisions when division changes
+    useEffect(() => {
+        if (selectedDivision) {
+            const filteredSubdivisions = subdivisions.filter(
+                sub => sub.division_id.toString() === selectedDivision
+            );
+            setAvailableSubdivisions(filteredSubdivisions);
+        } else {
+            setAvailableSubdivisions([]);
+        }
+    }, [selectedDivision, subdivisions]);
+
+    // Initialize selected division when editing
+    useEffect(() => {
+        if (editingWorkflow && data.division_ids && data.division_ids.length > 0) {
+            setSelectedDivision(data.division_ids[0]);
+        }
+    }, [editingWorkflow, data.division_ids]);
+
+    const handleDivisionChange = (divisionId) => {
+        setSelectedDivision(divisionId);
+        setData("division_ids", divisionId ? [divisionId] : []);
+        // Clear subdivisions when division changes
+        setData("subdivision_ids", []);
+    };
+
+    const handleSubdivisionToggle = (subdivisionId) => {
+        const currentIds = data.subdivision_ids || [];
+        const newIds = currentIds.includes(subdivisionId.toString())
+            ? currentIds.filter(id => id !== subdivisionId.toString())
+            : [...currentIds, subdivisionId.toString()];
+        
+        setData("subdivision_ids", newIds);
+    };
+
     return (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
             <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6">
@@ -115,6 +156,52 @@ export default function ModalCreate({
                             }
                         />
                         <Label htmlFor="wf_is_active">Active</Label>
+                    </div>
+
+                    {/* Divisions and Subdivisions Assignment */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <Label>Division (Optional)</Label>
+                            <Select
+                                value={selectedDivision}
+                                onValueChange={handleDivisionChange}
+                            >
+                                <SelectTrigger className="w-full">
+                                    <SelectValue placeholder="Select a division" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {divisions.map((d) => (
+                                        <SelectItem key={d.id} value={d.id.toString()}>
+                                            {d.name}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                            <p className="text-xs text-gray-500 mt-1">Select division that can use this workflow</p>
+                        </div>
+                        <div>
+                            <Label>Subdivisions (Optional)</Label>
+                            <div className="border rounded p-2 max-h-32 overflow-y-auto">
+                                {availableSubdivisions.length > 0 ? (
+                                    availableSubdivisions.map((s) => (
+                                        <div key={s.id} className="flex items-center gap-2 mb-1">
+                                            <input
+                                                type="checkbox"
+                                                id={`sub_${s.id}`}
+                                                checked={data.subdivision_ids?.includes(s.id.toString()) || false}
+                                                onChange={() => handleSubdivisionToggle(s.id)}
+                                            />
+                                            <Label htmlFor={`sub_${s.id}`} className="text-sm">{s.name}</Label>
+                                        </div>
+                                    ))
+                                ) : (
+                                    <p className="text-sm text-gray-500">
+                                        {selectedDivision ? "No subdivisions available for this division" : "Select a division first"}
+                                    </p>
+                                )}
+                            </div>
+                            <p className="text-xs text-gray-500 mt-1">Select subdivisions that can use this workflow</p>
+                        </div>
                     </div>
 
                     {/* Steps */}

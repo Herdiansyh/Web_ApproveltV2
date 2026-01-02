@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
-import { Head, router } from "@inertiajs/react";
+import { Head, router, Link } from "@inertiajs/react";
 import { Card } from "@/Components/ui/card";
 import { Button } from "@/Components/ui/button";
 import {
@@ -28,6 +28,7 @@ import FieldsModal from "./FieldsModal.jsx";
 import CardFormDocument from "./CardFormDocument.jsx";
 import { Separator } from "@/Components/ui/separator.jsx";
 import Footer from "@/Components/Footer.jsx";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 export default function Index({ auth, documents }) {
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -52,8 +53,6 @@ export default function Index({ auth, documents }) {
         // Format document data for edit mode
         const formattedDoc = {
             ...doc,
-            division_id: doc.divisions && doc.divisions.length > 0 ? doc.divisions[0].id : null,
-            subdivision_ids: doc.subdivisions ? doc.subdivisions.map(sub => sub.id) : [],
         };
         setEditingDocument(formattedDoc);
         setIsModalOpen(true);

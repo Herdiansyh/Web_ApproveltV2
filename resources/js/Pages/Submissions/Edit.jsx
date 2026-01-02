@@ -357,7 +357,6 @@ export default function Edit({ auth, submission, documentFields = [] }) {
                 }
             })
             .catch((error) => {
-                console.error("Update error:", error);
                 hideLoading(false); // Hide loading animation on error
                 Swal.fire({
                     icon: "error",

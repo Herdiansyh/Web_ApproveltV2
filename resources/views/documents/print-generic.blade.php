@@ -275,7 +275,7 @@
             </tr>
             <tr>
                 <td class="label">Divisi</td>
-                <td class="value">{{ $submission->user?->division?->subdivision?->name ?? '-' }}</td>
+                <td class="value">{{ $submission->user?->division->name ?? '-' }}</td>
             </tr>
         </table>
     </div>

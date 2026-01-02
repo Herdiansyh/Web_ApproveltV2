@@ -16,9 +16,10 @@ import {
     TableHeader,
     TableRow,
 } from "@/Components/ui/table";
-import { router } from "@inertiajs/react";
+import { router, Link } from "@inertiajs/react";
 import React from "react";
 import Swal from "sweetalert2";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 export default function CardFormDocument({
     handleSearch,
@@ -86,8 +87,6 @@ export default function CardFormDocument({
                     <TableRow>
                         <TableHead>Name</TableHead>
                         <TableHead>Description</TableHead>
-                        <TableHead>Division</TableHead>
-                        <TableHead>Subdivisions</TableHead>
                         <TableHead>Status</TableHead>
                         <TableHead>Actions</TableHead>
                     </TableRow>
@@ -98,16 +97,6 @@ export default function CardFormDocument({
                             <TableRow key={doc.id}>
                                 <TableCell>{doc.name}</TableCell>
                                 <TableCell>{doc.description || "-"}</TableCell>
-                                <TableCell>
-                                    {doc.divisions && doc.divisions.length > 0 
-                                        ? doc.divisions[0].name 
-                                        : "-"}
-                                </TableCell>
-                                <TableCell>
-                                    {doc.subdivisions && doc.subdivisions.length > 0 
-                                        ? doc.subdivisions.map(sub => sub.name).join(", ")
-                                        : "-"}
-                                </TableCell>
                                 <TableCell>
                                     <span
                                         className={`inline-flex items-center px-2 py-1 rounded-full text-xs ${
@@ -142,13 +131,9 @@ export default function CardFormDocument({
                                                 onClick={() => {
                                                     const payload = {
                                                         name: doc.name,
-                                                        description:
-                                                            doc.description ||
-                                                            "",
+                                                        description: doc.description,
                                                         is_active:
                                                             !doc.is_active,
-                                                        division_id: doc.divisions && doc.divisions.length > 0 ? doc.divisions[0].id : null,
-                                                        subdivision_ids: doc.subdivisions ? doc.subdivisions.map(sub => sub.id) : [],
                                                         default_columns: doc.default_columns || [],
                                                     };
                                                     router.put(
@@ -375,6 +360,72 @@ export default function CardFormDocument({
                     )}
                 </TableBody>
             </Table>
+
+            {/* Pagination */}
+            {documents && documents.total > 0 && (
+                <div className="flex items-center justify-between mt-6 pt-6 border-t">
+                    <div className="text-sm text-gray-600">
+                        Showing {documents.from} to {" "}
+                        {documents.to} of {documents.total}{" "}
+                        documents
+                    </div>
+                    <div className="flex gap-2">
+                        {documents.prev_page_url && (
+                            <Link href={documents.prev_page_url}>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    style={{ borderRadius: "8px" }}
+                                >
+                                    <ChevronLeft size={16} />
+                                </Button>
+                            </Link>
+                        )}
+
+                        {documents.links &&
+                            documents.links.map((link, index) => {
+                                if (link.label === "&laquo; Previous") {
+                                    return null;
+                                }
+                                if (link.label === "Next &raquo;") {
+                                    return null;
+                                }
+                                return (
+                                    <Link
+                                        key={index}
+                                        href={link.url || "#"}
+                                        only={[]}
+                                    >
+                                        <Button
+                                            variant={
+                                                link.active
+                                                    ? "default"
+                                                    : "outline"
+                                            }
+                                            size="sm"
+                                            disabled={!link.url}
+                                            style={{ borderRadius: "8px" }}
+                                        >
+                                            {link.label}
+                                        </Button>
+                                    </Link>
+                                );
+                            })}
+
+                        {documents.next_page_url && (
+                            <Link href={documents.next_page_url}>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    style={{ borderRadius: "8px" }}
+                                >
+                                    <ChevronRight size={16} />
+                                </Button>
+                            </Link>
+                        )}
+                    </div>
+                </div>
+            )}
         </Card>
     );
 }

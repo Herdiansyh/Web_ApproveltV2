@@ -11,14 +11,14 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('document_type_subdivisions', function (Blueprint $table) {
+        Schema::create('workflow_divisions', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('document_id')->constrained()->onDelete('cascade');
-            $table->foreignId('subdivision_id')->constrained()->onDelete('cascade');
+            $table->foreignId('workflow_id')->constrained()->onDelete('cascade');
+            $table->foreignId('division_id')->constrained()->onDelete('cascade');
             $table->timestamps();
             
             // Unique constraint untuk mencegah duplikasi
-            $table->unique(['document_id', 'subdivision_id']);
+            $table->unique(['workflow_id', 'division_id']);
         });
     }
 
@@ -27,6 +27,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('document_type_subdivisions');
+        Schema::dropIfExists('workflow_divisions');
     }
 };

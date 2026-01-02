@@ -24,7 +24,7 @@ export default function Login({ status, canResetPassword }) {
                 try {
                     await setupCsrfTokenAfterLogin();
                 } catch (error) {
-                    console.error('Failed to refresh CSRF token after login:', error);
+                    // Handle CSRF token refresh error silently
                 }
             },
         });

@@ -63,9 +63,6 @@ class StampPdfOnDecision implements ShouldQueue
             'inputPath' => $inputPath,
         ]);
 
-        // Position can optionally be customized via submission watermark_x/y
-        $pos = null;
-
         $dirRel = 'submission/' . $submission->id;
         $outRel = $dirRel . '/stamped_' . $this->status . '.pdf';
         $outAbs = storage_path('app/private/' . $outRel);
@@ -80,13 +77,11 @@ class StampPdfOnDecision implements ShouldQueue
                 'error' => $e->getMessage(),
             ]);
             
-            // Try multiple fallback methods for shared hosting
             $fallback = $this->tryAlternativeFallback($inputPath, $submission->id, $this->status);
             if ($fallback && File::exists($fallback)) {
                 $pdf = new Fpdi();
                 $pageCount = $pdf->setSourceFile($fallback);
             } else {
-                // Create a simple stamped PDF as last resort
                 Log::warning('All PDF processing failed, creating simple stamped PDF', [
                     'submission_id' => $submission->id,
                 ]);
@@ -95,15 +90,16 @@ class StampPdfOnDecision implements ShouldQueue
             }
         }
 
+        // Loop ke setiap halaman PDF
         for ($pageNo = 1; $pageNo <= $pageCount; $pageNo++) {
             $tplId = $pdf->importPage($pageNo);
             $size = $pdf->getTemplateSize($tplId);
             $pdf->AddPage($size['orientation'], [$size['width'], $size['height']]);
             $pdf->useTemplate($tplId);
 
-            // Hanya tambahkan stamp di halaman terakhir
-            if ($pageNo === $pageCount) {
-
+            /** * LOGIKA STAMP DI SINI (Dijalankan untuk setiap $pageNo)
+             */
+            
             // Group approvers by action_type to create separate stamps
             $stampsByAction = [];
             foreach ($this->approvers as $approver) {
@@ -115,12 +111,12 @@ class StampPdfOnDecision implements ShouldQueue
             }
             
             // Render stamps for each action type separately
+            // Menggunakan tinggi halaman dinamis agar posisi konsisten di setiap halaman
             $stampY = $submission->watermark_y ?? ($size['height'] - 25 - 10);
-            $stampSpacing = 30; // Space between stamps
+            $stampSpacing = 30; 
             
             foreach ($stampsByAction as $actionType => $approvers) {
-                // Determine label based on action_type
-                $label = 'APPROVED BY'; // default
+                $label = 'APPROVED BY'; 
                 if ($actionType === 'request_next') {
                     $label = 'MENGETAHUI';
                 } elseif ($actionType === 'approve') {
@@ -130,18 +126,15 @@ class StampPdfOnDecision implements ShouldQueue
                 $approverNames = [];
                 $approverDates = [];
                 
-                // For external documents, only show last approver per action type
                 $isExternalDocument = !$submission->generated_pdf_path && $submission->file_path;
                 
                 if ($isExternalDocument && count($approvers) > 1) {
                     $lastApprover = end($approvers);
                     $approverNames = [strtoupper($lastApprover['name'])];
-                    $approverDates = [];
                     if (!empty($lastApprover['approved_at'])) {
                         $approverDates[] = \Carbon\Carbon::parse($lastApprover['approved_at'])->format('d/m/Y H:i');
                     }
                 } else {
-                    // Show all approvers for this action type
                     foreach ($approvers as $approver) {
                         $approverNames[] = strtoupper($approver['name']);
                         if (!empty($approver['approved_at'])) {
@@ -153,14 +146,12 @@ class StampPdfOnDecision implements ShouldQueue
                 $allApproversText = implode(' • ', $approverNames);
                 $allDatesText = implode(' • ', $approverDates);
                 
-                // Calculate stamp dimensions
                 $baseHeight = 25;
                 $totalHeight = $baseHeight;
                 $rightMargin = 10;
                 $fontSize = 9;
                 $smallFontSize = 6;
                 
-                // Set font for width calculation
                 $pdf->SetFont('Helvetica', 'B', $fontSize);
                 $labelWidth = $pdf->GetStringWidth($label);
                 $approversWidth = $pdf->GetStringWidth($allApproversText);
@@ -169,11 +160,10 @@ class StampPdfOnDecision implements ShouldQueue
                 $x = $submission->watermark_x ?? ($size['width'] - $maxWidth - $rightMargin);
                 $y = $stampY;
                 
-                // Colors based on status
                 $textColor = $this->status === 'approved' ? [6, 95, 70] : [220, 38, 38];
                 $accentColor = $this->status === 'approved' ? [34, 197, 94] : [239, 68, 68];
                 
-                // Draw decorative lines
+                // Dekorasi Garis
                 $pdf->SetDrawColor(...$accentColor);
                 $pdf->SetLineWidth(0.5);
                 $pdf->Line($x - 3, $y, $x + $maxWidth + 3, $y);
@@ -190,34 +180,28 @@ class StampPdfOnDecision implements ShouldQueue
                 $pdf->Line($x + $maxWidth + 3, $y + $totalHeight, $x + $maxWidth + 3 - $cornerSize, $y + $totalHeight);
                 $pdf->Line($x + $maxWidth + 3, $y + $totalHeight, $x + $maxWidth + 3, $y + $totalHeight - $cornerSize);
                 
-                // Write label
+                // Text Label
                 $pdf->SetFont('Helvetica', 'B', $fontSize);
                 $pdf->SetTextColor(...$textColor);
                 $pdf->SetXY($x, $y + 2);
                 $pdf->Cell($maxWidth, 4, $label, 0, 1, 'C', false);
                 
-                // Write approver names
+                // Approver names
                 $pdf->SetFont('Helvetica', 'B', $fontSize + 1);
                 $pdf->SetXY($x, $y + 6);
                 $pdf->Cell($maxWidth, 5, $allApproversText, 0, 1, 'C', false);
                 
-                // Write dates
+                // Dates
                 $pdf->SetFont('Helvetica', '', $smallFontSize);
                 $pdf->SetTextColor(100, 100, 100);
                 $pdf->SetXY($x, $y + 11);
                 $pdf->Cell($maxWidth, 3, $allDatesText, 0, 1, 'C', false);
                 
-                // Add QR code for the first stamp only
+                // QR code (Hanya pada stamp pertama di setiap halaman)
                 if ($actionType === array_key_first($stampsByAction)) {
                     try {
                         $verifyUrl = route('verification.show', $submission->short_code);
-                        $qrSvg = QrCode::format('svg')
-                            ->size(90)
-                            ->margin(1)
-                            ->errorCorrection('M')
-                            ->generate($verifyUrl);
-                        
-                        $qrTempPath = sys_get_temp_dir() . '/qr_' . $submission->id . '.png';
+                        $qrTempPath = sys_get_temp_dir() . '/qr_' . $submission->id . '_' . $pageNo . '.png';
                         $qrPng = QrCode::format('png')
                             ->size(90)
                             ->margin(1)
@@ -244,17 +228,17 @@ class StampPdfOnDecision implements ShouldQueue
                     } catch (\Throwable $e) {
                         Log::warning('Failed to add QR code to stamped PDF', [
                             'submission_id' => $submission->id,
+                            'page' => $pageNo,
                             'error' => $e->getMessage(),
                         ]);
                     }
                 }
                 
-                // Move Y position for next stamp
                 $stampY -= ($totalHeight + $stampSpacing);
-            }
             }
         }
 
+        // Simpan Hasil Akhir
         try {
             $pdf->Output($outAbs, 'F');
         } catch (\Throwable $t) {
@@ -275,10 +259,10 @@ class StampPdfOnDecision implements ShouldQueue
                 'stamped_generated_at' => now(),
             ]
         );
-        Log::info('Stamped PDF generated', [
+        Log::info('Stamped PDF generated for all pages', [
             'submission_id' => $submission->id,
             'status' => $this->status,
-            'path' => $outRel,
+            'total_pages' => $pageCount,
         ]);
     }
 
@@ -292,33 +276,20 @@ class StampPdfOnDecision implements ShouldQueue
         return [($int >> 16) & 255, ($int >> 8) & 255, $int & 255];
     }
 
-    /**
-     * Try multiple fallback methods for shared hosting environments
-     */
     private function tryAlternativeFallback(string $inputPath, int $submissionId, string $status): ?string
     {
-        // Method 1: Try original QPDF method if available
         $qpdfFallback = $this->tryUncompressWithQpdf($inputPath, $submissionId, $status);
         if ($qpdfFallback) {
             return $qpdfFallback;
         }
-        
-        // Method 2: Try using built-in PDF manipulation (limited but works without external tools)
         try {
             return $this->tryPdfReconstruction($inputPath, $submissionId, $status);
         } catch (\Throwable $e) {
-            Log::warning('PDF reconstruction failed', [
-                'submission_id' => $submissionId,
-                'error' => $e->getMessage(),
-            ]);
+            Log::warning('PDF reconstruction failed', ['submission_id' => $submissionId, 'error' => $e->getMessage()]);
         }
-        
         return null;
     }
     
-    /**
-     * Attempt to reconstruct PDF using PHP only (no external dependencies)
-     */
     private function tryPdfReconstruction(string $inputPath, int $submissionId, string $status): ?string
     {
         $dir = storage_path('app/private/submission/' . $submissionId);
@@ -326,35 +297,17 @@ class StampPdfOnDecision implements ShouldQueue
         $out = $dir . '/_reconstructed_' . $status . '.pdf';
         
         try {
-            // Read original PDF
             $content = file_get_contents($inputPath);
-            if (!$content) {
-                return null;
-            }
+            if (!$content) return null;
             
-            // Simple PDF reconstruction - remove problematic streams
-            // This is a basic approach that works for many PDF files
-            $reconstructed = preg_replace(
-                ['/stream\s*\n/', '/\nendstream/'],
-                ['stream', 'endstream'],
-                $content
-            );
-            
-            if (file_put_contents($out, $reconstructed)) {
-                return $out;
-            }
+            $reconstructed = preg_replace(['/stream\s*\n/', '/\nendstream/'], ['stream', 'endstream'], $content);
+            if (file_put_contents($out, $reconstructed)) return $out;
         } catch (\Throwable $e) {
-            Log::error('PDF reconstruction error', [
-                'error' => $e->getMessage(),
-            ]);
+            Log::error('PDF reconstruction error', ['error' => $e->getMessage()]);
         }
-        
         return null;
     }
     
-    /**
-     * Create a simple stamped PDF when all else fails
-     */
     private function createSimpleStampedPdf(Submission $submission, string $originalPath): void
     {
         try {
@@ -362,11 +315,9 @@ class StampPdfOnDecision implements ShouldQueue
             $outRel = $dirRel . '/stamped_' . $this->status . '.pdf';
             $outAbs = storage_path('app/private/' . $outRel);
             
-            // Create a new PDF with just the stamp
             $pdf = new Fpdi();
             $pdf->AddPage();
             
-            // Add stamp information
             $label = $this->status === 'approved' ? 'APPROVED' : 'REJECTED';
             $approverNames = [];
             foreach ($this->approvers as $approver) {
@@ -374,10 +325,8 @@ class StampPdfOnDecision implements ShouldQueue
             }
             $allApproversText = implode(' • ', $approverNames);
             
-            // Set colors
             $textColor = $this->status === 'approved' ? [6, 95, 70] : [220, 38, 38];
             
-            // Add stamp text
             $pdf->SetFont('Helvetica', 'B', 24);
             $pdf->SetTextColor(...$textColor);
             $pdf->Cell(0, 20, $label, 0, 1, 'C');
@@ -388,12 +337,9 @@ class StampPdfOnDecision implements ShouldQueue
             $pdf->SetFont('Helvetica', '', 12);
             $pdf->SetTextColor(100, 100, 100);
             $pdf->Cell(0, 10, 'Original document could not be processed', 0, 1, 'C');
-            $pdf->Cell(0, 10, 'Please check the original document separately', 0, 1, 'C');
             
-            // Save the simple stamped PDF
             $pdf->Output($outAbs, 'F');
             
-            // Update database
             $hash = @hash_file('sha256', $outAbs) ?: null;
             StampedFile::updateOrCreate(
                 ['submission_id' => $submission->id, 'status' => $this->status],
@@ -403,79 +349,29 @@ class StampPdfOnDecision implements ShouldQueue
                     'stamped_generated_at' => now(),
                 ]
             );
-            
-            Log::info('Simple stamped PDF created', [
-                'submission_id' => $submission->id,
-                'status' => $this->status,
-                'path' => $outRel,
-            ]);
-            
         } catch (\Throwable $e) {
-            Log::error('Failed to create simple stamped PDF', [
-                'submission_id' => $submission->id,
-                'error' => $e->getMessage(),
-            ]);
+            Log::error('Failed to create simple stamped PDF', ['submission_id' => $submission->id, 'error' => $e->getMessage()]);
         }
     }
-    /**
-     * Attempt to uncompress PDF using qpdf to make it compatible with FPDI free parser.
-     * Requires QPDF_PATH in env (path to qpdf executable). Returns path to processed file or null.
-     */
+
     private function tryUncompressWithQpdf(string $inputPath, int $submissionId, string $status): ?string
     {
         $qpdf = (string) config('services.qpdf.path');
-        $usePathBinary = false;
         if (!$qpdf || !File::exists($qpdf)) {
-            Log::warning('qpdf path not configured or not found on disk, trying PATH fallback');
-            $usePathBinary = true;
-            $qpdf = 'qpdf'; // rely on system PATH
+            $qpdf = 'qpdf';
         }
         $dir = storage_path('app/private/submission/' . $submissionId);
         File::ensureDirectoryExists($dir);
         $out = $dir . '/_qpdf_uncompressed_' . $status . '.pdf';
 
-        // Try to make PDF FPDI-compatible: disable object streams, uncompress streams, remove encryption
-        // qpdf --qdf --object-streams=disable --stream-data=uncompress --decrypt input.pdf output.pdf
         $cmd = '"' . $qpdf . '" --qdf --object-streams=disable --stream-data=uncompress --decrypt "' . $inputPath . '" "' . $out . '"';
         try {
             $result = null;
             $exit = null;
-            
-            // Optimized: Add timeout control to prevent hanging
-            $timeout = 30; // 30 seconds timeout
-            $startTime = time();
-            
             @exec($cmd . ' 2>&1', $result, $exit);
-            
-            $executionTime = time() - $startTime;
-            if ($executionTime > $timeout) {
-                Log::error('qpdf command timeout', [
-                    'submission_id' => $submissionId,
-                    'execution_time' => $executionTime,
-                    'timeout' => $timeout,
-                ]);
-                return null;
-            }
-            
-            if ($exit === 0 && File::exists($out)) {
-                Log::info('qpdf command succeeded', [
-                    'submission_id' => $submissionId,
-                    'execution_time' => $executionTime,
-                ]);
-                return $out;
-            }
-            Log::error('qpdf command failed', [
-                'using_path_binary' => $usePathBinary,
-                'cmd' => $cmd,
-                'exit' => $exit,
-                'output' => $result,
-                'execution_time' => $executionTime,
-            ]);
+            if ($exit === 0 && File::exists($out)) return $out;
         } catch (\Throwable $t) {
-            Log::error('qpdf execution error', [
-                'error' => $t->getMessage(),
-                'submission_id' => $submissionId,
-            ]);
+            Log::error('qpdf execution error', ['error' => $t->getMessage()]);
         }
         return null;
     }

@@ -32,18 +32,9 @@ export default function Index({ auth, subdivisions, divisions }) {
     const [search, setSearch] = useState("");
     const [selectedDivision, setSelectedDivision] = useState("all");
 
-    const filteredSubdivisions = subdivisions.filter((sub) => {
-        const matchSearch =
-            sub.name.toLowerCase().includes(search.toLowerCase()) ||
-            (sub.description
-                ? sub.description.toLowerCase().includes(search.toLowerCase())
-                : false);
-        const matchSelect =
-            selectedDivision === "all" ||
-            sub.division?.name?.toLowerCase() ===
-                selectedDivision.toLowerCase();
-        return matchSearch && matchSelect;
-    });
+    // Use pagination data directly instead of filtering
+    // Client-side filtering on current page only
+    const filteredSubdivisions = subdivisions;
 
     const handleEdit = (subdivision) => {
         setEditingSubdivision(subdivision);

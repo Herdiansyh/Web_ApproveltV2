@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef } from "react";
+import React, { useState, useMemo, useRef, useEffect } from "react";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
 import { Head, useForm, router, Link } from "@inertiajs/react";
 import { Card } from "@/Components/ui/card";
@@ -26,6 +26,7 @@ import Footer from "@/Components/Footer";
 import { useLoading } from "@/Components/GlobalLoading";
 import OptimizedDownloadLoading from "@/Components/OptimizedDownloadLoading";
 import { fetchWithCsrf } from "@/utils/csrfToken";
+import PdfViewer from "@/Components/PdfViewer";
 
 export default function Show({
     auth,
@@ -40,9 +41,6 @@ export default function Show({
     userDivisionId = null,
     hasStamped = false,
 }) {
-    // Debug log untuk melihat data yang diterima
-    console.log(currentStep);
-
     const { showLoading, hideLoading } = useLoading();
     const [showApproveModal, setShowApproveModal] = useState(false);
     const [showRejectModal, setShowRejectModal] = useState(false);
@@ -97,11 +95,26 @@ export default function Show({
         // Reset progress
         setDownloadProgress(0);
 
+        // Detect file type from submission to set proper headers and filename
+        const getFileExtension = () => {
+            const fileName = submission.file_path || submission.generated_pdf_path || '';
+            const extension = fileName.split('.').pop()?.toLowerCase();
+            return extension || 'pdf'; // Default to pdf
+        };
+
+        const fileExtension = getFileExtension();
+        const isImageFile = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'].includes(fileExtension);
+        
+        // Set proper accept headers based on file type
+        const acceptHeader = isImageFile 
+            ? 'image/*,application/octet-stream' 
+            : 'application/pdf,application/octet-stream';
+
         fetch(downloadUrl, {
             method: "GET",
             headers: {
                 "X-Requested-With": "XMLHttpRequest",
-                Accept: "application/pdf,application/octet-stream",
+                "Accept": acceptHeader,
             },
         })
             .then((response) => {
@@ -148,7 +161,17 @@ export default function Show({
                 const url = window.URL.createObjectURL(blob);
                 const link = document.createElement("a");
                 link.href = url;
-                link.download = `document-${submission.id}.pdf`;
+                
+                // Generate proper filename based on file type
+                const fileExtension = getFileExtension();
+                const isImageFile = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'].includes(fileExtension);
+                
+                if (isImageFile) {
+                    link.download = `document-${submission.id}.${fileExtension}`;
+                } else {
+                    link.download = `document-${submission.id}.pdf`;
+                }
+                
                 document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);
@@ -161,14 +184,13 @@ export default function Show({
                     Swal.fire({
                         icon: "success",
                         title: "Download Berhasil!",
-                        text: "Dokumen berhasil diunduh.",
+                        text: `Dokumen ${isImageFile ? 'gambar' : 'PDF'} berhasil diunduh.`,
                         timer: 2000,
                         showConfirmButton: false,
                     });
                 }, 500);
             })
             .catch((error) => {
-                console.error("Download error:", error);
                 // Fallback to window.open if fetch fails
                 window.open(downloadUrl, "_blank");
 
@@ -178,7 +200,7 @@ export default function Show({
                     Swal.fire({
                         icon: "error",
                         title: "Download Gagal",
-                        text: "Terjadi kesalahan saat mengunduh dokumen.",
+                        text: "Terjadi kesalahan saat mengunduh dokumen. Silakan coba lagi.",
                         timer: 2000,
                         showConfirmButton: false,
                     });
@@ -219,8 +241,6 @@ export default function Show({
                 return response.json();
             })
             .catch((error) => {
-                console.error("❌ JSON Parsing Error:", error);
-
                 // Check if this is a JSON parsing error
                 if (error.message.includes("Unexpected token")) {
                     throw new Error(
@@ -254,7 +274,6 @@ export default function Show({
                 }
             })
             .catch((error) => {
-                console.error("Approve error:", error);
                 hideLoading(false); // Hide loading animation on error
                 Swal.fire({
                     icon: "error",
@@ -339,7 +358,6 @@ export default function Show({
                         }
                     })
                     .catch((error) => {
-                        console.error("Reject error:", error);
                         hideLoading(false); // Hide loading animation on error
                         Swal.fire({
                             icon: "error",
@@ -387,7 +405,6 @@ export default function Show({
                         });
                     })
                     .catch((error) => {
-                        console.error("Delete error:", error);
                         Swal.fire({
                             icon: "error",
                             title: "Gagal!",
@@ -463,7 +480,6 @@ export default function Show({
                         }
                     })
                     .catch((error) => {
-                        console.error("Request next error:", error);
                         Swal.fire({
                             icon: "error",
                             title: "Error!",
@@ -563,7 +579,6 @@ export default function Show({
                         }
                     })
                     .catch((error) => {
-                        console.error("Cancel error:", error);
                         hideLoading(false);
                         Swal.fire({
                             icon: "error",
@@ -656,7 +671,6 @@ export default function Show({
                         }
                     })
                     .catch((error) => {
-                        console.error("Amend error:", error);
                         hideLoading(false);
                         Swal.fire({
                             icon: "error",
@@ -1436,26 +1450,7 @@ export default function Show({
                                 className="mt-2 border border-border/40 overflow-hidden shadow-inner bg-muted/10"
                             >
                                 {submission.file_path ? (
-                                    <object
-                                        data={fileUrl}
-                                        type="application/pdf"
-                                        className="w-full h-[600px]"
-                                    >
-                                        <div className="text-center p-6">
-                                            <p className="text-muted-foreground">
-                                                Dokumen tidak dapat ditampilkan
-                                                di browser ini.
-                                            </p>
-                                            <a
-                                                href={fileUrl}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                className="text-primary hover:underline"
-                                            >
-                                                Buka di tab baru
-                                            </a>
-                                        </div>
-                                    </object>
+                                    <PdfViewer fileUrl={fileUrl}   />
                                 ) : (
                                     <div className="text-center p-4">
                                         <p className="text-muted-foreground">

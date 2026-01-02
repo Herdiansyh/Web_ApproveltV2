@@ -86,15 +86,7 @@ export default function Index({ auth, users, divisions, subdivisions, roles }) {
         }
     }, [data.division_id, subdivisions]);
 
-    const filteredUsers = users.data.filter((user) => {
-        const matchesDivision = selectedDivision
-            ? String(user.division_id) === String(selectedDivision)
-            : true;
-        const matchesSearch = search
-            ? user.name.toLowerCase().includes(search.toLowerCase())
-            : true;
-        return matchesDivision && matchesSearch;
-    });
+    const filteredUsers = users;
 
     const handleSubmit = (e) => {
         e.preventDefault();
@@ -189,7 +181,6 @@ export default function Index({ auth, users, divisions, subdivisions, roles }) {
     useEffect(() => {
         const handleGlobalError = (event) => {
             // Tangkap error global yang tidak tertangani
-            console.error("Global error caught:", event.error);
             showErrorAlert(
                 "System Error",
                 "An unexpected error occurred. Please try again."

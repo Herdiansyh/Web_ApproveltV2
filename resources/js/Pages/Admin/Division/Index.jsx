@@ -35,15 +35,7 @@ export default function Index({ auth, divisions }) {
 
     const handleSearch = (e) => setSearch(e.target.value);
 
-    const filteredDivisions = (divisions?.data || []).filter((division) => {
-        const matchSearch = division.name
-            .toLowerCase()
-            .includes(search.toLowerCase());
-        const matchSelect =
-            selectedDivision === "all" ||
-            division.name.toLowerCase() === selectedDivision.toLowerCase();
-        return matchSearch && matchSelect;
-    });
+    const filteredDivisions = divisions;
 
     const handleEdit = (division) => {
         setEditingDivision(division);

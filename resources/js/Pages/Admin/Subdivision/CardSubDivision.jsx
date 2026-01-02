@@ -16,6 +16,8 @@ import {
     TableHeader,
     TableRow,
 } from "@/Components/ui/table";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import { Link } from "@inertiajs/react";
 import React from "react";
 
 export default function CardSubDivision({
@@ -100,8 +102,10 @@ export default function CardSubDivision({
                     </TableRow>
                 </TableHeader>
                 <TableBody>
-                    {filteredSubdivisions.length > 0 ? (
-                        filteredSubdivisions.map((sub) => (
+                    {filteredSubdivisions &&
+                    filteredSubdivisions.data &&
+                    filteredSubdivisions.data.length > 0 ? (
+                        filteredSubdivisions.data.map((sub) => (
                             <TableRow key={sub.id}>
                                 <TableCell>{sub.name}</TableCell>
                                 <TableCell>
@@ -146,6 +150,72 @@ export default function CardSubDivision({
                     )}
                 </TableBody>
             </Table>
+
+            {/* Pagination */}
+            {filteredSubdivisions && filteredSubdivisions.total > 0 && (
+                <div className="flex items-center justify-between mt-6 pt-6 border-t">
+                    <div className="text-sm text-gray-600">
+                        Showing {filteredSubdivisions.from} to{" "}
+                        {filteredSubdivisions.to} of{" "}
+                        {filteredSubdivisions.total} subdivisions
+                    </div>
+                    <div className="flex gap-2">
+                        {filteredSubdivisions.prev_page_url && (
+                            <Link href={filteredSubdivisions.prev_page_url}>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    style={{ borderRadius: "8px" }}
+                                >
+                                    <ChevronLeft size={16} />
+                                </Button>
+                            </Link>
+                        )}
+
+                        {filteredSubdivisions.links &&
+                            filteredSubdivisions.links.map((link, index) => {
+                                if (link.label === "&laquo; Previous") {
+                                    return null;
+                                }
+                                if (link.label === "Next &raquo;") {
+                                    return null;
+                                }
+                                return (
+                                    <Link
+                                        key={index}
+                                        href={link.url || "#"}
+                                        only={[]}
+                                    >
+                                        <Button
+                                            variant={
+                                                link.active
+                                                    ? "default"
+                                                    : "outline"
+                                            }
+                                            size="sm"
+                                            disabled={!link.url}
+                                            style={{ borderRadius: "8px" }}
+                                        >
+                                            {link.label}
+                                        </Button>
+                                    </Link>
+                                );
+                            })}
+
+                        {filteredSubdivisions.next_page_url && (
+                            <Link href={filteredSubdivisions.next_page_url}>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    style={{ borderRadius: "8px" }}
+                                >
+                                    <ChevronRight size={16} />
+                                </Button>
+                            </Link>
+                        )}
+                    </div>
+                </div>
+            )}
         </Card>
     );
 }

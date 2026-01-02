@@ -541,21 +541,21 @@ class SubmissionController extends Controller
                 })
                 ->where(function($query) use ($user) {
                     // Filter berdasarkan divisi user WAJIB
-                    $query->whereHas('document.divisions', function($q) use ($user) {
+                    $query->whereHas('divisions', function($q) use ($user) {
                         $q->where('division_id', $user->division_id);
                     });
                     
-                    // Jika user memiliki subdivision, maka document juga harus memiliki subdivision yang cocok
+                    // Jika user memiliki subdivision, maka workflow juga harus memiliki subdivision yang cocok
                     if ($user->subdivision_id) {
-                        $query->whereHas('document.subdivisions', function($q) use ($user) {
+                        $query->whereHas('subdivisions', function($q) use ($user) {
                             $q->where('subdivision_id', $user->subdivision_id);
                         });
                     } else {
-                        // Jika user tidak memiliki subdivision, pastikan document tidak memiliki subdivision restriction
-                        // atau document memiliki subdivision yang null/empty (berlaku untuk semua subdivisi di divisi tersebut)
-                        $query->whereDoesntHave('document.subdivisions')
-                              ->orWhereHas('document.subdivisions', function($q) {
-                                  $q->whereNull('subdivision_id'); // Document yang berlaku untuk semua subdivisi
+                        // Jika user tidak memiliki subdivision, pastikan workflow tidak memiliki subdivision restriction
+                        // atau workflow memiliki subdivision yang null/empty (berlaku untuk semua subdivisi di divisi tersebut)
+                        $query->whereDoesntHave('subdivisions')
+                              ->orWhereHas('subdivisions', function($q) {
+                                  $q->whereNull('subdivision_id'); // Workflow yang berlaku untuk semua subdivisi
                               });
                     }
                 })
@@ -1257,12 +1257,86 @@ class SubmissionController extends Controller
         }
 
         $path = Storage::disk('private')->path($submission->file_path);
-        $type = mime_content_type($path);
+        $filename = basename($submission->file_path);
+        
+        // Determine MIME type secara lebih reliable
+        $finfo = finfo_open(FILEINFO_MIME_TYPE);
+        $mimeType = finfo_file($finfo, $path);
+        finfo_close($finfo);
+        
+        // Fallback ke extension-based detection jika finfo gagal
+        if (!$mimeType) {
+            $ext = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
+            switch ($ext) {
+                case 'jpg':
+                case 'jpeg':
+                    $mimeType = 'image/jpeg';
+                    break;
+                case 'png':
+                    $mimeType = 'image/png';
+                    break;
+                case 'gif':
+                    $mimeType = 'image/gif';
+                    break;
+                case 'bmp':
+                    $mimeType = 'image/bmp';
+                    break;
+                case 'webp':
+                    $mimeType = 'image/webp';
+                    break;
+                case 'pdf':
+                    $mimeType = 'application/pdf';
+                    break;
+                default:
+                    $mimeType = 'application/octet-stream';
+                    break;
+            }
+        }
 
-        return response()->file($path, [
-            'Content-Type' => $type,
-            'Content-Disposition' => 'inline; filename="' . basename($submission->file_path) . '"',
-        ]);
+        // Dynamic headers based on file type
+        $isImage = strpos($mimeType, 'image/') === 0;
+        $isPdf = $mimeType === 'application/pdf';
+        
+        if ($isImage) {
+            // Image headers - allow inline viewing for iOS Safari compatibility
+            $headers = [
+                'Content-Type' => $mimeType,
+                'Content-Disposition' => 'inline; filename="' . $filename . '"',
+                'Content-Length' => filesize($path),
+                'Accept-Ranges' => 'bytes',
+                'Cache-Control' => 'public, must-revalidate, max-age=0',
+                'Pragma' => 'public',
+                'Expires' => '0',
+                // Add CORS headers for iOS Safari
+                'Access-Control-Allow-Origin' => '*',
+                'Access-Control-Allow-Methods' => 'GET, OPTIONS',
+                'Access-Control-Allow-Headers' => 'Content-Type',
+            ];
+        } elseif ($isPdf) {
+            // PDF headers - view in browser
+            $headers = [
+                'Content-Type' => 'application/pdf',
+                'Content-Disposition' => 'inline; filename="' . $filename . '"',
+                'Content-Length' => filesize($path),
+                'Accept-Ranges' => 'bytes',
+                'Cache-Control' => 'public, must-revalidate, max-age=0',
+                'Pragma' => 'public',
+                'Expires' => '0',
+            ];
+        } else {
+            // Binary files - force download
+            $headers = [
+                'Content-Type' => $mimeType,
+                'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+                'Content-Length' => filesize($path),
+                'Accept-Ranges' => 'bytes',
+                'Cache-Control' => 'public, must-revalidate, max-age=0',
+                'Pragma' => 'public',
+                'Expires' => '0',
+            ];
+        }
+
+        return response()->file($path, $headers);
     }
 
     /** ------------------------

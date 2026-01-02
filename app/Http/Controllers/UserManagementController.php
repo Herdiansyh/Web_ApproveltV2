@@ -35,7 +35,7 @@ class UserManagementController extends Controller
      */
     public function index()
     {
-        $users = User::with(['division', 'subdivision'])->orderBy('name')->get();
+        $users = User::with(['division', 'subdivision'])->orderBy('name')->paginate(10);
 
         return Inertia::render('Admin/UserManagement/Index', [
             'users' => $users,

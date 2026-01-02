@@ -107,15 +107,5 @@ class Document extends Model
     {
         return $this->hasMany(Submission::class);
     }
-
-    public function divisions(): BelongsToMany
-    {
-        return $this->belongsToMany(Division::class, 'document_type_divisions');
-    }
-
-    public function subdivisions(): BelongsToMany
-    {
-        return $this->belongsToMany(Subdivision::class, 'document_type_subdivisions');
-    }
 }
 

@@ -53,10 +53,6 @@ export const fetchFreshCsrfToken = async () => {
 
         return data.token;
     } catch (error) {
-        // Optimized: Remove console.error in production
-        if (process.env.NODE_ENV === 'development') {
-            console.error('Error fetching fresh CSRF token:', error);
-        }
         throw error;
     }
 };
@@ -89,7 +85,6 @@ export const getValidCsrfToken = async () => {
     try {
         return await refreshCsrfToken();
     } catch (error) {
-        console.error('Failed to get valid CSRF token:', error);
         throw new Error('CSRF token tidak tersedia. Silakan refresh halaman.');
     }
 };
@@ -103,7 +98,6 @@ export const setupCsrfTokenAfterLogin = async () => {
         // Refresh token to ensure we have the latest one
         await refreshCsrfToken();
     } catch (error) {
-        console.error('Failed to refresh CSRF token after login:', error);
         // Don't throw error here, just log it as the token might still be valid
     }
 };
@@ -144,35 +138,15 @@ export const fetchWithCsrf = async (url, options = {}) => {
     };
 
     try {
-        console.log('🌐 Fetch Request:', {
-            url,
-            method: mergedOptions.method || 'GET',
-            headers: mergedOptions.headers,
-            bodyType: typeof mergedOptions.body,
-            body: mergedOptions.body instanceof FormData ? 'FormData' : mergedOptions.body
-        });
-
         const response = await fetch(url, mergedOptions);
-        
-        console.log('📥 Fetch Response:', {
-            status: response.status,
-            statusText: response.statusText,
-            ok: response.ok,
-            contentType: response.headers.get('content-type'),
-            headers: Object.fromEntries(response.headers.entries()),
-            redirected: response.redirected,
-            url: response.url
-        });
         
         // Handle redirects (usually authentication issues)
         if (response.redirected || (response.status >= 300 && response.status < 400)) {
-            console.warn('🔄 Request was redirected, possible authentication issue');
             throw new Error('Request di-redirect. Silakan login kembali.');
         }
         
         // Handle CSRF mismatch (419)
         if (response.status === 419) {
-            console.warn('CSRF token mismatch, attempting to refresh...');
             
             try {
                 // Refresh token and retry once
@@ -181,7 +155,6 @@ export const fetchWithCsrf = async (url, options = {}) => {
                 
                 return await fetch(url, mergedOptions);
             } catch (refreshError) {
-                console.error('Failed to refresh CSRF token for retry:', refreshError);
                 throw new Error('CSRF token mismatch. Silakan refresh halaman.');
             }
         }
@@ -190,14 +163,11 @@ export const fetchWithCsrf = async (url, options = {}) => {
         const contentType = response.headers.get('content-type');
         if (contentType && contentType.includes('text/html') && !response.ok) {
             // Server returned HTML error page
-            const text = await response.text();
-            console.error('Server returned HTML error page:', text.substring(0, 200));
             throw new Error('Server error: Halaman error dikembalikan. Silakan periksa log server.');
         }
         
         return response;
     } catch (error) {
-        console.error('Fetch error:', error);
         throw error;
     }
 };

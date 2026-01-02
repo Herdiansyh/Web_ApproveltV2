@@ -44,6 +44,18 @@ class Workflow extends Model
         return $this->belongsTo(Division::class, 'division_to_id');
     }
 
+    // Relasi ke divisi yang dapat menggunakan workflow ini
+    public function divisions()
+    {
+        return $this->belongsToMany(Division::class, 'workflow_divisions');
+    }
+
+    // Relasi ke subdivisi yang dapat menggunakan workflow ini
+    public function subdivisions()
+    {
+        return $this->belongsToMany(Subdivision::class, 'workflow_subdivisions');
+    }
+
     public function scopeActive($query)
     {
         return $query->where('is_active', true);

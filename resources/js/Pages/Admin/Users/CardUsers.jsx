@@ -16,8 +16,9 @@ import {
     TableHeader,
     TableRow,
 } from "@/Components/ui/table";
-import { X } from "lucide-react";
+import { X, ChevronLeft, ChevronRight } from "lucide-react";
 import React from "react";
+import { Link } from "@inertiajs/react";
 
 export default function CardUsers({
     auth,
@@ -82,7 +83,7 @@ export default function CardUsers({
             </div>
 
             {/* Active Filter */}
-            {selectedDivision && (
+            {selectedDivision && selectedDivision !== "all" && (
                 <div className="flex flex-wrap gap-2 mb-6">
                     <div className="flex items-center gap-1 bg-gray-100 text-gray-800 px-2 py-1 rounded-md text-sm">
                         {
@@ -112,8 +113,8 @@ export default function CardUsers({
                     </TableRow>
                 </TableHeader>
                 <TableBody>
-                    {filteredUsers.length > 0 ? (
-                        filteredUsers.map((user) => (
+                    {filteredUsers.data && filteredUsers.data.length > 0 ? (
+                        filteredUsers.data.map((user) => (
                             <TableRow key={user.id}>
                                 <TableCell>{user.name}</TableCell>
                                 <TableCell>{user.email}</TableCell>
@@ -169,6 +170,71 @@ export default function CardUsers({
                     )}
                 </TableBody>
             </Table>
+
+            {/* Pagination */}
+            {filteredUsers.total > 0 && (
+                <div className="flex items-center justify-between mt-6 pt-6 border-t">
+                    <div className="text-sm text-gray-600">
+                        Showing {filteredUsers.from} to {filteredUsers.to} of{" "}
+                        {filteredUsers.total} users
+                    </div>
+                    <div className="flex gap-2">
+                        {filteredUsers.prev_page_url && (
+                            <Link href={filteredUsers.prev_page_url}>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    style={{ borderRadius: "8px" }}
+                                >
+                                    <ChevronLeft size={16} />
+                                </Button>
+                            </Link>
+                        )}
+
+                        {filteredUsers.links &&
+                            filteredUsers.links.map((link, index) => {
+                                if (link.label === "&laquo; Previous") {
+                                    return null;
+                                }
+                                if (link.label === "Next &raquo;") {
+                                    return null;
+                                }
+                                return (
+                                    <Link
+                                        key={index}
+                                        href={link.url || "#"}
+                                        only={[]}
+                                    >
+                                        <Button
+                                            variant={
+                                                link.active
+                                                    ? "default"
+                                                    : "outline"
+                                            }
+                                            size="sm"
+                                            disabled={!link.url}
+                                            style={{ borderRadius: "8px" }}
+                                        >
+                                            {link.label}
+                                        </Button>
+                                    </Link>
+                                );
+                            })}
+
+                        {filteredUsers.next_page_url && (
+                            <Link href={filteredUsers.next_page_url}>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    style={{ borderRadius: "8px" }}
+                                >
+                                    <ChevronRight size={16} />
+                                </Button>
+                            </Link>
+                        )}
+                    </div>
+                </div>
+            )}
         </Card>
     );
 }

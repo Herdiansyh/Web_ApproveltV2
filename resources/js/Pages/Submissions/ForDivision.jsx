@@ -86,7 +86,6 @@ export default function ForDivision({
                     )
                 );
             } catch (error) {
-                console.error("Error fetching filter options:", error);
                 setFilters((prev) =>
                     prev.map((filter) =>
                         filter.id === filterId
@@ -992,10 +991,6 @@ export default function ForDivision({
                                             }
                                         })
                                         .catch((error) => {
-                                            console.error(
-                                                "Delete error:",
-                                                error
-                                            );
                                             Swal.fire({
                                                 icon: "error",
                                                 title: "Error!",

@@ -17,8 +17,8 @@ import {
     TableHeader,
     TableRow,
 } from "@/Components/ui/table";
-import { router } from "@inertiajs/react";
-import { ArrowRight, Edit, Plus, Settings, Trash2 } from "lucide-react";
+import { router, Link } from "@inertiajs/react";
+import { ArrowRight, Edit, Plus, Settings, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
 import React from "react";
 import Swal from "sweetalert2";
 export default function CardWorkflow({
@@ -28,6 +28,7 @@ export default function CardWorkflow({
     filterDocument,
     setFilterDocument,
     documents,
+    workflows,
     openCreateModal,
     goToPermissions,
     openEditModal,
@@ -81,6 +82,8 @@ export default function CardWorkflow({
                     <TableRow>
                         <TableHead>Name</TableHead>
                         <TableHead>Document</TableHead>
+                        <TableHead>Divisions</TableHead>
+                        <TableHead>Subdivisions</TableHead>
                         <TableHead>Steps</TableHead>
                         <TableHead>Status</TableHead>
                         <TableHead>Actions</TableHead>
@@ -95,6 +98,42 @@ export default function CardWorkflow({
                                 </TableCell>
                                 <TableCell>
                                     {wf.document?.name || "-"}
+                                </TableCell>
+                                <TableCell>
+                                    <div className="flex flex-wrap gap-1">
+                                        {wf.divisions?.length > 0 ? (
+                                            wf.divisions.map((division) => (
+                                                <Badge
+                                                    key={division.id}
+                                                    variant="outline"
+                                                    className="text-xs"
+                                                    style={{ borderRadius: "10px" }}
+                                                >
+                                                    {division.name}
+                                                </Badge>
+                                            ))
+                                        ) : (
+                                            <span className="text-gray-400 text-sm">No divisions</span>
+                                        )}
+                                    </div>
+                                </TableCell>
+                                <TableCell>
+                                    <div className="flex flex-wrap gap-1">
+                                        {wf.subdivisions?.length > 0 ? (
+                                            wf.subdivisions.map((subdivision) => (
+                                                <Badge
+                                                    key={subdivision.id}
+                                                    variant="secondary"
+                                                    className="text-xs"
+                                                    style={{ borderRadius: "10px" }}
+                                                >
+                                                    {subdivision.name}
+                                                </Badge>
+                                            ))
+                                        ) : (
+                                            <span className="text-gray-400 text-sm">No subdivisions</span>
+                                        )}
+                                    </div>
                                 </TableCell>
                                 <TableCell>
                                     <div className="flex items-center text-sm text-gray-600">
@@ -201,7 +240,7 @@ export default function CardWorkflow({
                     ) : (
                         <TableRow>
                             <TableCell
-                                colSpan={5}
+                                colSpan={7}
                                 className="text-center text-gray-500 py-8"
                             >
                                 No workflows found.
@@ -210,6 +249,72 @@ export default function CardWorkflow({
                     )}
                 </TableBody>
             </Table>
+
+            {/* Pagination */}
+            {workflows && workflows.total > 0 && (
+                <div className="flex items-center justify-between mt-6 pt-6 border-t">
+                    <div className="text-sm text-gray-600">
+                        Showing {workflows.from} to {" "}
+                        {workflows.to} of {workflows.total}{" "}
+                        workflows
+                    </div>
+                    <div className="flex gap-2">
+                        {workflows.prev_page_url && (
+                            <Link href={workflows.prev_page_url}>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    style={{ borderRadius: "8px" }}
+                                >
+                                    <ChevronLeft size={16} />
+                                </Button>
+                            </Link>
+                        )}
+
+                        {workflows.links &&
+                            workflows.links.map((link, index) => {
+                                if (link.label === "&laquo; Previous") {
+                                    return null;
+                                }
+                                if (link.label === "Next &raquo;") {
+                                    return null;
+                                }
+                                return (
+                                    <Link
+                                        key={index}
+                                        href={link.url || "#"}
+                                        only={[]}
+                                    >
+                                        <Button
+                                            variant={
+                                                link.active
+                                                    ? "default"
+                                                    : "outline"
+                                            }
+                                            size="sm"
+                                            disabled={!link.url}
+                                            style={{ borderRadius: "8px" }}
+                                        >
+                                            {link.label}
+                                        </Button>
+                                    </Link>
+                                );
+                            })}
+
+                        {workflows.next_page_url && (
+                            <Link href={workflows.next_page_url}>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    style={{ borderRadius: "8px" }}
+                                >
+                                    <ChevronRight size={16} />
+                                </Button>
+                            </Link>
+                        )}
+                    </div>
+                </div>
+            )}
         </Card>
     );
 }

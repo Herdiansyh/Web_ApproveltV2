@@ -15,6 +15,7 @@ export default function Index({
     workflows,
     divisions,
     documents,
+    subdivisions,
 }) {
     const [showModal, setShowModal] = useState(false);
     const [editingWorkflow, setEditingWorkflow] = useState(null);
@@ -25,6 +26,8 @@ export default function Index({
         name: "",
         description: "",
         document_id: "",
+        division_ids: [],
+        subdivision_ids: [],
         steps: [{ division_id: "", step_name: "" }],
         is_active: true,
     });
@@ -56,14 +59,14 @@ export default function Index({
     };
 
     // Filter workflows
-    const filteredWorkflows = workflows.filter((wf) => {
+    const filteredWorkflows = workflows?.data?.filter((wf) => {
         const matchText = wf.name
             .toLowerCase()
             .includes(filterText.toLowerCase());
         const matchDocument =
             filterDocument === "all" || wf.document?.name === filterDocument;
         return matchText && matchDocument;
-    });
+    }) || [];
 
     // Modal handlers
     const openCreateModal = () => {
@@ -75,6 +78,8 @@ export default function Index({
             document_id: "",
             steps: [{ division_id: "", step_name: "", actions: [] }],
             is_active: true,
+            division_ids: [],
+            subdivision_ids: [],
         });
         setShowModal(true);
     };
@@ -86,6 +91,8 @@ export default function Index({
             description: workflow.description || "",
             document_id: workflow.document_id?.toString() || "",
             is_active: !!workflow.is_active,
+            division_ids: workflow.divisions?.map(d => d.id.toString()) || [],
+            subdivision_ids: workflow.subdivisions?.map(s => s.id.toString()) || [],
             steps: workflow.steps?.map((s) => {
                 // Parse actions jika masih string
                 let actionsArray = [];
@@ -333,6 +340,7 @@ export default function Index({
                             filterDocument={filterDocument}
                             setFilterDocument={setFilterDocument}
                             documents={documents}
+                            workflows={workflows}
                             openCreateModal={openCreateModal}
                             goToPermissions={goToPermissions}
                             openEditModal={openEditModal}
@@ -355,6 +363,7 @@ export default function Index({
                     handleSubmit={handleSubmit}
                     documents={documents}
                     divisions={divisions}
+                    subdivisions={subdivisions}
                     availableActions={availableActions}
                     addStep={addStep}
                     removeStep={removeStep}

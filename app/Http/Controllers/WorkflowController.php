@@ -17,9 +17,9 @@ class WorkflowController extends Controller
 {
     public function index()
     {
-        $workflows = Workflow::with(['document', 'steps.division'])
+        $workflows = Workflow::with(['document', 'divisions', 'subdivisions', 'steps.division'])
             ->orderByDesc('id')
-            ->get();
+            ->paginate(10);
 
         $documents = Document::all();
 
@@ -38,6 +38,10 @@ class WorkflowController extends Controller
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
             'document_id' => 'required|exists:documents,id',
+            'division_ids' => 'nullable|array',
+            'division_ids.*' => 'exists:divisions,id',
+            'subdivision_ids' => 'nullable|array',
+            'subdivision_ids.*' => 'exists:subdivisions,id',
             'steps' => 'required|array|min:1',
             'steps.*.division_id' => 'required|exists:divisions,id',
             'steps.*.role' => 'nullable|string|max:100',
@@ -74,6 +78,15 @@ class WorkflowController extends Controller
 
                 // Ignore legacy per-step permissions payload (deprecated)
             }
+
+            // Sync divisions and subdivisions
+            if (isset($validated['division_ids'])) {
+                $workflow->divisions()->sync($validated['division_ids']);
+            }
+            
+            if (isset($validated['subdivision_ids'])) {
+                $workflow->subdivisions()->sync($validated['subdivision_ids']);
+            }
         });
 
         return redirect()->route('workflows.index')->with('success', 'Workflow berhasil dibuat.');
@@ -85,6 +98,10 @@ class WorkflowController extends Controller
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
             'document_id' => 'required|exists:documents,id',
+            'division_ids' => 'nullable|array',
+            'division_ids.*' => 'exists:divisions,id',
+            'subdivision_ids' => 'nullable|array',
+            'subdivision_ids.*' => 'exists:subdivisions,id',
             'steps' => 'array',
             'steps.*.division_id' => 'required|exists:divisions,id',
             'steps.*.role' => 'nullable|string|max:100',
@@ -125,6 +142,15 @@ class WorkflowController extends Controller
 
                     // Legacy per-step permissions diabaikan (deprecated)
                 }
+            }
+
+            // Sync divisions and subdivisions
+            if (isset($validated['division_ids'])) {
+                $workflow->divisions()->sync($validated['division_ids']);
+            }
+            
+            if (isset($validated['subdivision_ids'])) {
+                $workflow->subdivisions()->sync($validated['subdivision_ids']);
             }
         });
 

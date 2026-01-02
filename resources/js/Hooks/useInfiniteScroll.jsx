@@ -40,7 +40,7 @@ export const useInfiniteScroll = (fetchUrl, initialData = []) => {
                 updateCache(cacheKey, newData);
             }
         } catch (error) {
-            console.error('Error loading more data:', error);
+            // Handle loading error silently
         } finally {
             setLoading(false);
         }

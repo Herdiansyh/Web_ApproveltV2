@@ -73,6 +73,20 @@ export default function UpdateProfileInformation({
                     <InputError className="mt-2" message={errors.email} />
                 </div>
 
+                <div>
+                    <Label htmlFor="role" value="Role" />
+                    
+                    <div className="mt-1 p-1 bg-gray-50 border border-gray-200 " style={{borderRadius: '50px'}}>
+                        <span className="text-sm font-medium text-gray-700 capitalize">
+                            {user.role || 'Not assigned'}
+                        </span>
+                    </div>
+                    
+                    <p className="mt-1 text-xs text-gray-500">
+                        Your role in the system. This is assigned by the administrator.
+                    </p>
+                </div>
+
                 {mustVerifyEmail && user.email_verified_at === null && (
                     <div>
                         <p className="mt-2 text-sm text-gray-800">

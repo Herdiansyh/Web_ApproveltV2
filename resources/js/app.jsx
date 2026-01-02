@@ -9,7 +9,9 @@ import { initializeCsrfToken, setupPeriodicTokenRefresh } from "@/utils/csrfInit
 import { DataProvider } from "@/Contexts/DataContext";
 
 // Initialize CSRF token management
-initializeCsrfToken().catch(console.error);
+initializeCsrfToken().catch(() => {
+    // Handle CSRF initialization error silently
+});
 setupPeriodicTokenRefresh();
 
 const appName = import.meta.env.VITE_APP_NAME || "E-Approval";

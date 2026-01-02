@@ -1,4 +1,4 @@
-import { Head, Link } from "@inertiajs/react";
+import { Head, Link, router } from "@inertiajs/react";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
 import { TooltipProvider } from "@/Components/ui/tooltip";
 import {
@@ -17,11 +17,65 @@ import {
     Activity,
     ArrowRight,
     PlusCircle,
+    Search,
+    ChevronLeft,
+    ChevronRight,
 } from "lucide-react";
 import Header from "@/Components/Header";
 import Footer from "@/Components/Footer";
+import { useState, useEffect } from "react";
+import { Input } from "@/Components/ui/input";
 
 export default function AdminDashboard({ auth, stats }) {
+    const [activities, setActivities] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [search, setSearch] = useState("");
+    const [pagination, setPagination] = useState({
+        current_page: 1,
+        last_page: 1,
+        per_page: 10,
+        total: 0,
+        from: 0,
+        to: 0,
+    });
+
+    const fetchActivities = async (page = 1, searchTerm = "") => {
+        setLoading(true);
+        try {
+            const response = await fetch(`/api/admin/activities?page=${page}&search=${encodeURIComponent(searchTerm)}`, {
+                headers: {
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content')
+                }
+            });
+            const data = await response.json();
+            setActivities(data.activities);
+            setPagination(data.pagination);
+        } catch (error) {
+            // Handle activities fetch error silently
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchActivities();
+    }, []);
+
+    useEffect(() => {
+        const timeoutId = setTimeout(() => {
+            fetchActivities(1, search);
+        }, 500);
+
+        return () => clearTimeout(timeoutId);
+    }, [search]);
+
+    const handlePageChange = (page) => {
+        fetchActivities(page, search);
+    };
+
+    const handleActivityClick = (activity) => {
+        router.visit(activity.show_url);
+    };
     return (
         <AuthenticatedLayout
             header={
@@ -152,43 +206,131 @@ export default function AdminDashboard({ auth, stats }) {
                                         Aktivitas Terbaru
                                     </CardTitle>
                                     <CardDescription className="text-muted-foreground text-sm mt-1">
-                                        Pantau aktivitas terbaru dari seluruh
-                                        pengguna
+                                        Pantau semua aktivitas pengajuan dari seluruh pengguna
                                     </CardDescription>
                                 </div>
                                 <div className="p-2 bg-muted rounded-lg">
                                     <Activity className="w-5 h-5 text-muted-foreground" />
                                 </div>
                             </div>
+                            
+                            {/* Search Bar */}
+                            <div className="mt-4">
+                                <div className="relative">
+                                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                                    <Input
+                                        type="text"
+                                        placeholder="Cari berdasarkan nama pengguna atau judul pengajuan..."
+                                        value={search}
+                                        onChange={(e) => setSearch(e.target.value)}
+                                        className="pl-10 pr-4 py-2 w-full border-border bg-background"
+                                        style={{ borderRadius: "8px" }}
+                                    />
+                                </div>
+                            </div>
                         </CardHeader>
                         <CardContent className="pt-6">
-                            {stats.recentActivities?.length > 0 ? (
-                                <ul className="space-y-3">
-                                    {stats.recentActivities.map((a, i) => (
-                                        <li
-                                            key={i}
-                                            className="p-4 border border-border rounded-xl hover:bg-muted/50 hover:border-border transition-all duration-200 text-sm flex justify-between items-center group"
-                                        >
-                                            <span className="text-foreground">
-                                                <strong className="font-semibold text-foreground">
-                                                    {a.user}
-                                                </strong>{" "}
-                                                {a.action}
-                                            </span>
-                                            <span className="text-muted-foreground text-xs font-medium">
-                                                {a.time}
-                                            </span>
-                                        </li>
-                                    ))}
-                                </ul>
+                            {loading ? (
+                                <div className="text-center py-12">
+                                    <div className="inline-flex items-center justify-center w-16 h-16 bg-muted rounded-full mb-4">
+                                        <Activity className="w-8 h-8 text-muted-foreground animate-pulse" />
+                                    </div>
+                                    <p className="text-sm text-muted-foreground font-medium">
+                                        Memuat aktivitas...
+                                    </p>
+                                </div>
+                            ) : activities.length > 0 ? (
+                                <>
+                                    <ul className="space-y-3">
+                                        {activities.map((activity, i) => (
+                                            <li
+                                                key={i}
+                                                onClick={() => handleActivityClick(activity)}
+                                                className="p-4 border border-border rounded-xl hover:bg-muted/50 hover:border-primary/50 transition-all duration-200 text-sm cursor-pointer group"
+                                            >
+                                                <div className="flex justify-between items-start">
+                                                    <div className="flex-1">
+                                                        <div className="flex items-center gap-2 mb-1">
+                                                            <strong className="font-semibold text-foreground group-hover:text-primary transition-colors">
+                                                                {activity.user}
+                                                            </strong>
+                                                            <span className="text-muted-foreground">•</span>
+                                                            <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded">
+                                                                {activity.document_type}
+                                                            </span>
+                                                        </div>
+                                                        <p className="text-foreground mb-2">
+                                                            {activity.action}
+                                                        </p>
+                                                        <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                                                            <span>{activity.time}</span>
+                                                            <span>({activity.relative_time})</span>
+                                                            <span className={`px-2 py-1 rounded text-xs font-medium ${
+                                                                activity.status.includes('approved') ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200' :
+                                                                activity.status.includes('rejected') ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200' :
+                                                                activity.status.includes('cancelled') ? 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200' :
+                                                                'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
+                                                            }`}>
+                                                                {activity.status}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                    <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all" />
+                                                </div>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                    
+                                    {/* Pagination */}
+                                    {pagination.last_page > 1 && (
+                                        <div className="flex items-center justify-between mt-6 pt-4 border-t border-border">
+                                            <div className="text-sm text-muted-foreground">
+                                                Menampilkan {pagination.from} - {pagination.to} dari {pagination.total} aktivitas
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    onClick={() => handlePageChange(pagination.current_page - 1)}
+                                                    disabled={pagination.current_page === 1}
+                                                    className="border-border hover:bg-primary/10 hover:text-primary hover:border-primary/50"
+                                                >
+                                                    <ChevronLeft className="w-4 h-4" />
+                                                </Button>
+                                                <span className="text-sm text-muted-foreground px-3">
+                                                    Halaman {pagination.current_page} dari {pagination.last_page}
+                                                </span>
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    onClick={() => handlePageChange(pagination.current_page + 1)}
+                                                    disabled={pagination.current_page === pagination.last_page}
+                                                    className="border-border hover:bg-primary/10 hover:text-primary hover:border-primary/50"
+                                                >
+                                                    <ChevronRight className="w-4 h-4" />
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    )}
+                                </>
                             ) : (
                                 <div className="text-center py-12">
                                     <div className="inline-flex items-center justify-center w-16 h-16 bg-muted rounded-full mb-4">
                                         <Activity className="w-8 h-8 text-muted-foreground" />
                                     </div>
                                     <p className="text-sm text-muted-foreground font-medium">
-                                        Belum ada aktivitas terbaru
+                                        {search ? 'Tidak ada aktivitas yang ditemukan untuk pencarian ini' : 'Belum ada aktivitas terbaru'}
                                     </p>
+                                    {search && (
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => setSearch('')}
+                                            className="mt-3 border-border hover:bg-primary/10 hover:text-primary hover:border-primary/50"
+                                        >
+                                            Hapus Pencarian
+                                        </Button>
+                                    )}
                                 </div>
                             )}
                         </CardContent>

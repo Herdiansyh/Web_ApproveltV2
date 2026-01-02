@@ -11,7 +11,7 @@ class SubdivisionController extends Controller
 {
     public function index()
     {
-        $subdivisions = Subdivision::with('division')->get();
+        $subdivisions = Subdivision::with('division')->paginate(10);
         $divisions = Division::all();
 
         return Inertia::render('Admin/Subdivision/Index', [

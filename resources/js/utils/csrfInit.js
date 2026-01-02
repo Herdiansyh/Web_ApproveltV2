@@ -15,7 +15,6 @@ export const initializeCsrfToken = async () => {
         // Refresh token on app initialization
         await refreshCsrfToken();
     } catch (error) {
-        console.warn('Failed to initialize CSRF token:', error);
         // Don't throw error - app can still work with existing token
     }
 };
@@ -32,7 +31,7 @@ export const setupPeriodicTokenRefresh = () => {
         try {
             await refreshCsrfToken();
         } catch (error) {
-            console.warn('Failed to refresh CSRF token periodically:', error);
+            // Handle periodic refresh error silently
         }
     }, refreshInterval);
 };
@@ -47,7 +46,7 @@ export const setupBeforeUnloadTokenRefresh = () => {
     window.addEventListener('beforeunload', () => {
         // Don't wait for the refresh to complete, just trigger it
         refreshPromise = refreshCsrfToken().catch(error => {
-            console.warn('Failed to refresh CSRF token before unload:', error);
+            // Handle before unload refresh error silently
         });
     });
     
@@ -57,7 +56,7 @@ export const setupBeforeUnloadTokenRefresh = () => {
             try {
                 await refreshCsrfToken();
             } catch (error) {
-                console.warn('Failed to refresh CSRF token on visibility change:', error);
+                // Handle visibility change refresh error silently
             }
         }
     });

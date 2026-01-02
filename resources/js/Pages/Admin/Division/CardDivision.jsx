@@ -16,6 +16,8 @@ import {
     TableHeader,
     TableRow,
 } from "@/Components/ui/table";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import { Link } from "@inertiajs/react";
 import React from "react";
 
 export default function CardDivision({
@@ -98,8 +100,10 @@ export default function CardDivision({
                     </TableRow>
                 </TableHeader>
                 <TableBody>
-                    {filteredDivisions.length > 0 ? (
-                        filteredDivisions.map((division) => (
+                    {filteredDivisions &&
+                    filteredDivisions.data &&
+                    filteredDivisions.data.length > 0 ? (
+                        filteredDivisions.data.map((division) => (
                             <TableRow key={division.id}>
                                 <TableCell>
                                     <button
@@ -154,6 +158,72 @@ export default function CardDivision({
                     )}
                 </TableBody>
             </Table>
+
+            {/* Pagination */}
+            {filteredDivisions && filteredDivisions.total > 0 && (
+                <div className="flex items-center justify-between mt-6 pt-6 border-t">
+                    <div className="text-sm text-gray-600">
+                        Showing {filteredDivisions.from} to{" "}
+                        {filteredDivisions.to} of {filteredDivisions.total}{" "}
+                        divisions
+                    </div>
+                    <div className="flex gap-2">
+                        {filteredDivisions.prev_page_url && (
+                            <Link href={filteredDivisions.prev_page_url}>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    style={{ borderRadius: "8px" }}
+                                >
+                                    <ChevronLeft size={16} />
+                                </Button>
+                            </Link>
+                        )}
+
+                        {filteredDivisions.links &&
+                            filteredDivisions.links.map((link, index) => {
+                                if (link.label === "&laquo; Previous") {
+                                    return null;
+                                }
+                                if (link.label === "Next &raquo;") {
+                                    return null;
+                                }
+                                return (
+                                    <Link
+                                        key={index}
+                                        href={link.url || "#"}
+                                        only={[]}
+                                    >
+                                        <Button
+                                            variant={
+                                                link.active
+                                                    ? "default"
+                                                    : "outline"
+                                            }
+                                            size="sm"
+                                            disabled={!link.url}
+                                            style={{ borderRadius: "8px" }}
+                                        >
+                                            {link.label}
+                                        </Button>
+                                    </Link>
+                                );
+                            })}
+
+                        {filteredDivisions.next_page_url && (
+                            <Link href={filteredDivisions.next_page_url}>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    style={{ borderRadius: "8px" }}
+                                >
+                                    <ChevronRight size={16} />
+                                </Button>
+                            </Link>
+                        )}
+                    </div>
+                </div>
+            )}
         </Card>
     );
 }
