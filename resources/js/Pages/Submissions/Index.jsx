@@ -705,11 +705,11 @@ export default function Index({
                                         <th className="py-3 px-6 text-left">
                                             Jenis Dokumen
                                         </th>
-                                        {auth.user.role === "manager" && (
-                                            <th className="py-3 px-6 text-left">
-                                                Diajukan Oleh
-                                            </th>
-                                        )}
+
+                                        <th className="py-3 px-6 text-left">
+                                            Diajukan Oleh
+                                        </th>
+
                                         <th className="py-3 px-6 text-left">
                                             Status
                                         </th>
@@ -764,11 +764,10 @@ export default function Index({
                                                 {submission.workflow?.document
                                                     ?.name || "-"}
                                             </td>
-                                            {auth.user.role === "manager" && (
-                                                <td className="py-2 px-6 hover:underline">
-                                                    {submission.user.name}
-                                                </td>
-                                            )}
+                                            <td className="py-2 px-6 hover:underline">
+                                                {submission.user.name}
+                                            </td>
+
                                             <td className="py-2 px-6 flex ">
                                                 <span
                                                     className={`px-3 py-1 rounded-full text-[0.8em] sm:text-xs font-medium ${
