@@ -16,11 +16,13 @@ class Document extends Model
         'name',
         'description',
         'is_active',
+        'enable_data_tables',
         'default_columns',
     ];
 
     protected $casts = [
         'default_columns' => 'array',
+        'enable_data_tables' => 'boolean',
     ];
 
     /**

@@ -38,6 +38,7 @@ class WorkflowController extends Controller
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
             'document_id' => 'required|exists:documents,id',
+            'all_division' => 'sometimes|boolean',
             'division_ids' => 'nullable|array',
             'division_ids.*' => 'exists:divisions,id',
             'subdivision_ids' => 'nullable|array',
@@ -62,6 +63,7 @@ class WorkflowController extends Controller
                 'division_to_id' => $divisionToId,
                 'document_id' => $validated['document_id'],
                 'is_active' => array_key_exists('is_active', $validated) ? (bool)$validated['is_active'] : true,
+                'all_division' => array_key_exists('all_division', $validated) ? (bool)$validated['all_division'] : false,
                 'total_steps' => count($validated['steps']),
             ]);
 
@@ -79,13 +81,19 @@ class WorkflowController extends Controller
                 // Ignore legacy per-step permissions payload (deprecated)
             }
 
-            // Sync divisions and subdivisions
-            if (isset($validated['division_ids'])) {
-                $workflow->divisions()->sync($validated['division_ids']);
-            }
-            
-            if (isset($validated['subdivision_ids'])) {
-                $workflow->subdivisions()->sync($validated['subdivision_ids']);
+            // Sync divisions and subdivisions only if not all_division
+            if (!($validated['all_division'] ?? false)) {
+                if (isset($validated['division_ids'])) {
+                    $workflow->divisions()->sync($validated['division_ids']);
+                }
+                
+                if (isset($validated['subdivision_ids'])) {
+                    $workflow->subdivisions()->sync($validated['subdivision_ids']);
+                }
+            } else {
+                // Clear divisions and subdivisions if all_division is true
+                $workflow->divisions()->sync([]);
+                $workflow->subdivisions()->sync([]);
             }
         });
 
@@ -98,6 +106,7 @@ class WorkflowController extends Controller
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
             'document_id' => 'required|exists:documents,id',
+            'all_division' => 'sometimes|boolean',
             'division_ids' => 'nullable|array',
             'division_ids.*' => 'exists:divisions,id',
             'subdivision_ids' => 'nullable|array',
@@ -123,6 +132,7 @@ class WorkflowController extends Controller
                 'division_to_id' => $divisionToId,
                 'document_id' => $validated['document_id'],
                 'is_active' => array_key_exists('is_active', $validated) ? (bool)$validated['is_active'] : $workflow->is_active,
+                'all_division' => array_key_exists('all_division', $validated) ? (bool)$validated['all_division'] : $workflow->all_division,
                 'total_steps' => isset($validated['steps']) ? count($validated['steps']) : $workflow->total_steps,
             ]);
 
@@ -144,13 +154,19 @@ class WorkflowController extends Controller
                 }
             }
 
-            // Sync divisions and subdivisions
-            if (isset($validated['division_ids'])) {
-                $workflow->divisions()->sync($validated['division_ids']);
-            }
-            
-            if (isset($validated['subdivision_ids'])) {
-                $workflow->subdivisions()->sync($validated['subdivision_ids']);
+            // Sync divisions and subdivisions only if not all_division
+            if (!($validated['all_division'] ?? false)) {
+                if (isset($validated['division_ids'])) {
+                    $workflow->divisions()->sync($validated['division_ids']);
+                }
+                
+                if (isset($validated['subdivision_ids'])) {
+                    $workflow->subdivisions()->sync($validated['subdivision_ids']);
+                }
+            } else {
+                // Clear divisions and subdivisions if all_division is true
+                $workflow->divisions()->sync([]);
+                $workflow->subdivisions()->sync([]);
             }
         });
 

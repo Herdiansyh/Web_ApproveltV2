@@ -158,8 +158,27 @@ export default function ModalCreate({
                         <Label htmlFor="wf_is_active">Active</Label>
                     </div>
 
+                    {/* All Division Toggle */}
+                    <div className="flex items-center gap-2">
+                        <input
+                            id="wf_all_division"
+                            type="checkbox"
+                            checked={!!data.all_division}
+                            onChange={(e) => {
+                                setData("all_division", e.target.checked);
+                                // Clear division and subdivision selections when all_division is checked
+                                if (e.target.checked) {
+                                    setData("division_ids", []);
+                                    setData("subdivision_ids", []);
+                                    setSelectedDivision("");
+                                }
+                            }}
+                        />
+                        <Label htmlFor="wf_all_division">All Division</Label>
+                    </div>
+
                     {/* Divisions and Subdivisions Assignment */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className={`grid grid-cols-1 md:grid-cols-2 gap-4 ${data.all_division ? 'opacity-50 pointer-events-none' : ''}`}>
                         <div>
                             <Label>Division (Optional)</Label>
                             <Select

@@ -29,6 +29,20 @@ class UserController extends Controller
     }
 
     /**
+     * Fetch semua users tanpa pagination untuk search/filter.
+     */
+    public function all()
+    {
+        $users = User::with(['division', 'subdivision'])
+            ->latest()
+            ->get();
+
+        return response()->json([
+            'data' => $users
+        ]);
+    }
+
+    /**
      * Simpan user baru.
      */
     public function store(Request $request)

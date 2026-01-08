@@ -40,6 +40,7 @@ export default function Show({
     permissionForMe = null,
     userDivisionId = null,
     hasStamped = false,
+    actions = [],
 }) {
     const { showLoading, hideLoading } = useLoading();
     const [showApproveModal, setShowApproveModal] = useState(false);
@@ -1011,8 +1012,8 @@ export default function Show({
                                         currentSubmissionStep?.status ===
                                             "pending" &&
                                         canApprove &&
-                                        Array.isArray(currentStep?.actions) &&
-                                        currentStep.actions.length > 0 && (
+                                        Array.isArray(actions) &&
+                                        actions.length > 0 && (
                                             <DropdownMenu>
                                                 <DropdownMenuTrigger asChild>
                                                     <Button className="rounded-full bg-indigo-500 text-white hover:bg-indigo-600 shadow-sm text-sm px-4 py-1.5">
@@ -1023,7 +1024,7 @@ export default function Show({
                                                     align="end"
                                                     className="w-44 border border-border/30 shadow-md rounded-xl text-sm"
                                                 >
-                                                    {currentStep.actions.map(
+                                                    {actions.map(
                                                         (action, index) => {
                                                             const a =
                                                                 String(

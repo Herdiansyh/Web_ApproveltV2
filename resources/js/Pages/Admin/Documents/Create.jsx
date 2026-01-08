@@ -18,6 +18,7 @@ export default function Create({ isOpen, onClose, document }) {
         name: "",
         description: "",
         is_active: true,
+        enable_data_tables: false,
         default_columns: [
             {
                 name: "No",
@@ -50,6 +51,7 @@ export default function Create({ isOpen, onClose, document }) {
                 name: document.name || "",
                 description: document.description || "",
                 is_active: document.is_active ?? true,
+                enable_data_tables: document.enable_data_tables ?? false,
                 default_columns: document.default_columns || [
                     {
                         name: "No",
@@ -170,6 +172,20 @@ export default function Create({ isOpen, onClose, document }) {
                         />
                         <label htmlFor="is_active" className="text-sm font-medium text-gray-700">
                             Active
+                        </label>
+                    </div>
+
+                    {/* Enable Data Tables Toggle */}
+                    <div className="flex items-center space-x-2">
+                        <input
+                            type="checkbox"
+                            id="enable_data_tables"
+                            checked={data.enable_data_tables}
+                            onChange={(e) => setData("enable_data_tables", e.target.checked)}
+                            className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                        />
+                        <label htmlFor="enable_data_tables" className="text-sm font-medium text-gray-700">
+                            Enable Data Tables (Wajib isi saat pengajuan)
                         </label>
                     </div>
 

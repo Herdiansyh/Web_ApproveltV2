@@ -15,9 +15,16 @@ class Workflow extends Model
         'division_from_id',
         'division_to_id',
         'is_active',
+        'all_division',
         'total_steps',
         'document_id',
         'flow_definition',
+    ];
+
+    protected $casts = [
+        'is_active' => 'boolean',
+        'all_division' => 'boolean',
+        'flow_definition' => 'array',
     ];
 
     // Relasi ke steps

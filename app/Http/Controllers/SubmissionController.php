@@ -525,14 +525,6 @@ class SubmissionController extends Controller
         try {
             $user = Auth::user();
             
-            // Debug: Log user info
-            \Log::info('SubmissionController::create - User Info', [
-                'user_id' => $user->id,
-                'user_role' => $user->role,
-                'user_division_id' => $user->division_id,
-                'user_subdivision_id' => $user->subdivision_id
-            ]);
-            
             $division = $user->division;
 
             $workflows = Workflow::where('is_active', true)
@@ -540,38 +532,34 @@ class SubmissionController extends Controller
                     $q->where('is_active', true);
                 })
                 ->where(function($query) use ($user) {
-                    // Filter berdasarkan divisi user WAJIB
-                    $query->whereHas('divisions', function($q) use ($user) {
-                        $q->where('division_id', $user->division_id);
-                    });
+                    // Include workflows with all_division=true (global workflows)
+                    $query->where('all_division', true);
                     
-                    // Jika user memiliki subdivision, maka workflow juga harus memiliki subdivision yang cocok
-                    if ($user->subdivision_id) {
-                        $query->whereHas('subdivisions', function($q) use ($user) {
-                            $q->where('subdivision_id', $user->subdivision_id);
+                    // OR filter berdasarkan divisi user WAJIB
+                    $query->orWhere(function($subQuery) use ($user) {
+                        $subQuery->whereHas('divisions', function($q) use ($user) {
+                            $q->where('division_id', $user->division_id);
                         });
-                    } else {
-                        // Jika user tidak memiliki subdivision, pastikan workflow tidak memiliki subdivision restriction
-                        // atau workflow memiliki subdivision yang null/empty (berlaku untuk semua subdivisi di divisi tersebut)
-                        $query->whereDoesntHave('subdivisions')
-                              ->orWhereHas('subdivisions', function($q) {
-                                  $q->whereNull('subdivision_id'); // Workflow yang berlaku untuk semua subdivisi
-                              });
-                    }
+                        
+                        // Jika user memiliki subdivision, maka workflow juga harus memiliki subdivision yang cocok
+                        if ($user->subdivision_id) {
+                            $subQuery->whereHas('subdivisions', function($q) use ($user) {
+                                $q->where('subdivision_id', $user->subdivision_id);
+                            });
+                        } else {
+                            // Jika user tidak memiliki subdivision, pastikan workflow tidak memiliki subdivision restriction
+                            // atau workflow memiliki subdivision yang null/empty (berlaku untuk semua subdivisi di divisi tersebut)
+                            $subQuery->whereDoesntHave('subdivisions')
+                                      ->orWhereHas('subdivisions', function($q) {
+                                          $q->whereNull('subdivision_id'); // Workflow yang berlaku untuk semua subdivisi
+                                      });
+                        }
+                    });
                 })
                 ->with(['steps', 'steps.division', 'document.fields', 'document' => function($query) {
-                    $query->select('id', 'name', 'description', 'is_active', 'default_columns');
+                    $query->select('id', 'name', 'description', 'is_active', 'default_columns', 'enable_data_tables');
                 }])
                 ->get();
-
-            // Debug: Log workflows found
-            \Log::info('SubmissionController::create - Workflows Found', [
-                'total_workflows' => $workflows->count(),
-                'workflow_ids' => $workflows->pluck('id')->toArray(),
-                'user_division_id' => $user->division_id,
-                'user_subdivision_id' => $user->subdivision_id,
-                'filter_logic' => 'Division WAJIB cocok + Subdivision harus cocok (jika user punya subdivision)'
-            ]);
 
             return Inertia::render('Submissions/Create', [
                 'userDivision' => $division,
@@ -765,6 +753,13 @@ class SubmissionController extends Controller
         // Check if this is FormData request (has file or content-type is multipart)
         $isFormData = $request->hasFile('file') || $request->header('Content-Type') && str_contains($request->header('Content-Type'), 'multipart/form-data');
         
+        // Handle useTableData from FormData (checkbox not sent = false)
+        if ($isFormData) {
+            $useTableData = $request->input('useTableData') === 'true';
+        } else {
+            $useTableData = $request->boolean('useTableData', false);
+        }
+        
         if ($isFormData) {
             $validated = $request->validate([
                 'workflow_id' => 'required|exists:workflows,id',
@@ -772,12 +767,25 @@ class SubmissionController extends Controller
                 'description' => 'nullable|string',
                 'file' => 'nullable|file|max:10240',
                 'data' => 'nullable|string', // Allow string for FormData JSON
+                'useTableData' => 'sometimes|string', // Accept string from FormData
+                'tableData' => 'nullable|string', // Allow string for FormData JSON
+                'tableColumns' => 'nullable|string', // Allow string for FormData JSON
             ]);
             
             // Convert JSON string to array for FormData requests
             $dataPayload = [];
             if (!empty($validated['data'])) {
                 $dataPayload = json_decode($validated['data'], true) ?? [];
+            }
+            
+            // Add tableData to dataPayload if exists
+            if (!empty($validated['tableData'])) {
+                $dataPayload['tableData'] = json_decode($validated['tableData'], true) ?? [];
+            }
+            
+            // Add tableColumns to dataPayload if exists
+            if (!empty($validated['tableColumns'])) {
+                $dataPayload['tableColumns'] = json_decode($validated['tableColumns'], true) ?? [];
             }
         } else {
             $validated = $request->validate([
@@ -786,6 +794,7 @@ class SubmissionController extends Controller
                 'description' => 'nullable|string',
                 'file' => 'nullable|file|max:10240',
                 'data' => 'nullable|array',
+                'useTableData' => 'sometimes|boolean',
             ]);
             
             $dataPayload = $validated['data'] ?? [];
@@ -794,7 +803,9 @@ class SubmissionController extends Controller
 
         $user = Auth::user();
 
-        $workflow = Workflow::with(['steps', 'steps.division', 'document.fields'])
+        $workflow = Workflow::with(['steps', 'steps.division', 'document.fields', 'document' => function($query) {
+                    $query->select('id', 'name', 'description', 'is_active', 'default_columns', 'enable_data_tables');
+                }])
             ->where('id', $validated['workflow_id'])
             ->where('is_active', true)
             ->whereHas('document', function ($q) {
@@ -807,69 +818,54 @@ class SubmissionController extends Controller
         // Validate required dynamic fields from Document Type
         $docFields = $workflow->document?->fields ?? collect();
         
+        // Check if data tables is mandatory for this document type
+        if ($workflow->document && $workflow->document->enable_data_tables) {
+            $tableData = $dataPayload['tableData'] ?? [];
+            
+            // Check if useTableData is checked
+            if (!$useTableData) {
+                // For Inertia requests, use proper validation error
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'useTableData' => 'Document Type ini wajib menggunakan Data Tables. Centang "Gunakan Data Table" dan isi data yang diperlukan.'
+                ]);
+            }
+            
+            // Check if table data is provided and not empty
+            if (empty($tableData) || !is_array($tableData)) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'tableData' => 'Data Tables wajib diisi. Tambahkan minimal satu baris data.'
+                ]);
+            }
+            
+            // Validate required columns in table data
+            $tableColumns = $dataPayload['tableColumns'] ?? [];
+            $requiredColumns = collect($tableColumns)->filter(function ($col) {
+                return isset($col['required']) && $col['required'] === true;
+            });
+            
+            foreach ($requiredColumns as $column) {
+                $columnKey = $column['key'] ?? $column['name'];
+                $columnName = $column['name'] ?? $columnKey;
+                
+                $hasValidData = false;
+                foreach ($tableData as $rowIndex => $row) {
+                    $value = $row[$columnKey] ?? null;
+                    if ($value !== null && $value !== '') {
+                        $hasValidData = true;
+                        break;
+                    }
+                }
+                
+                if (!$hasValidData) {
+                    throw \Illuminate\Validation\ValidationException::withMessages([
+                        "tableData.{$columnKey}" => "Kolom wajib '{$columnName}' harus diisi pada minimal satu baris data."
+                    ]);
+                }
+            }
+        }
+        
         // Skip validation if no fields are defined for this document type
         if ($docFields->isNotEmpty()) {
-            // Process table data from direct request fields (Inertia sends them separately)
-            $tableData = $request->input('tableData');
-            $tableColumns = $request->input('tableColumns');
-            
-            // For FormData requests, table data comes as JSON strings
-            if ($isFormData) {
-                $tableData = $request->input('tableData');
-                $tableColumns = $request->input('tableColumns');
-                
-                // Decode JSON strings from FormData
-                if (!empty($tableData)) {
-                    $decodedTableData = json_decode($tableData, true);
-                    if (json_last_error() === JSON_ERROR_NONE && is_array($decodedTableData)) {
-                        $dataPayload['tableData'] = $decodedTableData;
-                    }
-                }
-                
-                if (!empty($tableColumns)) {
-                    $decodedTableColumns = json_decode($tableColumns, true);
-                    if (json_last_error() === JSON_ERROR_NONE && is_array($decodedTableColumns)) {
-                        $dataPayload['tableColumns'] = $decodedTableColumns;
-                    }
-                }
-            } else {
-                // Normal form requests (Inertia)
-                if (!empty($tableData) && is_array($tableData)) {
-                    $dataPayload['tableData'] = $tableData;
-                }
-                
-                if (!empty($tableColumns) && is_array($tableColumns)) {
-                    $dataPayload['tableColumns'] = $tableColumns;
-                }
-            }
-            
-            // Also try to process JSON strings within data object (fallback)
-            if (!empty($dataPayload['tableDataJson'])) {
-                try {
-                    $tableDataFromJson = json_decode($dataPayload['tableDataJson'], true);
-                    if (json_last_error() === JSON_ERROR_NONE && is_array($tableDataFromJson)) {
-                        $dataPayload['tableData'] = $tableDataFromJson;
-                    }
-                } catch (\Exception $e) {
-                    // Error decoding tableDataJson
-                }
-            }
-            
-            if (!empty($dataPayload['tableColumnsJson'])) {
-                try {
-                    $tableColumnsFromJson = json_decode($dataPayload['tableColumnsJson'], true);
-                    if (json_last_error() === JSON_ERROR_NONE && is_array($tableColumnsFromJson)) {
-                        $dataPayload['tableColumns'] = $tableColumnsFromJson;
-                    }
-                } catch (\Exception $e) {
-                    // Error decoding tableColumnsJson
-                }
-            }
-            
-            // Remove the JSON strings after processing
-            unset($dataPayload['tableDataJson']);
-            unset($dataPayload['tableColumnsJson']);
-            
             foreach ($docFields as $df) {
                 if ($df->required && (!array_key_exists($df->name, $dataPayload) || $dataPayload[$df->name] === null || $dataPayload[$df->name] === '')) {
                     // Check if this is an API request
@@ -884,65 +880,9 @@ class SubmissionController extends Controller
                     return back()->withErrors(["data.{$df->name}" => $df->label . ' wajib diisi'])->withInput();
                 }
             }
-        } else {
-            // For documents without fields, still process table data if provided
-            $tableData = $request->input('tableData');
-            $tableColumns = $request->input('tableColumns');
-            
-            // For FormData requests, table data comes as JSON strings
-            if ($isFormData) {
-                if (!empty($tableData)) {
-                    $decodedTableData = json_decode($tableData, true);
-                    if (json_last_error() === JSON_ERROR_NONE && is_array($decodedTableData)) {
-                        $dataPayload['tableData'] = $decodedTableData;
-                    }
-                }
-                
-                if (!empty($tableColumns)) {
-                    $decodedTableColumns = json_decode($tableColumns, true);
-                    if (json_last_error() === JSON_ERROR_NONE && is_array($decodedTableColumns)) {
-                        $dataPayload['tableColumns'] = $decodedTableColumns;
-                    }
-                }
-            } else {
-                // Normal form requests (Inertia)
-                if (!empty($tableData) && is_array($tableData)) {
-                    $dataPayload['tableData'] = $tableData;
-                }
-                
-                if (!empty($tableColumns) && is_array($tableColumns)) {
-                    $dataPayload['tableColumns'] = $tableColumns;
-                }
-            }
-            
-            // Also try to process JSON strings within data object (fallback)
-            if (!empty($dataPayload['tableDataJson'])) {
-                try {
-                    $tableDataFromJson = json_decode($dataPayload['tableDataJson'], true);
-                    if (json_last_error() === JSON_ERROR_NONE && is_array($tableDataFromJson)) {
-                        $dataPayload['tableData'] = $tableDataFromJson;
-                    }
-                } catch (\Exception $e) {
-                    // Error decoding tableDataJson
-                }
-            }
-            
-            if (!empty($dataPayload['tableColumnsJson'])) {
-                try {
-                    $tableColumnsFromJson = json_decode($dataPayload['tableColumnsJson'], true);
-                    if (json_last_error() === JSON_ERROR_NONE && is_array($tableColumnsFromJson)) {
-                        $dataPayload['tableColumns'] = $tableColumnsFromJson;
-                    }
-                } catch (\Exception $e) {
-                    // Error decoding tableColumnsJson
-                }
-            }
-            
-            // Remove the JSON strings after processing
-            unset($dataPayload['tableDataJson']);
-            unset($dataPayload['tableColumnsJson']);
         }
 
+        // Create submission
         $filePath = null;
         if ($request->hasFile('file')) {
             $filePath = $request->file('file')->store('submissions', 'private');
@@ -982,11 +922,11 @@ class SubmissionController extends Controller
                 'success' => true,
                 'message' => 'Pengajuan berhasil dibuat.',
                 'submission_id' => $submission->id,
-                'redirect_url' => route('submissions.forDivision')
+                'redirect_url' => route('submissions.outgoing')
             ]);
         }
 
-        return redirect()->route('submissions.OutGoing.jsx')->with('success', 'Pengajuan berhasil dibuat.');
+        return redirect()->route('submissions.outgoing.jsx')->with('success', 'Pengajuan berhasil dibuat.');
     }
 
     /** ------------------------
@@ -1007,6 +947,9 @@ class SubmissionController extends Controller
         ]);
 
         $user = Auth::user();
+
+        // Check if submission has been stamped
+        $hasStamped = $submission->stamped !== null;
 
         // Ambil WorkflowStep saat ini jika ada workflow; untuk template-only bisa null
         $currentWorkflowStep = $submission->workflow
@@ -1034,9 +977,17 @@ class SubmissionController extends Controller
                 ? SubdivisionPermission::where('subdivision_id', $user->subdivision_id)->first()
                 : null;
 
-            if ($permission || $user->role === 'admin') {
+            // User bisa approve jika admin atau punya permission
+            $hasPermission = $user->role === 'admin' || ($permission && ($permission->can_approve || $permission->can_reject || $permission->can_request_next));
+            
+            // Jika user tidak punya subdivision_id, berikan permission default
+            if (!$user->subdivision_id && $user->role !== 'admin') {
+                $hasPermission = true; // User tanpa subdivision diizinkan untuk aksi basic
+            }
+
+            if ($hasPermission) {
                 // User bisa approve jika punya permission global
-                $canApprove = $user->role === 'admin' ? true : ($permission->can_approve || $permission->can_reject || $permission->can_request_next);
+                $canApprove = $user->role === 'admin' ? true : ($permission ? ($permission->can_approve || $permission->can_reject || $permission->can_request_next) : true);
 
                 // Pastikan actions berbentuk array sebelum difilter
                 $actionsRaw = $currentWorkflowStep->actions;
@@ -1053,6 +1004,10 @@ class SubmissionController extends Controller
                 $filteredActions = array_values(array_filter($actionsArray, function ($action) use ($permission, $user) {
                     $a = strtolower((string) $action);
                     if ($user->role === 'admin') return true;
+                    
+                    // Jika user tidak punya subdivision_id, izinkan semua actions
+                    if (!$user->subdivision_id) return true;
+                    
                     if (str_contains($a, 'approve')) return (bool) $permission->can_approve;
                     if (str_contains($a, 'reject')) return (bool) $permission->can_reject;
                     if (str_contains($a, 'reviewed')) return (bool) $permission->can_request_next;
@@ -1061,52 +1016,20 @@ class SubmissionController extends Controller
             }
         }
 
-        // 🔥 PENTING: Parse actions jika masih string (untuk Inertia)
-        if ($currentWorkflowStep) {
-            // Pastikan array dan terapkan filter jika ada
-            $actionsRaw = $currentWorkflowStep->actions;
-            if (is_string($actionsRaw)) {
-                $decoded = json_decode($actionsRaw, true);
-                $actionsArray = is_array($decoded) ? $decoded : [];
-            } elseif (is_array($actionsRaw)) {
-                $actionsArray = $actionsRaw;
-            } else {
-                $actionsArray = [];
-            }
-            $currentWorkflowStep->actions = !empty($filteredActions) ? $filteredActions : $actionsArray;
-        }
-
-        $fileUrl = route('submissions.file', $submission->id);
-        $fileExists = $submission->file_path && Storage::disk('private')->exists($submission->file_path);
-
-        // 🔥 Debug log
-        Log::info('Show Submission Debug:', [
-            'submission_id' => $submission->id,
-            'current_step' => $submission->current_step,
-            'workflow_step_id' => $currentWorkflowStep?->id,
-            'actions' => $currentWorkflowStep?->actions,
-            'actions_type' => gettype($currentWorkflowStep?->actions),
-            'user_subdivision_id' => $user->subdivision_id,
-            'can_approve' => $canApprove,
-        ]);
-
-        $hasStamped = false;
-        if ($submission->stamped && $submission->stamped->stamped_pdf_path && Storage::disk('private')->exists($submission->stamped->stamped_pdf_path)) {
-            $hasStamped = true;
-        }
-
         return Inertia::render('Submissions/Show', [
             'submission' => $submission,
-            'workflowSteps' => $submission->workflowSteps()->with('approver')->orderBy('step_order')->get(),
-            'currentStep' => $currentWorkflowStep, // 🔥 Kirim WorkflowStep (ada field actions)
-            'currentSubmissionStep' => $currentSubmissionStep, // Status tracking
+            'fileUrl' => $submission->file_path ? request()->getSchemeAndHttpHost() . route('submissions.file', $submission, false) : null,
             'canApprove' => $canApprove,
-            'fileUrl' => $fileUrl,
-            'fileExists' => $fileExists,
+            'currentSubmissionStep' => $currentSubmissionStep,
+            'workflow' => $submission->workflow,
+            'steps' => $submission->workflow->steps->sortBy('step_order')->values(),
+            'currentStep' => $currentWorkflowStep,
+            'actions' => $filteredActions ?? [],
             'documentFields' => $submission->workflow?->document?->fields ?? [],
             'permissionForMe' => $user->subdivision_id ? SubdivisionPermission::where('subdivision_id', $user->subdivision_id)->first() : null,
             'userDivisionId' => $user->division_id,
             'hasStamped' => $hasStamped,
+          
         ]);
     }
 

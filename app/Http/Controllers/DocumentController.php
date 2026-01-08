@@ -42,6 +42,7 @@ class DocumentController extends Controller
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
             'is_active' => 'sometimes|boolean',
+            'enable_data_tables' => 'sometimes|boolean',
             'default_columns' => 'nullable|array',
             'default_columns.*.name' => 'required|string|max:255',
             'default_columns.*.key' => 'required|string|max:255',
@@ -61,6 +62,7 @@ class DocumentController extends Controller
             'name' => $data['name'],
             'description' => $data['description'] ?? null,
             'is_active' => array_key_exists('is_active', $data) ? (bool)$data['is_active'] : true,
+            'enable_data_tables' => array_key_exists('enable_data_tables', $data) ? (bool)$data['enable_data_tables'] : false,
             'default_columns' => $data['default_columns'] ?? null,
         ]);
 
@@ -109,6 +111,7 @@ class DocumentController extends Controller
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
             'is_active' => 'sometimes|boolean',
+            'enable_data_tables' => 'sometimes|boolean',
             'default_columns' => 'nullable|array',
             'default_columns.*.name' => 'required|string|max:255',
             'default_columns.*.key' => 'required|string|max:255',
@@ -128,6 +131,7 @@ class DocumentController extends Controller
             'name' => $data['name'],
             'description' => $data['description'] ?? null,
             'is_active' => array_key_exists('is_active', $data) ? (bool)$data['is_active'] : $document->is_active,
+            'enable_data_tables' => array_key_exists('enable_data_tables', $data) ? (bool)$data['enable_data_tables'] : $document->enable_data_tables,
             'default_columns' => $data['default_columns'] ?? $document->default_columns,
         ]);
 

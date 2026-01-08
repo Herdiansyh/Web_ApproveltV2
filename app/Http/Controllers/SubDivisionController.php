@@ -20,6 +20,20 @@ class SubdivisionController extends Controller
         ]);
     }
 
+    /**
+     * Fetch semua subdivisions tanpa pagination untuk search/filter.
+     */
+    public function all()
+    {
+        $subdivisions = Subdivision::with(['division'])
+            ->latest()
+            ->get();
+
+        return response()->json([
+            'data' => $subdivisions
+        ]);
+    }
+
     public function store(Request $request)
     {
         $request->validate([

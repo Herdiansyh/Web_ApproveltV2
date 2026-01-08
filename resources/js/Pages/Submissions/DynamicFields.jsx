@@ -1,3 +1,4 @@
+import React from "react";
 import { Input } from "@/Components/ui/input";
 import { Label } from "@/Components/ui/label";
 import {
@@ -8,195 +9,186 @@ import {
     SelectValue,
 } from "@/Components/ui/select";
 import { Textarea } from "@/Components/ui/textarea";
-import React from "react";
 
 export default function DynamicFields({
-    activeFields,
+    activeFields = [],
     data,
     setData,
-    errors,
+    errors = {},
     setIsSaved,
 }) {
+    // 🔑 Ambil nilai jenis pembayaran berdasarkan NAMA FIELD
+    const jenisPembayaran = data?.data?.["Jenis Pembayaran"] ?? "";
+    const isKartuKredit = jenisPembayaran === "Rincian Kartu Kredit";
+
+    const handleSetValue = (name, value) => {
+        setData("data", {
+            ...(data.data || {}),
+            [name]: value,
+        });
+        setIsSaved(false);
+    };
+
     return (
-        <div
-            className="border-t pt-6 mt-6"
-            style={{
-                borderRadius: "10px",
-            }}
-        >
+        <div className="border-t pt-6 mt-6 rounded-lg">
             <h3 className="text-lg font-semibold mb-4">Informasi Tambahan</h3>
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {activeFields.map((f) => {
                     const type = String(f.type || "text").toLowerCase();
-                    const value = data.data?.[f.name] ?? "";
-                    const setVal = (v) => {
-                        setData("data", {
-                            ...(data.data || {}),
-                            [f.name]: v,
-                        });
-                        setIsSaved(false);
-                    };
-
+                    const name = f.name;
+                    const label = f.label;
+                    const value = data?.data?.[name] ?? "";
                     const options = Array.isArray(f.options) ? f.options : [];
 
-                    const renderSelectOptions = () => {
-                        if (!options.length) return null;
-                        return options.map((opt, idx) => {
-                            if (opt && typeof opt === "object") {
-                                const val = String(opt.value ?? opt.id ?? "");
-                                const label =
-                                    opt.label ?? String(opt.name ?? val);
-                                return (
-                                    <SelectItem key={val || idx} value={val}>
-                                        {label}
-                                    </SelectItem>
-                                );
-                            }
-                            const val = String(opt);
-                            return (
-                                <SelectItem key={val} value={val}>
-                                    {val}
-                                </SelectItem>
-                            );
-                        });
-                    };
+                    // 🚫 Sembunyikan Nama Bank jika bukan kartu kredit
+                    if (name === "Nama Bank" && !isKartuKredit) {
+                        return null;
+                    }
+
+                    // 🔖 Field label / separator
+                    if (type === "label") {
+                        return (
+                            <div key={f.id || name} className="col-span-full">
+                                <div className="border-t border-gray-300 my-4" />
+                                <h4 className="font-bold text-lg py-2">
+                                    {label}
+                                </h4>
+                            </div>
+                        );
+                    }
 
                     return (
-                        <div key={f.id || f.name}>
-                            {type === "label" ? (
-                                // For label type, only show the label as a separator without the field label
-                                <div className="col-span-full mt-1">
-                                    <div className="border-t border-gray-300 dark:border-gray-600 my-4"></div>
-                                    <h4 className="font-bold text-lg text-gray-800 dark:text-gray-200 py-2">
-                                        {f.label}
-                                    </h4>
-                                </div>
-                            ) : (
-                                <>
-                                    <Label>
-                                        {f.label}
-                                        {f.required && (
-                                            <span className="text-red-500 ml-1">*</span>
-                                        )}
-                                    </Label>
-                                    {type === "textarea" ? (
+                        <div key={f.id || name}>
+                            <Label>
+                                {label}
+                                {f.required && (
+                                    <span className="text-red-500 ml-1">*</span>
+                                )}
+                            </Label>
+
+                            {/* TEXTAREA */}
+                            {type === "textarea" && (
                                 <Textarea
-                                    style={{
-                                        borderRadius: "10px",
-                                    }}
-                                    value={value}
-                                    onChange={(e) => setVal(e.target.value)}
                                     rows={3}
-                                    className={`mt-1 ${
-                                        f.required &&
-                                        (!value || value.trim() === "") &&
-                                        errors[`data.${f.name}`]
-                                            ? "border-red-500"
-                                            : ""
-                                    }`}
+                                    value={value}
+                                    onChange={(e) =>
+                                        handleSetValue(name, e.target.value)
+                                    }
+                                    className="mt-1"
                                 />
-                            ) : type === "date" ? (
+                            )}
+
+                            {/* DATE */}
+                            {type === "date" && (
                                 <Input
-                                    style={{
-                                        borderRadius: "10px",
-                                    }}
                                     type="date"
                                     value={value}
-                                    onChange={(e) => setVal(e.target.value)}
-                                    className={`mt-1 ${
-                                        f.required &&
-                                        !value &&
-                                        errors[`data.${f.name}`]
-                                            ? "border-red-500"
-                                            : ""
-                                    }`}
+                                    onChange={(e) =>
+                                        handleSetValue(name, e.target.value)
+                                    }
+                                    className="mt-1"
                                 />
-                            ) : type === "select" ? (
-                                <Select
-                                    value={value === null ? "" : String(value)}
-                                    onValueChange={(v) => setVal(v)}
-                                >
-                                    <SelectTrigger
-                                        style={{
-                                            borderRadius: "10px",
-                                        }}
-                                        className={`w-full mt-1 ${
-                                            f.required &&
-                                            (!value || value === "") &&
-                                            errors[`data.${f.name}`]
-                                                ? "border-red-500"
-                                                : ""
-                                        }`}
-                                    >
-                                        <SelectValue
-                                            placeholder={`Pilih ${f.label}`}
-                                        />
-                                    </SelectTrigger>
-                                    <SelectContent
-                                        style={{
-                                            borderRadius: "10px",
-                                        }}
-                                    >
-                                        {renderSelectOptions()}
-                                    </SelectContent>
-                                </Select>
-                            ) : type === "number" ? (
+                            )}
+
+                            {/* NUMBER */}
+                            {type === "number" && (
                                 <Input
-                                    style={{
-                                        borderRadius: "10px",
-                                    }}
                                     type="number"
                                     value={value}
-                                    onChange={(e) => setVal(e.target.value)}
-                                    className={`mt-1 ${
-                                        f.required &&
-                                        (!value || value.trim() === "") &&
-                                        errors[`data.${f.name}`]
-                                            ? "border-red-500"
-                                            : ""
-                                    }`}
+                                    onChange={(e) =>
+                                        handleSetValue(name, e.target.value)
+                                    }
+                                    className="mt-1"
                                 />
-                            ) : type === "file" ? (
+                            )}
+
+                            {/* FILE */}
+                            {type === "file" && (
                                 <Input
-                                    style={{
-                                        borderRadius: "10px",
-                                    }}
                                     type="file"
-                                    onChange={(e) => {
-                                        const file =
-                                            e.target.files && e.target.files[0];
-                                        setVal(file ? file.name : "");
-                                    }}
-                                    className={`mt-1 ${
-                                        f.required &&
-                                        (!value || value.trim() === "") &&
-                                        errors[`data.${f.name}`]
-                                            ? "border-red-500"
-                                            : ""
-                                    }`}
+                                    onChange={(e) =>
+                                        handleSetValue(
+                                            name,
+                                            e.target.files?.[0] || null
+                                        )
+                                    }
+                                    className="mt-1"
                                 />
-                            ) : (
+                            )}
+
+                            {/* SELECT */}
+                            {type === "select" && (
+                                <Select
+                                    value={String(value)}
+                                    onValueChange={(v) => {
+                                        const nextData = {
+                                            ...(data.data || {}),
+                                            [name]: v,
+                                        };
+
+                                        // 🔁 Reset Nama Bank jika ganti dari kartu kredit
+                                        if (
+                                            name === "Jenis Pembayaran" &&
+                                            v !== "Rincian Kartu Kredit"
+                                        ) {
+                                            nextData["Nama Bank"] = "";
+                                        }
+
+                                        setData("data", nextData);
+                                        setIsSaved(false);
+                                    }}
+                                >
+                                    <SelectTrigger className="mt-1">
+                                        <SelectValue
+                                            placeholder={`Pilih ${label}`}
+                                        />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {options.map((opt, idx) => {
+                                            const val =
+                                                typeof opt === "object"
+                                                    ? String(
+                                                          opt.value ?? opt.id
+                                                      )
+                                                    : String(opt);
+
+                                            const optLabel =
+                                                typeof opt === "object"
+                                                    ? opt.label ??
+                                                      opt.name ??
+                                                      val
+                                                    : val;
+
+                                            return (
+                                                <SelectItem
+                                                    key={val || idx}
+                                                    value={val}
+                                                >
+                                                    {optLabel}
+                                                </SelectItem>
+                                            );
+                                        })}
+                                    </SelectContent>
+                                </Select>
+                            )}
+
+                            {/* DEFAULT TEXT */}
+                            {type === "text" && (
                                 <Input
-                                    style={{
-                                        borderRadius: "10px",
-                                    }}
                                     value={value}
-                                    onChange={(e) => setVal(e.target.value)}
-                                    className={`mt-1 ${
-                                        f.required &&
-                                        (!value || value.trim() === "") &&
-                                        errors[`data.${f.name}`]
-                                            ? "border-red-500"
-                                            : ""
-                                    }`}
+                                    onChange={(e) =>
+                                        handleSetValue(name, e.target.value)
+                                    }
+                                    className="mt-1"
                                 />
                             )}
-                            {f.required && errors[`data.${f.name}`] && (
+
+                            {/* ERROR */}
+                            {f.required && errors[`data.${name}`] && (
                                 <p className="text-red-500 text-sm mt-1">
-                                    {errors[`data.${f.name}`]}
+                                    {errors[`data.${name}`]}
                                 </p>
-                            )}
-                                </>
                             )}
                         </div>
                     );

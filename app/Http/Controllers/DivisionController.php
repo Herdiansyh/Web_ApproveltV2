@@ -8,13 +8,27 @@ use Inertia\Inertia;
 
 class DivisionController extends Controller
 {
+    /**
+     * Fetch semua divisions tanpa pagination untuk search/filter.
+     */
+    public function all()
+    {
+        $divisions = Division::with(['subdivisions'])
+            ->latest()
+            ->get();
+
+        return response()->json([
+            'data' => $divisions
+        ]);
+    }
+
     // Menampilkan daftar division
- public function index()
-{
-    return Inertia::render('Admin/Division/Index', [
-        'divisions' => Division::with('subdivisions')->paginate(10),
-    ]);
-}
+    public function index()
+    {
+        return Inertia::render('Admin/Division/Index', [
+            'divisions' => Division::with('subdivisions')->paginate(10),
+        ]);
+    }
 
 
     // Halaman buat division baru

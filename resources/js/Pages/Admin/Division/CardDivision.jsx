@@ -32,6 +32,9 @@ export default function CardDivision({
     setIsModalOpen,
     setSelectedDivisionForSub,
     setEditingDivision,
+    currentPage,
+    setCurrentPage,
+    isLoadingAll = false,
 }) {
     return (
         <Card className="p-6 shadow-xl" style={{ borderRadius: "15px" }}>
@@ -89,6 +92,14 @@ export default function CardDivision({
                     + Add New Division
                 </Button>
             </div>
+
+            {/* Loading indicator */}
+            {isLoadingAll && (
+                <div className="flex justify-center items-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                    <span className="ml-2 text-gray-600">Loading all divisions for search...</span>
+                </div>
+            )}
 
             {/* Table */}
             <Table>
@@ -169,15 +180,26 @@ export default function CardDivision({
                     </div>
                     <div className="flex gap-2">
                         {filteredDivisions.prev_page_url && (
-                            <Link href={filteredDivisions.prev_page_url}>
+                            filteredDivisions.prev_page_url === '#' ? (
                                 <Button
                                     variant="outline"
                                     size="sm"
                                     style={{ borderRadius: "8px" }}
+                                    onClick={() => setCurrentPage(currentPage - 1)}
                                 >
                                     <ChevronLeft size={16} />
                                 </Button>
-                            </Link>
+                            ) : (
+                                <Link href={filteredDivisions.prev_page_url}>
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        style={{ borderRadius: "8px" }}
+                                    >
+                                        <ChevronLeft size={16} />
+                                    </Button>
+                                </Link>
+                            )
                         )}
 
                         {filteredDivisions.links &&
@@ -189,37 +211,62 @@ export default function CardDivision({
                                     return null;
                                 }
                                 return (
-                                    <Link
-                                        key={index}
-                                        href={link.url || "#"}
-                                        only={[]}
-                                    >
-                                        <Button
-                                            variant={
-                                                link.active
-                                                    ? "default"
-                                                    : "outline"
-                                            }
-                                            size="sm"
-                                            disabled={!link.url}
-                                            style={{ borderRadius: "8px" }}
-                                        >
-                                            {link.label}
-                                        </Button>
-                                    </Link>
+                                    <div key={index}>
+                                        {link.url === '#' ? (
+                                            <Button
+                                                variant={
+                                                    link.active
+                                                        ? "default"
+                                                        : "outline"
+                                                }
+                                                size="sm"
+                                                disabled={!link.url}
+                                                style={{ borderRadius: "8px" }}
+                                                onClick={() => link.url && setCurrentPage(parseInt(link.label))}
+                                            >
+                                                {link.label}
+                                            </Button>
+                                        ) : (
+                                            <Link href={link.url || "#"}>
+                                                <Button
+                                                    variant={
+                                                        link.active
+                                                            ? "default"
+                                                            : "outline"
+                                                    }
+                                                    size="sm"
+                                                    disabled={!link.url}
+                                                    style={{ borderRadius: "8px" }}
+                                                >
+                                                    {link.label}
+                                                </Button>
+                                            </Link>
+                                        )}
+                                    </div>
                                 );
                             })}
 
                         {filteredDivisions.next_page_url && (
-                            <Link href={filteredDivisions.next_page_url}>
+                            filteredDivisions.next_page_url === '#' ? (
                                 <Button
                                     variant="outline"
                                     size="sm"
                                     style={{ borderRadius: "8px" }}
+                                    onClick={() => setCurrentPage(currentPage + 1)}
                                 >
                                     <ChevronRight size={16} />
                                 </Button>
-                            </Link>
+                            ) : (
+                                <Link href={filteredDivisions.next_page_url}>
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        style={{ borderRadius: "8px" }}
+                                    >
+                                        <ChevronRight size={16} />
+                                    </Button>
+                                </Link>
+                            )
                         )}
                     </div>
                 </div>

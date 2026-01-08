@@ -315,6 +315,13 @@ export default function Create({ auth, userDivision, workflows }) {
         return documentFields;
     }, [documentFields]);
 
+    // Auto-enable data tables if document type requires it
+    useEffect(() => {
+        if (selectedWorkflow?.document?.enable_data_tables) {
+            setData("useTableData", true);
+        }
+    }, [selectedWorkflow]);
+
     // 🔹 Load data dari localStorage ketika halaman dibuka
     useEffect(() => {
         const savedData = localStorage.getItem("createFormData");
@@ -497,6 +504,68 @@ export default function Create({ auth, userDivision, workflows }) {
             }
         }
 
+        // Check if data tables is mandatory for this document type
+        if (
+            selectedWorkflow?.document?.enable_data_tables &&
+            !data.useTableData
+        ) {
+            Swal.fire({
+                icon: "warning",
+                title: "Validation Error",
+                text: "Document Type ini wajib menggunakan Data Tables. Centang 'Gunakan Data Table' dan isi data yang diperlukan.",
+            });
+            return;
+        }
+
+        // If data tables is mandatory, ensure there's at least one row with data
+        if (
+            selectedWorkflow?.document?.enable_data_tables &&
+            data.useTableData
+        ) {
+            if (!data.tableData || data.tableData.length === 0) {
+                Swal.fire({
+                    icon: "warning",
+                    title: "Validation Error",
+                    text: "Data Tables wajib diisi. Tambahkan minimal satu baris data.",
+                });
+                return;
+            }
+
+            // Check if all required columns have data
+            const requiredColumns = data.tableColumns.filter(
+                (col) => col.required
+            );
+            const missingRequiredData = [];
+
+            for (const column of requiredColumns) {
+                let hasData = false;
+                for (const row of data.tableData) {
+                    const value = row[column.key];
+                    if (
+                        value &&
+                        (typeof value !== "string" || value.trim() !== "")
+                    ) {
+                        hasData = true;
+                        break;
+                    }
+                }
+                if (!hasData) {
+                    missingRequiredData.push(column.name);
+                }
+            }
+
+            if (missingRequiredData.length > 0) {
+                Swal.fire({
+                    icon: "warning",
+                    title: "Validation Error",
+                    text: `Kolom wajib berikut harus diisi: ${missingRequiredData.join(
+                        ", "
+                    )}`,
+                });
+                return;
+            }
+        }
+
         // Include table data in form submission only if useTableData is true
         let tableDataFiltered = [];
         if (data.useTableData && data.tableData && data.tableData.length > 0) {
@@ -559,6 +628,12 @@ export default function Create({ auth, userDivision, workflows }) {
                     if (data.data && Object.keys(data.data).length > 0) {
                         formData.append("data", JSON.stringify(data.data));
                     }
+
+                    // Add useTableData field
+                    formData.append(
+                        "useTableData",
+                        data.useTableData ? "true" : "false"
+                    );
 
                     // Add table data if useTableData is true and data exists
                     if (
@@ -682,8 +757,9 @@ export default function Create({ auth, userDivision, workflows }) {
                     Swal.fire({
                         icon: "error",
                         title: "Error!",
-                        text: "Terjadi kesalahan saat mengirim pengajuan: " +
-                            (error.message || "Unknown error")
+                        text:
+                            "Terjadi kesalahan saat mengirim pengajuan: " +
+                            (error.message || "Unknown error"),
                     });
                 }
             }
@@ -900,15 +976,9 @@ export default function Create({ auth, userDivision, workflows }) {
                                                                 value="wd"
                                                             >
                                                                 Tidak ada
-                                                                workflow yang
-                                                                tersedia untuk
-                                                                divisi Anda.
-                                                                Pastikan
-                                                                Document Type
-                                                                sudah
-                                                                dikonfigurasi
-                                                                untuk divisi/
-                                                                subdivisi Anda.
+                                                                Doctype!
+                                                                silahkan hubungi
+                                                                Admin..
                                                             </SelectItem>
                                                         )}
                                                     </SelectContent>
@@ -1012,6 +1082,7 @@ export default function Create({ auth, userDivision, workflows }) {
                                     )}
                                     {/* Dynamic Excel-like Table */}
                                     <TableExcel
+                                        selectedWorkflow={selectedWorkflow}
                                         data={data}
                                         setData={setData}
                                         setIsSaved={setIsSaved}

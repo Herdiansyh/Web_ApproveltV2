@@ -344,8 +344,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/filter/options', [FilterController::class, 'getOptions'])->name('filter.options');
 
     // Manager-only routes
-        Route::post('submissions/{submission}/approve', [SubmissionController::class, 'approve'])->name('submissions.approve');
-        Route::post('submissions/{submission}/reject', [SubmissionController::class, 'reject'])->name('submissions.reject');
+    Route::post('submissions/{submission}/approve', [SubmissionController::class, 'approve'])->name('submissions.approve');
+    Route::post('submissions/{submission}/reject', [SubmissionController::class, 'reject'])->name('submissions.reject');
         
   
 
@@ -366,15 +366,20 @@ Route::middleware(['auth', 'verified'])->group(function () {
             'stats' => $stats,
         ]);
     })->name('Admindashboard');
+        // Subdivision Management
+        Route::get('/subdivisions/all', [SubdivisionController::class, 'all'])->name('subdivisions.all')->middleware('auth');
         Route::resource('subdivisions', SubdivisionController::class);
 
         // User Management
         Route::get('/users', [UserController::class, 'index'])->name('users.index');
+        Route::get('/users/all', [UserController::class, 'all'])->name('users.all')->middleware('auth');
         Route::post('/users', [UserController::class, 'store'])->name('users.store');
         Route::put('/users/{user}', [UserController::class, 'update'])->name('users.update');
         Route::delete('/users/{user}', [UserController::class, 'destroy'])->name('users.destroy');
 
         // Division Management
+        Route::get('/divisions', [DivisionController::class, 'index'])->name('divisions.index');
+        Route::get('/divisions/all', [DivisionController::class, 'all'])->name('divisions.all')->middleware('auth');
         Route::resource('divisions', DivisionController::class);
 
         // Workflow Management

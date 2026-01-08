@@ -18,7 +18,14 @@ import {
     TableRow,
 } from "@/Components/ui/table";
 import { router, Link } from "@inertiajs/react";
-import { ArrowRight, Edit, Plus, Settings, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
+import {
+    ArrowRight,
+    Edit,
+    Plus,
+    Trash2,
+    ChevronLeft,
+    ChevronRight,
+} from "lucide-react";
 import React from "react";
 import Swal from "sweetalert2";
 export default function CardWorkflow({
@@ -30,10 +37,10 @@ export default function CardWorkflow({
     documents,
     workflows,
     openCreateModal,
-    goToPermissions,
     openEditModal,
     handleDelete,
 }) {
+    console.log(workflows);
     return (
         <Card style={{ borderRadius: "15px" }} className="p-6 shadow-xl">
             {/* Filters & Create Button */}
@@ -101,37 +108,64 @@ export default function CardWorkflow({
                                 </TableCell>
                                 <TableCell>
                                     <div className="flex flex-wrap gap-1">
-                                        {wf.divisions?.length > 0 ? (
+                                        {wf?.all_division ? (
+                                            <Badge
+                                                variant="outline"
+                                                className="text-xs"
+                                                style={{ borderRadius: "10px" }}
+                                            >
+                                                All Divisions
+                                            </Badge>
+                                        ) : wf?.divisions?.length > 0 ? (
                                             wf.divisions.map((division) => (
                                                 <Badge
                                                     key={division.id}
                                                     variant="outline"
                                                     className="text-xs"
-                                                    style={{ borderRadius: "10px" }}
+                                                    style={{
+                                                        borderRadius: "10px",
+                                                    }}
                                                 >
                                                     {division.name}
                                                 </Badge>
                                             ))
                                         ) : (
-                                            <span className="text-gray-400 text-sm">No divisions</span>
+                                            <span className="text-gray-400 text-sm">
+                                                No divisions
+                                            </span>
                                         )}
                                     </div>
                                 </TableCell>
                                 <TableCell>
                                     <div className="flex flex-wrap gap-1">
-                                        {wf.subdivisions?.length > 0 ? (
-                                            wf.subdivisions.map((subdivision) => (
-                                                <Badge
-                                                    key={subdivision.id}
-                                                    variant="secondary"
-                                                    className="text-xs"
-                                                    style={{ borderRadius: "10px" }}
-                                                >
-                                                    {subdivision.name}
-                                                </Badge>
-                                            ))
+                                        {wf?.all_division ? (
+                                            <Badge
+                                                variant="outline"
+                                                className="text-xs"
+                                                style={{ borderRadius: "10px" }}
+                                            >
+                                                All Divisions
+                                            </Badge>
+                                        ) : wf?.subdivisions?.length > 0 ? (
+                                            wf.subdivisions.map(
+                                                (subdivision) => (
+                                                    <Badge
+                                                        key={subdivision.id}
+                                                        variant="outline"
+                                                        className="text-xs"
+                                                        style={{
+                                                            borderRadius:
+                                                                "10px",
+                                                        }}
+                                                    >
+                                                        {subdivision.name}
+                                                    </Badge>
+                                                )
+                                            )
                                         ) : (
-                                            <span className="text-gray-400 text-sm">No subdivisions</span>
+                                            <span className="text-gray-400 text-sm">
+                                                No divisions
+                                            </span>
                                         )}
                                     </div>
                                 </TableCell>
@@ -254,9 +288,8 @@ export default function CardWorkflow({
             {workflows && workflows.total > 0 && (
                 <div className="flex items-center justify-between mt-6 pt-6 border-t">
                     <div className="text-sm text-gray-600">
-                        Showing {workflows.from} to {" "}
-                        {workflows.to} of {workflows.total}{" "}
-                        workflows
+                        Showing {workflows.from} to {workflows.to} of{" "}
+                        {workflows.total} workflows
                     </div>
                     <div className="flex gap-2">
                         {workflows.prev_page_url && (

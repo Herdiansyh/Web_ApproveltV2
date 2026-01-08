@@ -23,8 +23,7 @@ return new class extends Migration
             $table->string('title');
             $table->text('description')->nullable();
             $table->string('file_path')->nullable();
-            $table->string('signature_path')->nullable();
-
+          
             // Workflow (SET NULL jika workflow dihapus)
             $table->foreignId('workflow_id')
                 ->nullable()
@@ -60,12 +59,7 @@ return new class extends Migration
             $table->string('verification_token')->nullable()->unique();
             $table->string('qr_code_path')->nullable();
 
-            // Watermark
-            $table->float('watermark_x')->nullable();
-            $table->float('watermark_y')->nullable();
-            $table->float('watermark_width')->nullable();
-            $table->float('watermark_height')->nullable();
-
+         
             $table->timestamps();
         });
     }

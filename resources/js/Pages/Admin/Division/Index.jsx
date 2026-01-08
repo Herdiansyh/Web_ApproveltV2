@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
 import { Head, router } from "@inertiajs/react";
 import { Button } from "@/Components/ui/button";
@@ -31,11 +31,104 @@ export default function Index({ auth, divisions }) {
     const [editingDivision, setEditingDivision] = useState(null);
     const [search, setSearch] = useState("");
     const [selectedDivision, setSelectedDivision] = useState("all");
-    const [selectedDivisionForSub, setSelectedDivisionForSub] = useState(null); // ⬅️ for subdivision modal
+    const [selectedDivisionForSub, setSelectedDivisionForSub] = useState(null);
+    const [currentPage, setCurrentPage] = useState(1);
 
     const handleSearch = (e) => setSearch(e.target.value);
 
-    const filteredDivisions = divisions;
+    // Reset page saat search atau filter berubah
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [search, selectedDivision]);
+
+    // State untuk menyimpan semua data saat search
+    const [allDivisions, setAllDivisions] = useState(null);
+    const [isLoadingAll, setIsLoadingAll] = useState(false);
+
+    // Fetch semua data saat search/filter aktif
+    useEffect(() => {
+        if (search || (selectedDivision && selectedDivision !== "all")) {
+            const fetchAllDivisions = async () => {
+                setIsLoadingAll(true);
+                try {
+                    const response = await fetch("/divisions/all");
+                    const data = await response.json();
+                    setAllDivisions(data.data);
+                } catch (error) {
+                    console.error("Error fetching all divisions:", error);
+                } finally {
+                    setIsLoadingAll(false);
+                }
+            };
+            fetchAllDivisions();
+        } else {
+            setAllDivisions(null); // Reset saat tidak ada filter
+        }
+    }, [search, selectedDivision]);
+
+    // Gunakan pagination backend yang sudah ada dengan client-side filtering
+    const divisionsArray = Array.isArray(divisions)
+        ? divisions
+        : divisions?.data || [];
+    const searchArray = allDivisions || divisionsArray; // Gunakan allDivisions saat ada search/filter
+
+    const filteredDivisions = searchArray.filter((division) => {
+        const matchText =
+            !search ||
+            division.name.toLowerCase().includes(search.toLowerCase()) ||
+            (division.description &&
+                division.description
+                    .toLowerCase()
+                    .includes(search.toLowerCase()));
+        const matchDivision =
+            selectedDivision === "all" ||
+            selectedDivision === "" ||
+            division.name.toLowerCase() === selectedDivision.toLowerCase();
+        return matchText && matchDivision;
+    });
+
+    // Buat pagination object yang menggunakan backend pagination tapi dengan filtered data
+    const paginationData = useMemo(() => {
+        // Jika ada search/filter, gunakan client-side pagination
+        if (search || (selectedDivision && selectedDivision !== "all")) {
+            const itemsPerPage = 10;
+            const totalPages = Math.ceil(
+                filteredDivisions.length / itemsPerPage
+            );
+            const startIndex = (currentPage - 1) * itemsPerPage;
+            const endIndex = startIndex + itemsPerPage;
+            const paginatedDivisions = filteredDivisions.slice(
+                startIndex,
+                endIndex
+            );
+
+            return {
+                data: paginatedDivisions,
+                current_page: currentPage,
+                from: filteredDivisions.length > 0 ? startIndex + 1 : 0,
+                to: Math.min(endIndex, filteredDivisions.length),
+                total: filteredDivisions.length,
+                last_page: totalPages,
+                prev_page_url: currentPage > 1 ? "#" : null,
+                next_page_url: currentPage < totalPages ? "#" : null,
+                links: Array.from({ length: totalPages }, (_, i) => ({
+                    label: String(i + 1),
+                    url: i + 1 === currentPage ? null : "#",
+                    active: i + 1 === currentPage,
+                })),
+            };
+        } else {
+            // Jika tidak ada filter, gunakan pagination backend asli
+            return divisions;
+        }
+    }, [
+        filteredDivisions,
+        currentPage,
+        search,
+        selectedDivision,
+        divisions,
+        allDivisions,
+    ]);
 
     const handleEdit = (division) => {
         setEditingDivision(division);
@@ -87,12 +180,14 @@ export default function Index({ auth, divisions }) {
                         <h1 className="text-2xl font-bold  mb-3">Divisions</h1>
 
                         <CardDivision
-                            divisions={divisions}
+                            filteredDivisions={paginationData}
                             handleSearch={handleSearch}
                             search={search}
                             selectedDivision={selectedDivision}
                             setSelectedDivision={setSelectedDivision}
-                            filteredDivisions={filteredDivisions}
+                            currentPage={currentPage}
+                            setCurrentPage={setCurrentPage}
+                            isLoadingAll={isLoadingAll}
                             handleEdit={handleEdit}
                             handleDelete={handleDelete}
                             setIsModalOpen={setIsModalOpen}

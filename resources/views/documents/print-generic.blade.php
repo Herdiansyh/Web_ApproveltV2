@@ -15,7 +15,7 @@
             font-family: DejaVu Sans, Helvetica, Arial, sans-serif;
             font-size: 11pt;
             color: #111827;
-            line-height: 1;
+            line-height: 1.5;
         }
 
         /* Header */

@@ -24,6 +24,7 @@ export default function TableExcel({
     addRow,
     deleteRow,
     updateCellData,
+    selectedWorkflow,
     existingTableData = [],
 }) {
     const [editValue, setEditValue] = React.useState("");
@@ -31,11 +32,25 @@ export default function TableExcel({
     return (
         <div className="mt-10">
             <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold">Data Tambahan</h3>
+                <h3 className="text-lg font-semibold">
+                    Data Tambahan{" "}
+                    {selectedWorkflow?.document?.enable_data_tables
+                        ? ""
+                        : "(Opsional)"}
+                </h3>
                 <div className="flex items-center gap-2">
+                    <input
+                        type="hidden"
+                        name="useTableData"
+                        value={data.useTableData ? "true" : "false"}
+                    />
+
                     <input
                         type="checkbox"
                         id="useTableData"
+                        disabled={
+                            selectedWorkflow?.document?.enable_data_tables
+                        }
                         checked={data.useTableData}
                         onChange={(e) => {
                             setData("useTableData", e.target.checked);
@@ -43,6 +58,7 @@ export default function TableExcel({
                         }}
                         className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                     />
+
                     <Label
                         htmlFor="useTableData"
                         className="text-sm font-medium text-gray-700"
@@ -52,10 +68,17 @@ export default function TableExcel({
                 </div>
             </div>
 
-            <p className="text-sm text-gray-600 mb-4">
-                {existingTableData.length > 0
-                    ? "Pengajuan ini memiliki data table. Centang untuk mengedit atau hapus centang untuk menghapus data table."
-                    : "Centang 'Gunakan Data Table' jika ingin menyertakan data tabel dalam pengajuan ini."}
+            <p
+                style={{ borderRadius: "10px" }}
+                className={`text-sm ${
+                    selectedWorkflow?.document?.enable_data_tables
+                        ? "text-white text-center bg-red-600 max-w-md p-1"
+                        : "text-gray-600"
+                } mb-4  `}
+            >
+                {selectedWorkflow?.document?.enable_data_tables
+                    ? "Wajib mengisi data table di pengajuan dokumen ini !"
+                    : "Centang 'Gunakan Data Table' jika ingin menyertakan data tabel dalam pengajuan ini. (Opsional)"}
             </p>
 
             {data.useTableData && (

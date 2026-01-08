@@ -31,6 +31,9 @@ export default function CardSubDivision({
     handleDelete,
     setIsModalOpen,
     setEditingSubdivision,
+    currentPage,
+    setCurrentPage,
+    isLoadingAll = false,
 }) {
     return (
         <Card style={{ borderRadius: "15px" }} className="p-6 shadow-xl">
@@ -90,6 +93,14 @@ export default function CardSubDivision({
                     </Button>
                 </div>
             </div>
+
+            {/* Loading indicator */}
+            {isLoadingAll && (
+                <div className="flex justify-center items-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                    <span className="ml-2 text-gray-600">Loading all subdivisions for search...</span>
+                </div>
+            )}
 
             {/* Tabel Subdivisions */}
             <Table>
@@ -161,15 +172,26 @@ export default function CardSubDivision({
                     </div>
                     <div className="flex gap-2">
                         {filteredSubdivisions.prev_page_url && (
-                            <Link href={filteredSubdivisions.prev_page_url}>
+                            filteredSubdivisions.prev_page_url === '#' ? (
                                 <Button
                                     variant="outline"
                                     size="sm"
                                     style={{ borderRadius: "8px" }}
+                                    onClick={() => setCurrentPage(currentPage - 1)}
                                 >
                                     <ChevronLeft size={16} />
                                 </Button>
-                            </Link>
+                            ) : (
+                                <Link href={filteredSubdivisions.prev_page_url}>
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        style={{ borderRadius: "8px" }}
+                                    >
+                                        <ChevronLeft size={16} />
+                                    </Button>
+                                </Link>
+                            )
                         )}
 
                         {filteredSubdivisions.links &&
@@ -181,37 +203,62 @@ export default function CardSubDivision({
                                     return null;
                                 }
                                 return (
-                                    <Link
-                                        key={index}
-                                        href={link.url || "#"}
-                                        only={[]}
-                                    >
-                                        <Button
-                                            variant={
-                                                link.active
-                                                    ? "default"
-                                                    : "outline"
-                                            }
-                                            size="sm"
-                                            disabled={!link.url}
-                                            style={{ borderRadius: "8px" }}
-                                        >
-                                            {link.label}
-                                        </Button>
-                                    </Link>
+                                    <div key={index}>
+                                        {link.url === '#' ? (
+                                            <Button
+                                                variant={
+                                                    link.active
+                                                        ? "default"
+                                                        : "outline"
+                                                }
+                                                size="sm"
+                                                disabled={!link.url}
+                                                style={{ borderRadius: "8px" }}
+                                                onClick={() => link.url && setCurrentPage(parseInt(link.label))}
+                                            >
+                                                {link.label}
+                                            </Button>
+                                        ) : (
+                                            <Link href={link.url || "#"}>
+                                                <Button
+                                                    variant={
+                                                        link.active
+                                                            ? "default"
+                                                            : "outline"
+                                                    }
+                                                    size="sm"
+                                                    disabled={!link.url}
+                                                    style={{ borderRadius: "8px" }}
+                                                >
+                                                    {link.label}
+                                                </Button>
+                                            </Link>
+                                        )}
+                                    </div>
                                 );
                             })}
 
                         {filteredSubdivisions.next_page_url && (
-                            <Link href={filteredSubdivisions.next_page_url}>
+                            filteredSubdivisions.next_page_url === '#' ? (
                                 <Button
                                     variant="outline"
                                     size="sm"
                                     style={{ borderRadius: "8px" }}
+                                    onClick={() => setCurrentPage(currentPage + 1)}
                                 >
                                     <ChevronRight size={16} />
                                 </Button>
-                            </Link>
+                            ) : (
+                                <Link href={filteredSubdivisions.next_page_url}>
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        style={{ borderRadius: "8px" }}
+                                    >
+                                        <ChevronRight size={16} />
+                                    </Button>
+                                </Link>
+                            )
                         )}
                     </div>
                 </div>
