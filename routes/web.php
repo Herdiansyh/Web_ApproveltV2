@@ -408,4 +408,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     });
 }); 
 
+// 404 Error Page Route
+Route::get('/404', function () {
+    return Inertia::render('Errors/NotFound');
+})->name('errors.404');
+
 require __DIR__.'/auth.php';

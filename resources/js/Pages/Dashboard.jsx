@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import Header from "@/Components/Header";
 import Footer from "@/Components/Footer";
+import { useEffect } from "react";
 
 export default function Dashboard({
     auth,
@@ -28,6 +29,12 @@ export default function Dashboard({
     canApprove,
     pendingItems = [],
 }) {
+    useEffect(() => {
+        //cek role user apabila admin redirect ke halaman admin/dashboard
+        if (auth.user.role === "admin") {
+            router.get(route("Admindashboard"));
+        }
+    });
     return (
         <AuthenticatedLayout
             header={
