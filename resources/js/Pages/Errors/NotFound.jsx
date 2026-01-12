@@ -6,9 +6,8 @@ const NotFound = () => {
         <>
             <Head title="Page Not Found - 404" />
             <div
-                className="page_404"
+                className="page_404 pt-[10vh] sm:pt-[50px] "
                 style={{
-                    padding: "10px 0",
                     background: "#fff",
                     fontFamily: '"Arvo", serif',
                     overflow: "hidden",
@@ -17,7 +16,6 @@ const NotFound = () => {
                 <div className="container mx-auto px-4">
                     <div className="flex justify-center">
                         <div className="text-center">
-                            {" "}
                             <div
                                 className="four_zero_four_bg  "
                                 style={{
